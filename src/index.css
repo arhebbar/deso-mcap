@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 222 41% 9%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 222 41% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 210 20% 80%;
+
+    --muted: 222 30% 12%;
+    --muted-foreground: 215 15% 50%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 222 47% 6%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 25% 16%;
+    --input: 222 25% 16%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --success: 152 69% 45%;
+    --success-foreground: 152 69% 95%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+    --info: 199 89% 48%;
+
+    --kpi-bg: 222 35% 11%;
+    --kpi-border: 222 25% 18%;
+    --kpi-glow: 199 89% 48%;
+
+    --chart-1: 199 89% 48%;
+    --chart-2: 152 69% 45%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 51%;
+    --chart-6: 210 20% 60%;
+
+    --table-row-hover: 222 30% 13%;
+    --table-header: 222 30% 8%;
+
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Inter', system-ui, sans-serif;
+
+    --sidebar-background: 222 41% 9%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 222 47% 6%;
+    --sidebar-accent: 222 30% 14%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 222 25% 16%;
+    --sidebar-ring: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .kpi-card {
+    @apply rounded-lg border p-5 transition-all duration-300;
+    background: hsl(var(--kpi-bg));
+    border-color: hsl(var(--kpi-border));
+  }
+
+  .kpi-card:hover {
+    border-color: hsl(var(--kpi-glow) / 0.3);
+    box-shadow: 0 0 20px hsl(var(--kpi-glow) / 0.05);
+  }
+
+  .kpi-value {
+    font-family: var(--font-mono);
+    @apply text-2xl font-bold tracking-tight;
+  }
+
+  .kpi-label {
+    @apply text-xs font-medium uppercase tracking-widest;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .status-positive {
+    color: hsl(var(--success));
+  }
+
+  .status-negative {
+    color: hsl(var(--destructive));
+  }
+
+  .status-warning {
+    color: hsl(var(--warning));
+  }
+
+  .chart-container {
+    @apply rounded-lg border p-5 overflow-visible;
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+  }
+
+  /* Ensure Recharts tooltips are visible above other content */
+  .recharts-tooltip-wrapper {
+    z-index: 9999 !important;
+    pointer-events: none;
+  }
+
+  .recharts-default-tooltip {
+    pointer-events: auto;
+  }
+
+  /* Fix white background on BarChart hover cursor - use dark theme color */
+  .recharts-rectangle.recharts-tooltip-cursor {
+    fill: hsl(var(--muted)) !important;
+  }
+
+  /* Standardize chart fonts - use Inter for all chart text (axes, legends, tooltips) */
+  .recharts-default-tooltip,
+  .recharts-legend-wrapper,
+  .recharts-legend-item-text,
+  .recharts-cartesian-axis-tick text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-polar-grid-angle-tick text {
+    font-family: var(--font-sans) !important;
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider;
+    color: hsl(var(--muted-foreground));
+    background: hsl(var(--table-header));
+  }
+
+  .data-table td {
+    @apply px-4 py-3 border-t;
+    border-color: hsl(var(--border));
+  }
+
+  .data-table tr:hover td {
+    background: hsl(var(--table-row-hover));
+  }
+
+  .badge-foundation {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--chart-4) / 0.15);
+    color: hsl(var(--chart-4));
+  }
+
+  .badge-amm {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--chart-1) / 0.15);
+    color: hsl(var(--chart-1));
+  }
+
+  .badge-founder {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--warning) / 0.15);
+    color: hsl(var(--warning));
+  }
+
+  .section-title {
+    @apply text-sm font-semibold uppercase tracking-wider mb-4;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .glow-line {
+    @apply h-px w-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--primary) / 0.4),
+      transparent
+    );
+  }
+}
