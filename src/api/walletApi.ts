@@ -79,63 +79,41 @@ async function desoPost(endpoint: string, body: object): Promise<unknown> {
 }
 
 /**
- * Fetch staked DESO. Two approaches:
- * 1) Validator-based: get-validators → get-stake-entries-for-validator per validator → aggregate by delegator.
- *    Returns empty map if APIs return 404 (not yet on public nodes).
- * 2) Fallback: get-users-stateless LockedBalanceNanos (Staked ≈ Total - Spendable).
- *    node.deso.org does not currently expose LockedBalanceNanos; we check for it when nodes add it.
+ * Fetch staked DESO per user via get-stake-entries-for-public-key.
+ * One call per tracked user; fallback to LockedBalanceNanos from get-users-stateless when API unavailable.
  */
-async function fetchStakedByValidator(
-  trackedPublicKeys: Set<string>
+async function fetchStakedByPublicKey(
+  publicKeys: string[]
 ): Promise<Map<string, number>> {
   const stakedByPk = new Map<string, number>();
-  try {
-    const validatorsRes = await fetch(`${DESO_NODE}/get-validators`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    if (!validatorsRes.ok) return stakedByPk;
-
-    const validatorsData = (await validatorsRes.json()) as {
-      Validators?: Array<{ PublicKeyBase58Check?: string }>;
-    };
-    const validators = validatorsData?.Validators ?? [];
-    if (validators.length === 0) return stakedByPk;
-
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < validators.length; i += BATCH_SIZE) {
-      const batch = validators.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map(async (v) => {
-          const pk = v.PublicKeyBase58Check;
-          if (!pk) return [] as Array<{ delegator: string; nanos: number }>;
-          const res = await fetch(`${DESO_NODE}/get-stake-entries-for-validator`, {
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < publicKeys.length; i += BATCH_SIZE) {
+    const batch = publicKeys.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(async (pk) => {
+        try {
+          const res = await fetch(`${DESO_NODE}/get-stake-entries-for-public-key`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ValidatorPublicKeyBase58Check: pk }),
+            body: JSON.stringify({ PublicKeyBase58Check: pk }),
           });
-          if (!res.ok) return [];
+          if (!res.ok) return { pk, staked: 0 };
           const data = (await res.json()) as {
-            StakeEntries?: Array<{ DelegatorPublicKeyBase58Check?: string; StakeNanos?: number }>;
+            StakeEntries?: Array<{ StakeNanos?: number }>;
           };
-          return (data?.StakeEntries ?? []).map((e) => ({
-            delegator: e.DelegatorPublicKeyBase58Check ?? '',
-            nanos: e.StakeNanos ?? 0,
-          }));
-        })
-      );
-      for (const entries of results) {
-        for (const { delegator, nanos } of entries) {
-          if (trackedPublicKeys.has(delegator) && nanos > 0) {
-            const amt = nanos / NANOS_PER_DESO;
-            stakedByPk.set(delegator, (stakedByPk.get(delegator) ?? 0) + amt);
-          }
+          const staked = (data?.StakeEntries ?? []).reduce(
+            (sum, e) => sum + (e.StakeNanos ?? 0),
+            0
+          );
+          return { pk, staked: staked / NANOS_PER_DESO };
+        } catch {
+          return { pk, staked: 0 };
         }
-      }
+      })
+    );
+    for (const { pk, staked } of results) {
+      if (staked > 0) stakedByPk.set(pk, staked);
     }
-  } catch {
-    // APIs may return 404 on public nodes; return empty map
   }
   return stakedByPk;
 }
@@ -308,7 +286,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
     try {
       const usersRes = (await desoPost('/get-users-stateless', {
         PublicKeysBase58Check: publicKeys,
-        SkipForLeaderboard: true,
+        SkipForLeaderboard: false,
         IncludeBalance: true,
       })) as { UserList?: UserBalance[] };
       usersList = usersRes.UserList ?? [];
@@ -317,8 +295,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
     }
   }
 
-  const trackedSet = new Set(publicKeys);
-  const stakedByPk = await fetchStakedByValidator(trackedSet);
+  const stakedByPk = await fetchStakedByPublicKey(publicKeys);
   const stakeByPk = new Map<string, { unstaked: number; staked: number }>();
   for (const pk of publicKeys) {
     const user = usersList.find((u) => u.PublicKeyBase58Check === pk);
