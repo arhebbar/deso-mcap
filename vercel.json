@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/deso/:path*", "destination": "https://node.deso.org/api/v0/:path*" },
+    { "source": "/api/deso-hodlers/:path*", "destination": "https://blockproducer.deso.org/api/v0/:path*" },
+    { "source": "/api/mempool/:path*", "destination": "https://mempool.space/api/:path*" },
+    { "source": "/api/eth-rpc", "destination": "https://cloudflare-eth.com" },
+    { "source": "/api/sol-rpc", "destination": "https://solana-rpc.publicnode.com" }
+  ]
+}

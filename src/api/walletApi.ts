@@ -6,9 +6,9 @@
  * Uses blockproducer.deso.org for get-hodlers (same as Openfund: https://openfund.com/d/openfund)
  */
 
-/** Use Vite proxy in dev to avoid CORS; direct URLs in production */
-const DESO_NODE = import.meta.env.DEV ? '/deso-api' : 'https://node.deso.org/api/v0';
-const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : 'https://blockproducer.deso.org/api/v0';
+/** Use Vite proxy in dev, Vercel rewrites in prod to avoid CORS */
+const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
+const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
 const NANOS_PER_DESO = 1e9;
 /** DAO coins (Openfund, Focus, dUSDC, etc.) use 1e18 decimals like ERC-20 */
 const NANOS_PER_DAO_COIN = 1e18;

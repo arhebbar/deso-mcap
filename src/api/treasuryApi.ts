@@ -3,9 +3,10 @@
  * BTC: mempool.space, ETH: public RPC + ERC20 (USDC, USDT), SOL: Solana RPC + SPL (USDC)
  */
 
-const MEMPOOL_BASE = 'https://mempool.space/api';
-const ETH_RPC = 'https://cloudflare-eth.com';
-const SOL_RPC = 'https://solana-rpc.publicnode.com';
+/** Use direct URLs in dev; Vercel rewrites in prod to avoid CORS */
+const MEMPOOL_BASE = import.meta.env.DEV ? 'https://mempool.space/api' : '/api/mempool';
+const ETH_RPC = import.meta.env.DEV ? 'https://cloudflare-eth.com' : '/api/eth-rpc';
+const SOL_RPC = import.meta.env.DEV ? 'https://solana-rpc.publicnode.com' : '/api/sol-rpc';
 const SATOSHI_PER_BTC = 1e8;
 const WEI_PER_ETH = 1e18;
 const LAMPORTS_PER_SOL = 1e9;
