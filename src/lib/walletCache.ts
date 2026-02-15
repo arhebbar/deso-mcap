@@ -4,17 +4,21 @@
  */
 
 const CACHE_KEY = 'deso-wallet-cache';
+const CACHE_VERSION = 9; // Batched profile lookups; force refresh for DeSo Bulls
 
 export interface CachedWalletEntry {
   name: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
   balances: Record<string, number>;
   usdValue: number;
+  desoStaked?: number;
+  desoUnstaked?: number;
 }
 
 export interface CachedWalletData {
   data: CachedWalletEntry[];
   timestamp: number;
+  version?: number;
 }
 
 export function getWalletCache(): CachedWalletData | null {
@@ -25,6 +29,7 @@ export function getWalletCache(): CachedWalletData | null {
     if (!parsed?.data || !Array.isArray(parsed.data) || typeof parsed.timestamp !== 'number') {
       return null;
     }
+    if ((parsed.version ?? 1) < CACHE_VERSION) return null;
     return parsed;
   } catch {
     return null;
@@ -36,6 +41,7 @@ export function setWalletCache(data: CachedWalletEntry[]): void {
     const payload: CachedWalletData = {
       data,
       timestamp: Date.now(),
+      version: CACHE_VERSION,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
   } catch {

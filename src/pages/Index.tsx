@@ -77,7 +77,7 @@ const Index = () => {
         {/* Trend Charts */}
         <TrendCharts />
 
-        {/* Wallet Table */}
+        {/* Wallet Table (Foundation, Team, DeSo Bulls) */}
         <WalletTable />
 
         {/* Foundation Treasury + AMM Funds */}

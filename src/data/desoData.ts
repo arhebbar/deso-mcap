@@ -2,9 +2,13 @@
 
 export interface WalletData {
   name: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'EXTERNAL';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL';
   balances: Record<string, number>;
   usdValue: number;
+  /** DESO staked (when known). Total DESO = desoStaked + desoUnstaked. */
+  desoStaked?: number;
+  /** DESO unstaked (when known). Total DESO = desoStaked + desoUnstaked. */
+  desoUnstaked?: number;
 }
 
 export interface MarketData {
@@ -40,14 +44,16 @@ export const FOUNDATION_WALLETS: WalletData[] = [
   {
     name: 'FOCUS_COLD_000',
     classification: 'FOUNDATION',
-    // ~1M DESO total: 200K unstaked, 800K staked
     balances: { DESO: 1_000_000 },
     usdValue: 5_780_000,
+    desoStaked: 800_000,
+    desoUnstaked: 200_000,
   },
   {
     name: 'focus',
     classification: 'FOUNDATION',
-    balances: { Focus: 800_000_000, DESO: 12_000, Openfund: 1_500_000 },
+    // Focus balance excluded: minted by account, not bought on DeSo – no real significance
+    balances: { DESO: 12_000, Openfund: 1_500_000 },
     usdValue: 450_000,
   },
   {
@@ -82,7 +88,29 @@ export const FOUNDER_WALLETS: WalletData[] = [
   },
   { name: 'Nader', classification: 'FOUNDER', balances: { Openfund: 12_500_000 }, usdValue: 1_087_500 },
   { name: 'Mossified', classification: 'FOUNDER', balances: { Openfund: 2_800_000 }, usdValue: 243_600 },
-  { name: 'LazyNina', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'LazyNina', classification: 'FOUNDER', balances: { DESO: 2.93 }, usdValue: 0 },
+];
+
+/** DeSo Bulls - community holders. No static fallback; API/cache only. */
+export const DESO_BULL_WALLETS: WalletData[] = [
+  { name: 'Randhir (Me)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'HighKey', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'JordanLintz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'LukeLintz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'StarGeezer', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DesocialWorld', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Edokoevoet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Gabrielist', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'RobertGraham', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: '0xAustin', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'BenErsing', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Darian_Parrish', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'VishalGulia', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ZeroToOne', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'whoisanku', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'fllwthrvr', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'PremierNS', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'WhaleDShark', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
 ];
 
 // Fallback when API fails. BTC/ETH/SOL are fetched from treasuryApi; USDC has no public API.

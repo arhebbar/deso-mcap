@@ -1,6 +1,6 @@
 # Openfund Holdings Summary
 
-> **API:** The app tries `get-hodlings-for-public-key` for Openfund (returns all tokens including DEX-held). If that endpoint is unavailable (404 on node.deso.org), we use `get-users-stateless` + static fallback. Openfund public key: `BC1YLj3zNA7hRAqBVkvsTeqw7oi4H6ogKiAFL1VXhZy6pYeZcZ6TDRY`
+> **API:** The app uses `get-hodlers-for-public-key` (via `https://blockproducer.deso.org/api/v0` — same as [Openfund](https://openfund.com/d/openfund)) with the **token creator Username** (e.g. `openfund`, `focus`, `dUSDC_`, `dBTC`, `dETH`, `dSOL`) to fetch **all holders** of each token in one shot. It then filters those holders for our tracked users (Foundation, Founding Team, DeSo Bulls). This captures both wallet-held and DEX-held balances.
 
 ## Current Static Values (desoData.ts)
 

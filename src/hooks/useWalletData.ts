@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalances } from '@/api/walletApi';
 import { getWalletCache, setWalletCache, type CachedWalletEntry } from '@/lib/walletCache';
-import { AMM_WALLETS, FOUNDATION_WALLETS, FOUNDER_WALLETS } from '@/data/desoData';
+import { AMM_WALLETS, FOUNDATION_WALLETS, FOUNDER_WALLETS, DESO_BULL_WALLETS } from '@/data/desoData';
 
-const STATIC_WALLETS = [...FOUNDATION_WALLETS, ...AMM_WALLETS, ...FOUNDER_WALLETS];
+const STATIC_WALLETS = [...FOUNDATION_WALLETS, ...AMM_WALLETS, ...FOUNDER_WALLETS, ...DESO_BULL_WALLETS];
 
 type DataSource = 'live' | 'cached' | 'static';
 
@@ -14,7 +14,7 @@ type DataSource = 'live' | 'cached' | 'static';
  * order book doesn't appear in get-users-stateless UsersYouHODL).
  */
 function mergeWithStatic(
-  api: { name: string; classification: string; balances: Record<string, number> },
+  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number },
   staticByName: Map<string, (typeof STATIC_WALLETS)[0]>
 ) {
   const fallback = staticByName.get(api.name);
@@ -27,7 +27,12 @@ function mergeWithStatic(
     const fbVal = fallbackBal[token] ?? 0;
     mergedBalances[token] = apiVal > 0 ? apiVal : fbVal;
   }
-  return { ...api, balances: mergedBalances };
+  return {
+    ...api,
+    balances: mergedBalances,
+    desoStaked: api.desoStaked ?? fallback?.desoStaked,
+    desoUnstaked: api.desoUnstaked ?? fallback?.desoUnstaked,
+  };
 }
 
 /**
@@ -60,9 +65,16 @@ export function useWalletData() {
   } else {
     const cached = getWalletCache();
     if (cached?.data?.length) {
-      wallets = cached.data.map((c) => {
-        const fallback = staticByName.get(c.name);
-        const cacheBal = c.balances ?? {};
+      const cachedByName = new Map(cached.data.map((c) => [c.name, c]));
+      // Merge cache with static so we always have the full set (e.g. DESO_BULL added after cache was created)
+      const allNames = new Set([
+        ...cachedByName.keys(),
+        ...STATIC_WALLETS.map((w) => w.name),
+      ]);
+      wallets = Array.from(allNames).map((name) => {
+        const c = cachedByName.get(name);
+        const fallback = staticByName.get(name);
+        const cacheBal = c?.balances ?? {};
         const fbBal = fallback?.balances ?? {};
         const merged: Record<string, number> = {};
         const allTokens = new Set([...Object.keys(fbBal), ...Object.keys(cacheBal)]);
@@ -71,7 +83,14 @@ export function useWalletData() {
           const fbVal = fbBal[token] ?? 0;
           merged[token] = cacheVal > 0 ? cacheVal : fbVal;
         }
-        return { ...c, balances: merged };
+        return {
+          name,
+          classification: c?.classification ?? fallback?.classification ?? 'FOUNDATION',
+          balances: merged,
+          usdValue: c?.usdValue ?? fallback?.usdValue ?? 0,
+          desoStaked: c?.desoStaked ?? fallback?.desoStaked,
+          desoUnstaked: c?.desoUnstaked ?? fallback?.desoUnstaked,
+        };
       });
       dataSource = 'cached';
       cachedAt = cached.timestamp;
@@ -83,8 +102,14 @@ export function useWalletData() {
 
   if (wallets.length === 0) wallets = STATIC_WALLETS;
 
+  // Exclude Focus account's Focus balance (minted, not bought on DeSo – no real significance)
+  for (const w of wallets) {
+    if (w.name === 'focus' && w.balances.Focus) delete w.balances.Focus;
+  }
+
   const ammWallets = wallets.filter((w) => w.classification === 'AMM');
   const foundationWallets = wallets.filter((w) => w.classification === 'FOUNDATION');
+  const desoBullsWallets = wallets.filter((w) => w.classification === 'DESO_BULL');
 
   const ammDeso = ammWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
   const foundationDeso = foundationWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
@@ -99,6 +124,7 @@ export function useWalletData() {
     wallets,
     ammWallets,
     foundationWallets,
+    desoBullsWallets,
     ammDeso,
     foundationDeso,
     founderDeso,

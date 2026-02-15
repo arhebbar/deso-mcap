@@ -278,7 +278,8 @@ export async function fetchTreasuryBalancesPerAddress(): Promise<TreasuryAddress
     if (config.chain === 'BTC') {
       const satoshis = await fetchBtcBalanceForAddress(config.address);
       const btc = satoshis / SATOSHI_PER_BTC;
-      holdings['BTC'] = btc;
+      const fallback = BTC_FALLBACK[config.address];
+      holdings['BTC'] = btc > 0 ? btc : fallback ?? 0;
       usdValue = 0;
     } else if (config.chain === 'ETH') {
       const [eth, usdc, usdt] = await Promise.all([

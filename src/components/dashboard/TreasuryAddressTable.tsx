@@ -1,6 +1,6 @@
 import { useTreasuryAddresses } from '@/hooks/useTreasuryData';
 import { useLiveData } from '@/hooks/useLiveData';
-import { formatUsd } from '@/lib/formatters';
+import { formatUsd, formatRelativeTime } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ChainBadge({ chain }: { chain: 'BTC' | 'ETH' | 'SOL' }) {
@@ -31,7 +31,7 @@ function truncateAddress(addr: string): string {
 }
 
 export default function TreasuryAddressTable() {
-  const { addresses, isLoading, isLive } = useTreasuryAddresses();
+  const { addresses, isLoading, isLive, cachedAt } = useTreasuryAddresses();
   const { marketData } = useLiveData();
 
   const rows = addresses.map((row) => {
@@ -50,16 +50,20 @@ export default function TreasuryAddressTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">Foundation Treasury + AMM Funds</h3>
-        {isLive && (
+        {isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>
-        )}
+        ) : cachedAt ? (
+          <span className="text-[10px] text-amber-500/90 font-medium uppercase tracking-wider" title="Values from cache (API failed or returned empty)">
+            Cached · {formatRelativeTime(cachedAt)}
+          </span>
+        ) : null}
       </div>
       {isLoading ? (
         <Skeleton className="h-48 w-full rounded" />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[120px]">
           <table className="data-table">
             <thead>
               <tr>

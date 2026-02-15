@@ -7,17 +7,29 @@ import { Plus, Minus } from 'lucide-react';
 
 const SMALL_SECTION_THRESHOLD = 50_000; // Sections below this start collapsed
 
+const BADGE_LABELS: Record<string, string> = {
+  FOUNDATION: 'Foundation',
+  AMM: 'AMM',
+  FOUNDER: 'Team',
+  DESO_BULL: 'DeSo Bull',
+};
+
 function ClassBadge({ classification }: { classification: string }) {
-  const cls = classification === 'FOUNDATION' ? 'badge-foundation' : classification === 'AMM' ? 'badge-amm' : 'badge-founder';
-  return <span className={cls}>{classification}</span>;
+  const cls =
+    classification === 'FOUNDATION' ? 'badge-foundation'
+    : classification === 'AMM' ? 'badge-amm'
+    : classification === 'DESO_BULL' ? 'badge-bull'
+    : 'badge-founder';
+  return <span className={cls}>{BADGE_LABELS[classification] ?? classification}</span>;
 }
 
-type SectionKey = 'FOUNDATION' | 'AMM' | 'FOUNDER';
+type SectionKey = 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   FOUNDATION: 'Foundation',
   AMM: 'AMM Funds',
-  FOUNDER: 'Founding Team',
+  FOUNDER: 'Team',
+  DESO_BULL: 'DeSo Bulls',
 };
 
 export default function WalletTable() {
@@ -42,14 +54,20 @@ export default function WalletTable() {
       FOUNDATION: [],
       AMM: [],
       FOUNDER: [],
+      DESO_BULL: [],
     };
     for (const w of allWallets) {
-      if (groups[w.classification]) groups[w.classification].push(w);
+      if (groups[w.classification as SectionKey]) groups[w.classification as SectionKey].push(w);
     }
+    const desoBulls = groups.DESO_BULL;
+    const randhir = desoBulls.find((w) => w.name === 'Randhir (Me)');
+    const rest = desoBulls.filter((w) => w.name !== 'Randhir (Me)').sort((a, b) => b.usdValue - a.usdValue);
+    const sortedDesoBulls = randhir ? [randhir, ...rest] : rest;
     return {
       FOUNDATION: [...groups.FOUNDATION].sort((a, b) => b.usdValue - a.usdValue),
       AMM: [...groups.AMM].sort((a, b) => b.usdValue - a.usdValue),
       FOUNDER: [...groups.FOUNDER].sort((a, b) => b.usdValue - a.usdValue),
+      DESO_BULL: sortedDesoBulls,
     };
   }, [allWallets]);
 
@@ -57,18 +75,20 @@ export default function WalletTable() {
     FOUNDATION: grouped.FOUNDATION.reduce((s, w) => s + w.usdValue, 0),
     AMM: grouped.AMM.reduce((s, w) => s + w.usdValue, 0),
     FOUNDER: grouped.FOUNDER.reduce((s, w) => s + w.usdValue, 0),
+    DESO_BULL: grouped.DESO_BULL.reduce((s, w) => s + w.usdValue, 0),
   }), [grouped]);
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     FOUNDATION: true,
     AMM: true,
     FOUNDER: true,
+    DESO_BULL: true,
   });
 
   const hasInitialized = useRef(false);
   useEffect(() => {
     if (hasInitialized.current) return;
-    const total = sectionTotals.FOUNDATION + sectionTotals.AMM + sectionTotals.FOUNDER;
+    const total = sectionTotals.FOUNDATION + sectionTotals.AMM + sectionTotals.FOUNDER + sectionTotals.DESO_BULL;
     if (total === 0) return; // Wait for data
     hasInitialized.current = true;
     const shouldCollapse = (t: number) => t > 0 && t < SMALL_SECTION_THRESHOLD;
@@ -76,8 +96,9 @@ export default function WalletTable() {
       FOUNDATION: !shouldCollapse(sectionTotals.FOUNDATION),
       AMM: !shouldCollapse(sectionTotals.AMM),
       FOUNDER: !shouldCollapse(sectionTotals.FOUNDER),
+      DESO_BULL: !shouldCollapse(sectionTotals.DESO_BULL),
     });
-  }, [sectionTotals.FOUNDATION, sectionTotals.AMM, sectionTotals.FOUNDER]);
+  }, [sectionTotals.FOUNDATION, sectionTotals.AMM, sectionTotals.FOUNDER, sectionTotals.DESO_BULL]);
 
   const toggleSection = (key: SectionKey) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -91,19 +112,30 @@ export default function WalletTable() {
         <td className="font-mono text-xs">{w.name}</td>
         <td><ClassBadge classification={w.classification} /></td>
         <td className="text-xs text-muted-foreground">
-          {(['DESO', 'Openfund', 'Focus', 'dUSDC', 'dBTC', 'dETH', 'dSOL'] as const)
-            .filter((token) => (w.balances[token] ?? 0) > 0)
-            .map((token) => {
+          {(() => {
+            const fmt = (n: number) =>
+              n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : n.toFixed(2);
+            const items: { key: string; label: string; amt: number }[] = [];
+            const tokens = ['DESO', 'Openfund', 'Focus', 'dUSDC', 'dBTC', 'dETH', 'dSOL'] as const;
+            const hasStakeBreakdown = w.desoStaked != null || w.desoUnstaked != null;
+            const staked = w.desoStaked ?? 0;
+            const unstaked = w.desoUnstaked ?? 0;
+            for (const token of tokens) {
               const amt = w.balances[token] ?? 0;
-              return (
-                <span key={token} className="mr-3">
-                  <span className="text-foreground font-mono">
-                    {amt >= 1_000_000 ? `${(amt / 1_000_000).toFixed(1)}M` : amt >= 1_000 ? `${(amt / 1_000).toFixed(1)}K` : amt.toFixed(2)}
-                  </span>{' '}
-                  {token}
-                </span>
-              );
-            })}
+              if (amt <= 0) continue;
+              if (token === 'DESO' && hasStakeBreakdown && (staked > 0 || unstaked > 0)) {
+                if (unstaked > 0) items.push({ key: 'DESO-unstaked', label: 'DESO (unstaked)', amt: unstaked });
+                if (staked > 0) items.push({ key: 'DESO-staked', label: 'DESO (staked)', amt: staked });
+              } else {
+                items.push({ key: token, label: token, amt });
+              }
+            }
+            return items.map(({ key, label, amt }) => (
+              <span key={key} className="mr-3">
+                <span className="text-foreground font-mono">{fmt(amt)}</span> {label}
+              </span>
+            ));
+          })()}
         </td>
         <td className="text-right font-mono text-sm">{formatUsd(w.usdValue)}</td>
       </tr>
@@ -145,7 +177,7 @@ export default function WalletTable() {
   return (
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="section-title mb-0">Tracked Foundation and Founding Team Wallets</h3>
+        <h3 className="section-title mb-0">Tracked Foundation, Team and DeSo Bulls Wallets</h3>
         {isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
@@ -175,6 +207,7 @@ export default function WalletTable() {
               <SectionTable sectionKey="FOUNDATION" />
               <SectionTable sectionKey="AMM" />
               <SectionTable sectionKey="FOUNDER" />
+              <SectionTable sectionKey="DESO_BULL" />
               <tr className="border-t border-border font-medium">
                 <td colSpan={3} className="text-xs pt-2">Total</td>
                 <td className="text-right font-mono text-sm pt-2">{formatUsd(totalUsd)}</td>

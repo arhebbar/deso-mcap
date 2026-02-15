@@ -191,6 +191,12 @@
     color: hsl(var(--warning));
   }
 
+  .badge-bull {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--success) / 0.15);
+    color: hsl(var(--success));
+  }
+
   .section-title {
     @apply text-sm font-semibold uppercase tracking-wider mb-4;
     color: hsl(var(--muted-foreground));

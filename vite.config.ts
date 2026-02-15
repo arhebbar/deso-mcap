@@ -17,6 +17,16 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cryptocompare/, ""),
       },
+      "/deso-api": {
+        target: "https://node.deso.org",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/deso-api/, "/api/v0"),
+      },
+      "/deso-hodlers": {
+        target: "https://blockproducer.deso.org",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/deso-hodlers/, "/api/v0"),
+      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

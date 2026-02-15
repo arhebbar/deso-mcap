@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-const DESO_NODE = 'https://node.deso.org/api/v0';
+/** Use Vite proxy in dev to avoid CORS; direct URL in production */
+const DESO_NODE = import.meta.env.DEV ? '/deso-api' : 'https://node.deso.org/api/v0';
 
 const ExchangeRateSchema = z.object({
   USDCentsPerDeSoExchangeRate: z.number(),
