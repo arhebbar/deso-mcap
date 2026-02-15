@@ -3,6 +3,9 @@ import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
 import CapitalStructureChart from '@/components/dashboard/CapitalStructureChart';
 import TrendCharts from '@/components/dashboard/TrendCharts';
+import DesoCirculationBreakdown from '@/components/dashboard/DesoCirculationBreakdown';
+import StakedDesoTable from '@/components/dashboard/StakedDesoTable';
+import UnstakedDesoTable from '@/components/dashboard/UnstakedDesoTable';
 import WalletTable from '@/components/dashboard/WalletTable';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
 import { useLiveData } from '@/hooks/useLiveData';
@@ -76,6 +79,15 @@ const Index = () => {
 
         {/* Trend Charts */}
         <TrendCharts />
+
+        {/* DESO Circulation Breakdown */}
+        <DesoCirculationBreakdown />
+
+        {/* Staked DESO Table */}
+        <StakedDesoTable />
+
+        {/* Unstaked DESO (named wallets, excl. staked) */}
+        <UnstakedDesoTable />
 
         {/* Wallet Table (Foundation, Team, DeSo Bulls) */}
         <WalletTable />

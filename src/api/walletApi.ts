@@ -6,9 +6,12 @@
  * Uses blockproducer.deso.org for get-hodlers (same as Openfund: https://openfund.com/d/openfund)
  */
 
+import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES } from '@/data/desoData';
+
 /** Use Vite proxy in dev, Vercel rewrites in prod to avoid CORS */
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
+const DESO_GRAPHQL = import.meta.env.DEV ? 'https://graphql-prod.deso.com/graphql' : '/api/deso-graphql';
 const NANOS_PER_DESO = 1e9;
 /** DAO coins (Openfund, Focus, dUSDC, etc.) use 1e18 decimals like ERC-20 */
 const NANOS_PER_DAO_COIN = 1e18;
@@ -17,6 +20,16 @@ export interface WalletConfig {
   username: string;
   displayName?: string;
   classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
+  /** When set, multiple configs with same mergeKey are combined into one entry */
+  mergeKey?: string;
+  /** When set, use this public key directly instead of looking up by username (for accounts with no username) */
+  publicKeyBase58Check?: string;
+}
+
+export interface StakedByValidator {
+  validatorPk: string;
+  validatorName?: string;
+  amount: number;
 }
 
 export interface WalletData {
@@ -26,6 +39,8 @@ export interface WalletData {
   usdValue: number;
   desoStaked?: number;
   desoUnstaked?: number;
+  /** Per-validator stake breakdown (for StakedDesoTable grouping) */
+  stakedByValidator?: StakedByValidator[];
 }
 
 const WALLET_CONFIG: WalletConfig[] = [
@@ -49,23 +64,31 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'LazyNina', classification: 'FOUNDER' },
   // DeSo Bulls (same fetch method as Foundation/Founder)
   { username: 'Randhir', displayName: 'Randhir (Me)', classification: 'DESO_BULL' },
-  { username: 'HighKey', classification: 'DESO_BULL' },
-  { username: 'JordanLintz', classification: 'DESO_BULL' },
-  { username: 'LukeLintz', classification: 'DESO_BULL' },
-  { username: 'StarGeezer', classification: 'DESO_BULL' },
-  { username: 'DesocialWorld', classification: 'DESO_BULL' },
-  { username: 'Edokoevoet', classification: 'DESO_BULL' },
+  { username: 'HighKey', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
+  { username: 'JordanLintz', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
+  { username: 'LukeLintz', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
+  { username: 'StarGeezer', displayName: 'StarGeezer (incl. SG_Vault)', classification: 'DESO_BULL', mergeKey: 'StarGeezer' },
+  { username: 'SG_Vault', displayName: 'StarGeezer (incl. SG_Vault)', classification: 'DESO_BULL', mergeKey: 'StarGeezer' },
+  { username: 'DesocialWorld', displayName: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', mergeKey: 'DesocialWorld' },
+  { username: 'DesocialWorldValidator', displayName: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', mergeKey: 'DesocialWorld' },
+  { username: 'Edokoevoet', displayName: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', mergeKey: 'DesocialWorld' },
   { username: 'Gabrielist', classification: 'DESO_BULL' },
   { username: 'RobertGraham', classification: 'DESO_BULL' },
   { username: '0xAustin', classification: 'DESO_BULL' },
   { username: 'BenErsing', classification: 'DESO_BULL' },
   { username: 'Darian_Parrish', classification: 'DESO_BULL' },
-  { username: 'VishalGulia', classification: 'DESO_BULL' },
+  { username: 'VishalGulia', displayName: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', mergeKey: 'VishalGulia' },
+  { username: 'VishalWallet', displayName: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', mergeKey: 'VishalGulia' },
+  { username: 'NIX0057', displayName: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', mergeKey: 'VishalGulia' },
+  { username: '', displayName: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', mergeKey: 'VishalGulia', publicKeyBase58Check: 'BC1YLgJHczW24n5kQYJYiw6MoFbg2CmDRf4bWxWRE7znVaRfT27V5kE' },
   { username: 'ZeroToOne', classification: 'DESO_BULL' },
   { username: 'anku', classification: 'DESO_BULL' },
   { username: 'fllwthrvr', classification: 'DESO_BULL' },
   { username: 'PremierNS', classification: 'DESO_BULL' },
-  { username: 'WhaleDShark', classification: 'DESO_BULL' },
+  { username: 'WhaleDShark', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
+  { username: 'WhaleDVault', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
+  { username: 'Crowd33', displayName: 'Crowd33 / CrowdWallet', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
+  { username: 'CrowdWallet', displayName: 'Crowd33 / CrowdWallet', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {
@@ -78,44 +101,367 @@ async function desoPost(endpoint: string, body: object): Promise<unknown> {
   return res.json();
 }
 
+const STAKE_ENTRIES_QUERY = `
+  query GetStakeEntries($pks: [String!]!, $after: Cursor) {
+    stakeEntries(first: 100, filter: { staker: { publicKey: { in: $pks } } }, after: $after) {
+      nodes {
+        stakerPkid
+        stakeAmountNanos
+        validatorEntry { account { publicKey } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+const LOCKED_STAKE_ENTRIES_QUERY = `
+  query GetLockedStakeEntries($pks: [String!]!, $after: Cursor) {
+    lockedStakeEntries(first: 100, filter: { staker: { publicKey: { in: $pks } } }, after: $after) {
+      nodes {
+        stakerPkid
+        lockedAmountNanos
+        validatorEntry { account { publicKey } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+const ALL_STAKE_ENTRIES_QUERY = `
+  query GetAllStakeEntries($after: Cursor) {
+    stakeEntries(first: 100, after: $after) {
+      nodes {
+        stakerPkid
+        stakeAmountNanos
+        validatorEntry { account { publicKey } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+const ALL_LOCKED_STAKE_ENTRIES_QUERY = `
+  query GetAllLockedStakeEntries($after: Cursor) {
+    lockedStakeEntries(first: 100, after: $after) {
+      nodes {
+        stakerPkid
+        lockedAmountNanos
+        validatorEntry { account { publicKey } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+type StakeEntry = { validatorPk: string; amount: number };
+
+async function fetchAllStakeNodes(
+  query: string,
+  variables: { pks: string[]; after?: string | null }
+): Promise<Array<{ stakerPk: string; validatorPk: string; amountNanos: number }>> {
+  const all: Array<{ stakerPk: string; validatorPk: string; amountNanos: number }> = [];
+  let after: string | null = variables.after ?? null;
+  const pks = variables.pks;
+  if (pks.length === 0) return all;
+
+  const amountKey = query.includes('lockedAmountNanos') ? 'lockedAmountNanos' : 'stakeAmountNanos';
+  const connKey = query.includes('lockedStakeEntries') ? 'lockedStakeEntries' : 'stakeEntries';
+
+  do {
+    const res = await fetch(DESO_GRAPHQL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { ...variables, after } }),
+    });
+    if (!res.ok) break;
+    const data = (await res.json()) as {
+      data?: Record<string, {
+        nodes?: Array<{
+          stakerPkid?: string;
+          stakeAmountNanos?: string;
+          lockedAmountNanos?: string;
+          validatorEntry?: { account?: { publicKey?: string } };
+        }>;
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+      }>;
+    };
+    const conn = data?.data?.[connKey];
+    const nodes = conn?.nodes ?? [];
+    for (const n of nodes) {
+      const stakerPk = n.stakerPkid ?? '';
+      const vPk = n.validatorEntry?.account?.publicKey ?? '';
+      const nanos = Number((n as Record<string, string>)[amountKey] ?? 0);
+      if (stakerPk && vPk && nanos > 0) {
+        all.push({ stakerPk, validatorPk: vPk, amountNanos: nanos });
+      }
+    }
+    const hasNext = conn?.pageInfo?.hasNextPage ?? false;
+    after = hasNext ? (conn?.pageInfo?.endCursor ?? null) : null;
+  } while (after);
+
+  return all;
+}
+
+async function fetchAllStakeNodesUnfiltered(
+  query: string,
+  variables: { after?: string | null }
+): Promise<Array<{ stakerPk: string; validatorPk: string; amountNanos: number }>> {
+  const all: Array<{ stakerPk: string; validatorPk: string; amountNanos: number }> = [];
+  let after: string | null = variables.after ?? null;
+  const amountKey = query.includes('lockedAmountNanos') ? 'lockedAmountNanos' : 'stakeAmountNanos';
+  const connKey = query.includes('lockedStakeEntries') ? 'lockedStakeEntries' : 'stakeEntries';
+
+  do {
+    const res = await fetch(DESO_GRAPHQL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { after } }),
+    });
+    if (!res.ok) break;
+    const data = (await res.json()) as {
+      data?: Record<string, {
+        nodes?: Array<{
+          stakerPkid?: string;
+          stakeAmountNanos?: string;
+          lockedAmountNanos?: string;
+          validatorEntry?: { account?: { publicKey?: string } };
+        }>;
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+      }>;
+    };
+    const conn = data?.data?.[connKey];
+    const nodes = conn?.nodes ?? [];
+    for (const n of nodes) {
+      const stakerPk = n.stakerPkid ?? '';
+      const vPk = n.validatorEntry?.account?.publicKey ?? '';
+      const nanos = Number((n as Record<string, string>)[amountKey] ?? 0);
+      if (stakerPk && vPk && nanos > 0) {
+        all.push({ stakerPk, validatorPk: vPk, amountNanos: nanos });
+      }
+    }
+    const hasNext = conn?.pageInfo?.hasNextPage ?? false;
+    after = hasNext ? (conn?.pageInfo?.endCursor ?? null) : null;
+  } while (after);
+
+  return all;
+}
+
 /**
- * Fetch staked DESO per user via get-stake-entries-for-public-key.
- * One call per tracked user; fallback to LockedBalanceNanos from get-users-stateless when API unavailable.
+ * Fetch staked DESO per user per validator via DeSo GraphQL API.
+ * Uses stakeEntries (active) + lockedStakeEntries (cooldown) with in filter for entire list.
  */
 async function fetchStakedByPublicKey(
   publicKeys: string[]
-): Promise<Map<string, number>> {
-  const stakedByPk = new Map<string, number>();
-  const BATCH_SIZE = 5;
-  for (let i = 0; i < publicKeys.length; i += BATCH_SIZE) {
-    const batch = publicKeys.slice(i, i + BATCH_SIZE);
-    const results = await Promise.all(
-      batch.map(async (pk) => {
-        try {
-          const res = await fetch(`${DESO_NODE}/get-stake-entries-for-public-key`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ PublicKeyBase58Check: pk }),
-          });
-          if (!res.ok) return { pk, staked: 0 };
-          const data = (await res.json()) as {
-            StakeEntries?: Array<{ StakeNanos?: number }>;
-          };
-          const staked = (data?.StakeEntries ?? []).reduce(
-            (sum, e) => sum + (e.StakeNanos ?? 0),
-            0
-          );
-          return { pk, staked: staked / NANOS_PER_DESO };
-        } catch {
-          return { pk, staked: 0 };
-        }
-      })
-    );
-    for (const { pk, staked } of results) {
-      if (staked > 0) stakedByPk.set(pk, staked);
+): Promise<Map<string, StakeEntry[]>> {
+  const stakedByPk = new Map<string, Map<string, number>>();
+
+  const [activeNodes, lockedNodes] = await Promise.all([
+    fetchAllStakeNodes(STAKE_ENTRIES_QUERY, { pks: publicKeys }),
+    fetchAllStakeNodes(LOCKED_STAKE_ENTRIES_QUERY, { pks: publicKeys }),
+  ]);
+
+  for (const { stakerPk, validatorPk, amountNanos } of [...activeNodes, ...lockedNodes]) {
+    let byValidator = stakedByPk.get(stakerPk);
+    if (!byValidator) {
+      byValidator = new Map();
+      stakedByPk.set(stakerPk, byValidator);
+    }
+    byValidator.set(validatorPk, (byValidator.get(validatorPk) ?? 0) + amountNanos);
+  }
+
+  const result = new Map<string, StakeEntry[]>();
+  for (const [pk, byValidator] of stakedByPk) {
+    const entries: StakeEntry[] = [];
+    for (const [vPk, nanos] of byValidator) {
+      entries.push({ validatorPk: vPk, amount: nanos / NANOS_PER_DESO });
+    }
+    if (entries.length > 0) result.set(pk, entries);
+  }
+  return result;
+}
+
+/** Resolve public keys to usernames via get-users-stateless (ProfileEntryResponse.Username) */
+async function fetchUsernamesForPks(pks: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (pks.length === 0) return map;
+  try {
+    const res = (await desoPost('/get-users-stateless', {
+      PublicKeysBase58Check: pks,
+      SkipForLeaderboard: true,
+      IncludeBalance: false,
+    })) as { UserList?: Array<{ PublicKeyBase58Check?: string; ProfileEntryResponse?: { Username?: string }; Profile?: { Username?: string } }> };
+    for (const u of res.UserList ?? []) {
+      const pk = u.PublicKeyBase58Check;
+      const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
+      if (pk && username) map.set(pk, username);
+    }
+  } catch {
+    // ignore
+  }
+  return map;
+}
+
+export interface AllStakedDesoRow {
+  stakerPk: string;
+  stakerName: string;
+  /** True if staker has a username (tracked or from chain); false if public key only */
+  hasUsername: boolean;
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'COMMUNITY';
+  amount: number;
+  validatorPk: string;
+  validatorName?: string;
+}
+
+export type ValidatorType = 'core' | 'community';
+
+export interface AllStakedDesoBucket {
+  validatorKey: string;
+  validatorName: string;
+  validatorType: ValidatorType;
+  foundation: AllStakedDesoRow[];
+  community: AllStakedDesoRow[];
+  total: number;
+}
+
+function getValidatorType(validatorName: string): ValidatorType {
+  const core = new Set(CORE_VALIDATOR_USERNAMES.map((u) => u.toLowerCase()));
+  const community = new Set(COMMUNITY_VALIDATOR_USERNAMES.map((u) => u.toLowerCase()));
+  const name = validatorName.toLowerCase();
+  if (core.has(name)) return 'core';
+  if (community.has(name)) return 'community';
+  return 'community'; // default unknown to community
+}
+
+/**
+ * Fetch ALL stake entries (no filter) for the Staked DESO table.
+ * Untracked stakers are classified as Community.
+ */
+export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
+  const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification']; mergeKey?: string }>();
+
+  // Add public-key-only accounts first
+  for (const config of WALLET_CONFIG) {
+    if (config.publicKeyBase58Check) {
+      trackedByPk.set(config.publicKeyBase58Check, {
+        displayName: config.displayName ?? (config.username || 'Unknown'),
+        classification: config.classification,
+        mergeKey: config.mergeKey,
+      });
     }
   }
-  return stakedByPk;
+
+  // Fetch profiles for username-based accounts
+  const usernameConfigs = WALLET_CONFIG.filter((c) => !c.publicKeyBase58Check);
+  const profileResults = await runBatched(usernameConfigs, 5, async (config) => {
+    try {
+      const profileRes = (await desoPost('/get-single-profile', {
+        Username: config.username,
+      })) as { Profile?: { PublicKeyBase58Check?: string } };
+      const pk = profileRes.Profile?.PublicKeyBase58Check;
+      if (pk) return { pk, config };
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  for (const { pk, config } of profileResults.values()) {
+    if (pk && config) {
+      trackedByPk.set(pk, {
+        displayName: config.displayName ?? config.username,
+        classification: config.classification,
+        mergeKey: config.mergeKey,
+      });
+    }
+  }
+
+  const [activeNodes, lockedNodes] = await Promise.all([
+    fetchAllStakeNodesUnfiltered(ALL_STAKE_ENTRIES_QUERY, {}),
+    fetchAllStakeNodesUnfiltered(ALL_LOCKED_STAKE_ENTRIES_QUERY, {}),
+  ]);
+
+  const byValidatorStaker = new Map<string, Map<string, number>>();
+  for (const { stakerPk, validatorPk, amountNanos } of [...activeNodes, ...lockedNodes]) {
+    let byStaker = byValidatorStaker.get(validatorPk);
+    if (!byStaker) {
+      byStaker = new Map();
+      byValidatorStaker.set(validatorPk, byStaker);
+    }
+    byStaker.set(stakerPk, (byStaker.get(stakerPk) ?? 0) + amountNanos);
+  }
+
+  const allValidatorPks = Array.from(byValidatorStaker.keys());
+  const allStakerPks = new Set<string>();
+  for (const byStaker of byValidatorStaker.values()) {
+    for (const pk of byStaker.keys()) allStakerPks.add(pk);
+  }
+  const untrackedPks = Array.from(allStakerPks).filter((pk) => !trackedByPk.has(pk));
+
+  const [validatorNames, stakerNames] = await Promise.all([
+    fetchUsernamesForPks(allValidatorPks),
+    fetchUsernamesForPks(untrackedPks),
+  ]);
+
+  const buckets: AllStakedDesoBucket[] = [];
+  for (const [validatorPk, byStaker] of byValidatorStaker) {
+    const validatorName = validatorNames.get(validatorPk) ?? `Validator ${validatorPk.slice(0, 8)}…`;
+    const foundation: AllStakedDesoRow[] = [];
+    const community: AllStakedDesoRow[] = [];
+    let total = 0;
+
+    // Build rows, merging by mergeKey when present
+    const byMergeKey = new Map<string, { stakerPk: string; stakerName: string; hasUsername: boolean; classification: AllStakedDesoRow['classification']; amount: number }>();
+    for (const [stakerPk, amountNanos] of byStaker) {
+      const amount = amountNanos / NANOS_PER_DESO;
+      total += amount;
+      const tracked = trackedByPk.get(stakerPk);
+      const stakerName = tracked?.displayName ?? stakerNames.get(stakerPk) ?? `${stakerPk.slice(0, 8)}…`;
+      const hasUsername = !!tracked || stakerNames.has(stakerPk);
+      const classification = tracked
+        ? tracked.classification
+        : ('COMMUNITY' as const);
+      const key = tracked?.mergeKey ?? stakerPk;
+      const existing = byMergeKey.get(key);
+      if (existing) {
+        existing.amount += amount;
+      } else {
+        byMergeKey.set(key, { stakerPk, stakerName, hasUsername, classification, amount });
+      }
+    }
+    const rows: AllStakedDesoRow[] = Array.from(byMergeKey.values()).map((r) => ({
+      stakerPk: r.stakerPk,
+      stakerName: r.stakerName,
+      hasUsername: r.hasUsername,
+      classification: r.classification,
+      amount: r.amount,
+      validatorPk,
+      validatorName,
+    }));
+    rows.sort((a, b) => b.amount - a.amount);
+    for (const r of rows) {
+      if (r.classification === 'FOUNDATION' || r.classification === 'AMM' || r.classification === 'FOUNDER') {
+        foundation.push(r);
+      } else {
+        community.push(r);
+      }
+    }
+
+    const validatorType = getValidatorType(validatorName);
+    buckets.push({
+      validatorKey: validatorPk,
+      validatorName,
+      validatorType,
+      foundation,
+      community,
+      total,
+    });
+  }
+
+  // Sort: Core first (by total desc), then Community (by total desc)
+  buckets.sort((a, b) => {
+    if (a.validatorType !== b.validatorType) return a.validatorType === 'core' ? -1 : 1;
+    return b.total - a.total;
+  });
+  return buckets;
 }
 
 /** Token creator usernames for get-hodlers-for-public-key (fetches all holders of that token) */
@@ -232,9 +578,23 @@ async function runBatched<T, R>(
 }
 
 export async function fetchWalletBalances(): Promise<WalletData[]> {
-  // 1. Build tracked users: publicKey -> { displayName, classification } (5 at a time to avoid rate limits)
-  const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification'] }>();
-  const profileResults = await runBatched(WALLET_CONFIG, 5, async (config) => {
+  // 1. Build tracked users: publicKey -> { displayName, classification, mergeKey? }
+  const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification']; mergeKey?: string }>();
+
+  // Add public-key-only accounts first (no username lookup)
+  for (const config of WALLET_CONFIG) {
+    if (config.publicKeyBase58Check) {
+      trackedByPk.set(config.publicKeyBase58Check, {
+        displayName: config.displayName ?? (config.username || 'Unknown'),
+        classification: config.classification,
+        mergeKey: config.mergeKey,
+      });
+    }
+  }
+
+  // Fetch profiles for username-based accounts (5 at a time)
+  const usernameConfigs = WALLET_CONFIG.filter((c) => !c.publicKeyBase58Check);
+  const profileResults = await runBatched(usernameConfigs, 5, async (config) => {
     try {
       const profileRes = (await desoPost('/get-single-profile', {
         Username: config.username,
@@ -251,6 +611,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       trackedByPk.set(pk, {
         displayName: config.displayName ?? config.username,
         classification: config.classification,
+        mergeKey: config.mergeKey,
       });
     }
   }
@@ -296,59 +657,92 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
   }
 
   const stakedByPk = await fetchStakedByPublicKey(publicKeys);
-  const stakeByPk = new Map<string, { unstaked: number; staked: number }>();
+  const allValidatorPks = new Set<string>();
+  for (const entries of stakedByPk.values()) {
+    for (const e of entries) allValidatorPks.add(e.validatorPk);
+  }
+  const validatorNames = await fetchUsernamesForPks(Array.from(allValidatorPks));
+  const stakeByPk = new Map<string, { unstaked: number; staked: number; stakedByValidator: StakedByValidator[] }>();
   for (const pk of publicKeys) {
     const user = usersList.find((u) => u.PublicKeyBase58Check === pk);
     const balanceNanos = user?.BalanceNanos ?? 0;
     const desoBalanceNanos = user?.DESOBalanceNanos ?? balanceNanos;
     const lockedNanos = user?.LockedBalanceNanos;
-    // Spendable = DESOBalanceNanos (liquid); when undefined, use BalanceNanos
     const spendable = desoBalanceNanos / NANOS_PER_DESO;
-    let staked = stakedByPk.get(pk) ?? 0;
+    const entries = stakedByPk.get(pk) ?? [];
+    let staked = entries.reduce((s, e) => s + e.amount, 0);
     if (staked === 0 && lockedNanos != null) {
       staked = lockedNanos / NANOS_PER_DESO;
     } else if (staked === 0 && balanceNanos > 0 && desoBalanceNanos < balanceNanos) {
-      // Fallback: Staked = BalanceNanos - DESOBalanceNanos (total - spendable)
       staked = (balanceNanos - desoBalanceNanos) / NANOS_PER_DESO;
     }
-    stakeByPk.set(pk, { unstaked: spendable, staked });
+    const stakedByValidator: StakedByValidator[] = entries.map((e) => ({
+      ...e,
+      validatorName: validatorNames.get(e.validatorPk),
+    }));
+    stakeByPk.set(pk, { unstaked: spendable, staked, stakedByValidator });
   }
 
-  // 4. Build results
-  const results: WalletData[] = [];
+  // 4. Build results (group by mergeKey when present)
+  const groupKeyToPks = new Map<string, string[]>();
   for (const pk of publicKeys) {
     const meta = trackedByPk.get(pk)!;
+    const key = meta.mergeKey ?? pk;
+    const arr = groupKeyToPks.get(key) ?? [];
+    arr.push(pk);
+    groupKeyToPks.set(key, arr);
+  }
+
+  const results: WalletData[] = [];
+  for (const [groupKey, pksInGroup] of groupKeyToPks) {
+    const meta = trackedByPk.get(pksInGroup[0])!;
     const balances: Record<string, number> = {};
 
-    const tokenMap = tokenHoldingsByPk.get(pk);
-    if (tokenMap) {
-      for (const [token, amt] of tokenMap) {
-        if (amt > 0) balances[token] = amt;
+    for (const pk of pksInGroup) {
+      const tokenMap = tokenHoldingsByPk.get(pk);
+      if (tokenMap) {
+        for (const [token, amt] of tokenMap) {
+          if (amt > 0) balances[token] = (balances[token] ?? 0) + amt;
+        }
       }
     }
 
-    const stakeData = stakeByPk.get(pk);
-    const user = usersList.find((u) => u.PublicKeyBase58Check === pk);
-    let desoBalance: number;
-    if (stakeData) {
-      desoBalance = stakeData.unstaked + stakeData.staked;
-    } else {
-      desoBalance = (user?.DESOBalanceNanos ?? user?.BalanceNanos ?? 0) / NANOS_PER_DESO;
+    let totalUnstaked = 0;
+    let totalStaked = 0;
+    const stakedByValidatorMap = new Map<string, number>();
+    for (const pk of pksInGroup) {
+      const stakeData = stakeByPk.get(pk);
+      const user = usersList.find((u) => u.PublicKeyBase58Check === pk);
+      if (stakeData) {
+        totalUnstaked += stakeData.unstaked;
+        totalStaked += stakeData.staked;
+        for (const e of stakeData.stakedByValidator) {
+          stakedByValidatorMap.set(e.validatorPk, (stakedByValidatorMap.get(e.validatorPk) ?? 0) + e.amount);
+        }
+      } else {
+        const desoNanos = user?.DESOBalanceNanos ?? user?.BalanceNanos ?? 0;
+        totalUnstaked += desoNanos / NANOS_PER_DESO;
+      }
     }
+    const desoBalance = totalUnstaked + totalStaked;
     if (desoBalance > 0) balances['DESO'] = desoBalance;
 
-    // Exclude Focus account's Focus balance (minted, not bought on DeSo – no real significance)
     if (meta.displayName === 'focus' && balances.Focus) {
       delete balances.Focus;
     }
+
+    const stakedByValidator: StakedByValidator[] = Array.from(stakedByValidatorMap.entries()).map(
+      ([validatorPk, amount]) => ({ validatorPk, validatorName: validatorNames.get(validatorPk), amount })
+    );
 
     results.push({
       name: meta.displayName,
       classification: meta.classification,
       balances,
       usdValue: 0,
-      desoStaked: stakeData?.staked,
-      desoUnstaked: stakeData?.unstaked,
+      desoStaked: totalStaked > 0 ? totalStaked : undefined,
+      desoUnstaked: totalUnstaked > 0 ? totalUnstaked : undefined,
+      stakedByValidator: stakedByValidator.length > 0 ? stakedByValidator : undefined,
     });
   }
 

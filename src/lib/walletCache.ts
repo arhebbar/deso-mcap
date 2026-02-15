@@ -4,7 +4,7 @@
  */
 
 const CACHE_KEY = 'deso-wallet-cache';
-const CACHE_VERSION = 9; // Batched profile lookups; force refresh for DeSo Bulls
+const CACHE_VERSION = 11; // SG_Vault merged with StarGeezer; invalidate stale cache
 
 export interface CachedWalletEntry {
   name: string;
@@ -13,6 +13,7 @@ export interface CachedWalletEntry {
   usdValue: number;
   desoStaked?: number;
   desoUnstaked?: number;
+  stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>;
 }
 
 export interface CachedWalletData {

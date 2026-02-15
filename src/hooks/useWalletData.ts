@@ -15,7 +15,7 @@ type DataSource = 'live' | 'cached' | 'static';
  * order book doesn't appear in get-users-stateless UsersYouHODL).
  */
 function mergeWithStatic(
-  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number },
+  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }> },
   staticByName: Map<string, (typeof STATIC_WALLETS)[0]>
 ) {
   const fallback = staticByName.get(api.name);
@@ -33,6 +33,7 @@ function mergeWithStatic(
     balances: mergedBalances,
     desoStaked: api.desoStaked ?? fallback?.desoStaked,
     desoUnstaked: api.desoUnstaked ?? fallback?.desoUnstaked,
+    stakedByValidator: api.stakedByValidator ?? (fallback as { stakedByValidator?: typeof api.stakedByValidator })?.stakedByValidator,
   };
 }
 
@@ -91,6 +92,7 @@ export function useWalletData() {
           usdValue: c?.usdValue ?? fallback?.usdValue ?? 0,
           desoStaked: c?.desoStaked ?? fallback?.desoStaked,
           desoUnstaked: c?.desoUnstaked ?? fallback?.desoUnstaked,
+          stakedByValidator: c?.stakedByValidator ?? (fallback as { stakedByValidator?: typeof c.stakedByValidator })?.stakedByValidator,
         };
       });
       dataSource = 'cached';
@@ -130,6 +132,7 @@ export function useWalletData() {
   const founderDeso = wallets
     .filter((w) => w.classification === 'FOUNDER')
     .reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+  const desoBullsDeso = desoBullsWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
 
   const foundationDusdc =
     foundationWallets.length > 0 ? foundationWallets[0].balances.dUSDC ?? 0 : 0;
@@ -142,6 +145,7 @@ export function useWalletData() {
     ammDeso,
     foundationDeso,
     founderDeso,
+    desoBullsDeso,
     foundationDusdc,
     isLoading: query.isLoading,
     isLive: dataSource === 'live',

@@ -26,7 +26,7 @@ export const MARKET_DATA: MarketData = {
   desoPrice: 5.78,
   desoTotalSupply: 12_200_000,
   desoStaked: 5_730_000,
-  btcPrice: 97_400,
+  btcPrice: 100_000, // Fallback when live API fails; live uses CoinGecko
   ethPrice: 2_640,
   solPrice: 196,
   focusPrice: 0.00034,
@@ -94,24 +94,59 @@ export const FOUNDER_WALLETS: WalletData[] = [
 /** DeSo Bulls - community holders. No static fallback; API/cache only. */
 export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Randhir (Me)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'HighKey', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'JordanLintz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'LukeLintz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'StarGeezer', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'DesocialWorld', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'Edokoevoet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'StarGeezer (incl. SG_Vault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Gabrielist', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'RobertGraham', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: '0xAustin', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'BenErsing', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Darian_Parrish', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'VishalGulia', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ZeroToOne', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'anku', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'fllwthrvr', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'PremierNS', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'WhaleDShark', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Crowd33 / CrowdWallet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
 ];
+
+/** Validator usernames considered "Core" (foundation-run). */
+export const CORE_VALIDATOR_USERNAMES: string[] = [
+  'LazyNina',
+  'NOT_AN_AGI',
+  'STAKE_TO_ME_OR_ELSE',
+  'REVOLUTIONARY_STAKING',
+  'simple_man_staking',
+  'respect_for_yield',
+  'AmericanStakers',
+  'UtopianCondition',
+  'yumyumstake',
+  'DesoSpaceStation',
+  'SAFU_Stake',
+];
+
+/** Validator usernames considered "Community". */
+export const COMMUNITY_VALIDATOR_USERNAMES: string[] = [
+  'DesocialWorldValidator',
+  'HighKeyValidator',
+  'NFTzToken',
+  '0xAustinValidator',
+  'ryleesnetValidator',
+  'SafetyNetValidator',
+  'TheItinerantValidator',
+  'BeyondSocialValidator',
+  'OmegaValidator',
+  'SafetyNetFundingValidator',
+  'x_dolla_DOT_games',
+  'DeSoNoCode',
+  'Imperator_co',
+  'NameTradeValidator',
+  'excelsa',
+];
+
+/** Placeholder: DESO locked in Creator Coins v1 AMMs. Set when data available. */
+export const CREATOR_COINS_V1_DESO = 0;
 
 // Fallback when API fails. BTC/ETH/SOL are fetched from treasuryApi; USDC has no public API.
 export const EXTERNAL_TREASURY = {
@@ -191,7 +226,7 @@ export function generateHistoricalData(days: number) {
       ammLiquidity: 11_800_000 * noise(),
       stakedSupply: 5_730_000 * noise(),
       desoPrice: 5.78 * noise(),
-      btcPrice: 97_400 * noise(),
+      btcPrice: 100_000 * noise(),
     });
   }
   return data;
