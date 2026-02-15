@@ -27,6 +27,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/deso-hodlers/, "/api/v0"),
       },
+      "/deso-graphql": {
+        target: "https://graphql-prod.deso.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/deso-graphql/, "/graphql"),
+      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

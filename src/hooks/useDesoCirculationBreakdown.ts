@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useWalletData } from './useWalletData';
 import { useStakedDesoData } from './useStakedDesoData';
 import { useLiveData } from './useLiveData';
-import { CREATOR_COINS_V1_DESO } from '@/data/desoData';
 import type { AllStakedDesoBucket } from '@/api/walletApi';
 
 export interface CirculationNode {
@@ -50,6 +49,7 @@ export function useDesoCirculationBreakdown() {
       founderDeso,
       desoBullsDeso,
       ammWallets,
+      ccv1TotalDeso,
     } = walletData;
 
     const ammOpenfundDeso = ammWallets
@@ -66,7 +66,7 @@ export function useDesoCirculationBreakdown() {
 
     const accounted =
       totalStaked +
-      CREATOR_COINS_V1_DESO +
+      ccv1TotalDeso +
       ammOpenfundDeso +
       ammFocusDeso +
       ammDesoOnly +
@@ -106,7 +106,7 @@ export function useDesoCirculationBreakdown() {
       label: 'Not Staked',
       amount: totalSupply - totalStaked,
       children: [
-        { label: 'Creator Coins v1', amount: CREATOR_COINS_V1_DESO },
+        { label: 'Creator Coins v1', amount: ccv1TotalDeso },
         { label: 'Openfund Tokens bought using DESO - Core + Community', amount: ammOpenfundDeso },
         { label: 'Focus Tokens bought using DESO - Core + Community', amount: ammFocusDeso },
         {
@@ -135,6 +135,7 @@ export function useDesoCirculationBreakdown() {
     walletData.founderDeso,
     walletData.desoBullsDeso,
     walletData.ammWallets,
+    walletData.ccv1TotalDeso,
     walletData.isLoading,
     stakedData.isLoading,
   ]);

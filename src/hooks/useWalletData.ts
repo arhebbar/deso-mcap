@@ -15,7 +15,7 @@ type DataSource = 'live' | 'cached' | 'static';
  * order book doesn't appear in get-users-stateless UsersYouHODL).
  */
 function mergeWithStatic(
-  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }> },
+  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>; ccv1ValueDeso?: number },
   staticByName: Map<string, (typeof STATIC_WALLETS)[0]>
 ) {
   const fallback = staticByName.get(api.name);
@@ -34,6 +34,7 @@ function mergeWithStatic(
     desoStaked: api.desoStaked ?? fallback?.desoStaked,
     desoUnstaked: api.desoUnstaked ?? fallback?.desoUnstaked,
     stakedByValidator: api.stakedByValidator ?? (fallback as { stakedByValidator?: typeof api.stakedByValidator })?.stakedByValidator,
+    ccv1ValueDeso: api.ccv1ValueDeso ?? (fallback as { ccv1ValueDeso?: number })?.ccv1ValueDeso,
   };
 }
 
@@ -93,6 +94,7 @@ export function useWalletData() {
           desoStaked: c?.desoStaked ?? fallback?.desoStaked,
           desoUnstaked: c?.desoUnstaked ?? fallback?.desoUnstaked,
           stakedByValidator: c?.stakedByValidator ?? (fallback as { stakedByValidator?: typeof c.stakedByValidator })?.stakedByValidator,
+          ccv1ValueDeso: c?.ccv1ValueDeso ?? (fallback as { ccv1ValueDeso?: number })?.ccv1ValueDeso,
         };
       });
       dataSource = 'cached';
@@ -137,6 +139,8 @@ export function useWalletData() {
   const foundationDusdc =
     foundationWallets.length > 0 ? foundationWallets[0].balances.dUSDC ?? 0 : 0;
 
+  const ccv1TotalDeso = wallets.reduce((sum, w) => sum + (w.ccv1ValueDeso ?? 0), 0);
+
   return {
     wallets,
     ammWallets,
@@ -147,6 +151,7 @@ export function useWalletData() {
     founderDeso,
     desoBullsDeso,
     foundationDusdc,
+    ccv1TotalDeso,
     isLoading: query.isLoading,
     isLive: dataSource === 'live',
     dataSource,

@@ -11,7 +11,7 @@ import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES } from '@/data/
 /** Use Vite proxy in dev, Vercel rewrites in prod to avoid CORS */
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
-const DESO_GRAPHQL = import.meta.env.DEV ? 'https://graphql-prod.deso.com/graphql' : '/api/deso-graphql';
+const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql';
 const NANOS_PER_DESO = 1e9;
 /** DAO coins (Openfund, Focus, dUSDC, etc.) use 1e18 decimals like ERC-20 */
 const NANOS_PER_DAO_COIN = 1e18;
@@ -41,6 +41,8 @@ export interface WalletData {
   desoUnstaked?: number;
   /** Per-validator stake breakdown (for StakedDesoTable grouping) */
   stakedByValidator?: StakedByValidator[];
+  /** Net value of CCv1 (Creator Coin v1) holdings in DESO, from GraphQL creatorCoinBalances */
+  ccv1ValueDeso?: number;
 }
 
 const WALLET_CONFIG: WalletConfig[] = [
@@ -50,6 +52,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'focus', classification: 'FOUNDATION' },
   { username: 'openfund', classification: 'FOUNDATION' },
   { username: 'Deso', classification: 'FOUNDATION' },
+  { username: 'deso10Mdaubet', classification: 'FOUNDATION' },
   // AMM
   { username: 'AMM_DESO_24_PlAEU', classification: 'AMM' },
   { username: 'AMM_DESO_23_GrYpe', classification: 'AMM' },
@@ -63,7 +66,11 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Mossified', classification: 'FOUNDER' },
   { username: 'LazyNina', classification: 'FOUNDER' },
   // DeSo Bulls (same fetch method as Foundation/Founder)
-  { username: 'Randhir', displayName: 'Randhir (Me)', classification: 'DESO_BULL' },
+  { username: 'Randhir', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
+  { username: 'RandhirStakingWallet', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
+  { username: 'Twinstars', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
+  { username: 'desoscams', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
+  { username: 'Bhagyasri', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
   { username: 'HighKey', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'JordanLintz', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'LukeLintz', displayName: 'HighKey / JordanLintz / LukeLintz', classification: 'DESO_BULL', mergeKey: 'HighKey' },
@@ -74,7 +81,8 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Edokoevoet', displayName: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', mergeKey: 'DesocialWorld' },
   { username: 'Gabrielist', classification: 'DESO_BULL' },
   { username: 'RobertGraham', classification: 'DESO_BULL' },
-  { username: '0xAustin', classification: 'DESO_BULL' },
+  { username: '0xAustin', displayName: '0xAustin', classification: 'DESO_BULL', mergeKey: '0xAustin' },
+  { username: '0xVault', displayName: '0xAustin', classification: 'DESO_BULL', mergeKey: '0xAustin' },
   { username: 'BenErsing', classification: 'DESO_BULL' },
   { username: 'Darian_Parrish', classification: 'DESO_BULL' },
   { username: 'VishalGulia', displayName: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', mergeKey: 'VishalGulia' },
@@ -89,6 +97,41 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'WhaleDVault', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
   { username: 'Crowd33', displayName: 'Crowd33 / CrowdWallet', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
   { username: 'CrowdWallet', displayName: 'Crowd33 / CrowdWallet', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
+  // Long-term community members
+  { username: 'Krassenstein', classification: 'DESO_BULL' },
+  { username: 'Kra_Wallet', classification: 'DESO_BULL', mergeKey: 'Krassenstein' },
+  { username: 'HKrassenstein', classification: 'DESO_BULL', mergeKey: 'Krassenstein' },
+  { username: 'Chadix', classification: 'DESO_BULL' },
+  { username: 'Dirham', classification: 'DESO_BULL' },
+  { username: 'EileenCoyle', displayName: 'EileenCoyle', classification: 'DESO_BULL', mergeKey: 'EileenCoyle' },
+  { username: 'EileenVault', displayName: 'EileenCoyle', classification: 'DESO_BULL', mergeKey: 'EileenCoyle' },
+  { username: 'LuisEddie', classification: 'DESO_BULL' },
+  { username: 'Homey', classification: 'DESO_BULL' },
+  { username: 'tobiasschmid', classification: 'DESO_BULL' },
+  { username: 'CreativeG', classification: 'DESO_BULL' },
+  { username: 'BKPower8', classification: 'DESO_BULL' },
+  { username: 'rajmal', classification: 'DESO_BULL' },
+  { username: 'DrMoz', classification: 'DESO_BULL' },
+  { username: 'Gatucu', classification: 'DESO_BULL' },
+  { username: 'mcMarsh', displayName: 'mcMarsh', classification: 'DESO_BULL', mergeKey: 'mcMarsh' },
+  { username: 'mcMarshstaking', displayName: 'mcMarsh', classification: 'DESO_BULL', mergeKey: 'mcMarsh' },
+  { username: 'ImJigarShah', displayName: 'ImJigarShah', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
+  { username: 'thesarcasm', displayName: 'ImJigarShah', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
+  { username: 'MrTriplet', classification: 'DESO_BULL' },
+  { username: 'FedeDM', displayName: 'FedeDM', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
+  { username: 'FedeDM_Guardian', displayName: 'FedeDM', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
+  { username: 'SeWiJuga', classification: 'DESO_BULL' },
+  { username: 'PeeBoy17', classification: 'DESO_BULL' },
+  { username: 'Pixelangelo', classification: 'DESO_BULL' },
+  { username: 'NFTLegacy', classification: 'DESO_BULL' },
+  { username: 'ElizabethTubbs', classification: 'DESO_BULL' },
+  { username: 'ThisDayInMusicHistory', displayName: 'ThisDayInMusicHistory', classification: 'DESO_BULL', mergeKey: 'ThisDayInMusicHistory' },
+  { username: 'MusicHeals', displayName: 'ThisDayInMusicHistory', classification: 'DESO_BULL', mergeKey: 'ThisDayInMusicHistory' },
+  { username: 'DonBarnhart', classification: 'DESO_BULL' },
+  { username: 'TangledBrush918', classification: 'DESO_BULL' },
+  { username: 'Moggel', classification: 'DESO_BULL' },
+  { username: 'ReihanRei', classification: 'DESO_BULL' },
+  { username: 'przemyslawdygdon', classification: 'DESO_BULL' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {
@@ -153,7 +196,63 @@ const ALL_LOCKED_STAKE_ENTRIES_QUERY = `
   }
 `;
 
+const CREATOR_COIN_BALANCES_QUERY = `
+  query CreatorCoinBalances($pks: [String!]!, $after: Cursor) {
+    creatorCoinBalances(first: 500, filter: { holder: { publicKey: { in: $pks } } }, after: $after) {
+      nodes {
+        totalValueNanos
+        holder { publicKey }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
 type StakeEntry = { validatorPk: string; amount: number };
+
+/** Fetch CCv1 (Creator Coin v1) net value in DESO per public key via GraphQL. */
+async function fetchCcV1ValueByPublicKey(
+  publicKeys: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (publicKeys.length === 0) return out;
+
+  let after: string | null = null;
+  do {
+    const res = await fetch(DESO_GRAPHQL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: CREATOR_COIN_BALANCES_QUERY,
+        variables: { pks: publicKeys, after },
+      }),
+    });
+    if (!res.ok) break;
+    const data = (await res.json()) as {
+      data?: {
+        creatorCoinBalances?: {
+          nodes?: Array<{ totalValueNanos?: string; holder?: { publicKey?: string } }>;
+          pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        };
+      };
+      errors?: Array<{ message?: string }>;
+    };
+    if (data?.errors?.length) break;
+    const conn = data?.data?.creatorCoinBalances;
+    const nodes = conn?.nodes ?? [];
+    for (const n of nodes) {
+      const pk = n.holder?.publicKey;
+      if (pk) {
+        const nanos = parseFloat(n.totalValueNanos ?? '0');
+        out.set(pk, (out.get(pk) ?? 0) + nanos / NANOS_PER_DESO);
+      }
+    }
+    const hasNext = conn?.pageInfo?.hasNextPage ?? false;
+    after = hasNext ? (conn?.pageInfo?.endCursor ?? null) : null;
+  } while (after);
+
+  return out;
+}
 
 async function fetchAllStakeNodes(
   query: string,
@@ -656,7 +755,10 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
     }
   }
 
-  const stakedByPk = await fetchStakedByPublicKey(publicKeys);
+  const [stakedByPk, ccv1ByPk] = await Promise.all([
+    fetchStakedByPublicKey(publicKeys),
+    fetchCcV1ValueByPublicKey(publicKeys),
+  ]);
   const allValidatorPks = new Set<string>();
   for (const entries of stakedByPk.values()) {
     for (const e of entries) allValidatorPks.add(e.validatorPk);
@@ -735,6 +837,8 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       ([validatorPk, amount]) => ({ validatorPk, validatorName: validatorNames.get(validatorPk), amount })
     );
 
+    const ccv1ValueDeso = pksInGroup.reduce((s, pk) => s + (ccv1ByPk.get(pk) ?? 0), 0);
+
     results.push({
       name: meta.displayName,
       classification: meta.classification,
@@ -743,6 +847,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       desoStaked: totalStaked > 0 ? totalStaked : undefined,
       desoUnstaked: totalUnstaked > 0 ? totalUnstaked : undefined,
       stakedByValidator: stakedByValidator.length > 0 ? stakedByValidator : undefined,
+      ccv1ValueDeso: ccv1ValueDeso > 0 ? ccv1ValueDeso : undefined,
     });
   }
 

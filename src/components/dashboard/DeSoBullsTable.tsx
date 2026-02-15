@@ -1,18 +1,23 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useWalletData } from '@/hooks/useWalletData';
 import { getUsernameForLink } from '@/api/walletApi';
 import { useLiveData } from '@/hooks/useLiveData';
 import { formatUsd, formatRelativeTime } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Minus } from 'lucide-react';
+
+const DESO_BULL_OTHERS_THRESHOLD = 10; // DeSo Bulls with < $10 grouped as "Others"
 
 export default function DeSoBullsTable() {
   const { desoBullsWallets, isLoading, isLive, dataSource, cachedAt } = useWalletData();
   const { marketData } = useLiveData();
+  const [openOthers, setOpenOthers] = useState(false);
 
   const allWallets = useMemo(() => {
     const withUsd = desoBullsWallets.map((w) => {
       const b = w.balances;
+      const ccv1Usd = (w.ccv1ValueDeso ?? 0) * marketData.desoPrice;
       const usdValue =
         (b.DESO || 0) * marketData.desoPrice +
         (b.dUSDC || 0) +
@@ -20,12 +25,16 @@ export default function DeSoBullsTable() {
         (b.Openfund || 0) * marketData.openfundPrice +
         (b.dBTC || 0) * marketData.btcPrice +
         (b.dETH || 0) * marketData.ethPrice +
-        (b.dSOL || 0) * marketData.solPrice;
+        (b.dSOL || 0) * marketData.solPrice +
+        ccv1Usd;
       return { ...w, usdValue };
     });
     return [...withUsd].sort((a, b) => b.usdValue - a.usdValue);
   }, [desoBullsWallets, marketData]);
 
+  const mainWallets = allWallets.filter((w) => w.usdValue >= DESO_BULL_OTHERS_THRESHOLD);
+  const othersWallets = allWallets.filter((w) => w.usdValue < DESO_BULL_OTHERS_THRESHOLD);
+  const othersTotal = othersWallets.reduce((s, w) => s + w.usdValue, 0);
   const totalUsd = allWallets.reduce((s, w) => s + w.usdValue, 0);
 
   const fmt = (n: number) =>
@@ -63,7 +72,7 @@ export default function DeSoBullsTable() {
               </tr>
             </thead>
             <tbody>
-              {allWallets.map((w) => (
+              {mainWallets.map((w) => (
                 <tr key={w.name}>
                   <td className="font-mono text-xs">
                     <Link to={`/u/${encodeURIComponent(getUsernameForLink(w.name))}`} className="text-primary hover:underline">
@@ -87,6 +96,8 @@ export default function DeSoBullsTable() {
                           items.push({ key: token, label: token, amt });
                         }
                       }
+                      const ccv1 = w.ccv1ValueDeso ?? 0;
+                      if (ccv1 > 0) items.push({ key: 'CCv1', label: 'CCv1', amt: ccv1 });
                       if (items.length === 0) return <span className="text-muted-foreground/60">—</span>;
                       return items.map(({ key, label, amt }) => (
                         <span key={key} className="mr-3">
@@ -98,6 +109,70 @@ export default function DeSoBullsTable() {
                   <td className="text-right font-mono text-sm">{formatUsd(w.usdValue)}</td>
                 </tr>
               ))}
+              {othersWallets.length > 0 && (
+                <>
+                  <tr
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpenOthers((p) => !p)}
+                    onKeyDown={(e) => e.key === 'Enter' && setOpenOthers((p) => !p)}
+                    className="cursor-pointer hover:bg-[var(--table-row-hover)] transition-colors border-b border-border bg-muted/20"
+                  >
+                    <td className="font-mono text-xs py-2">
+                      <div className="flex items-center gap-2">
+                        {openOthers ? (
+                          <Minus className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+                        )}
+                        <span className="text-muted-foreground">
+                          Others (&lt;${DESO_BULL_OTHERS_THRESHOLD}, {othersWallets.length} wallet{othersWallets.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-xs text-muted-foreground">—</td>
+                    <td className="text-right font-mono text-sm">{formatUsd(othersTotal)}</td>
+                  </tr>
+                  {openOthers &&
+                    othersWallets.map((w) => (
+                      <tr key={w.name}>
+                        <td className="font-mono text-xs pl-6">
+                          <Link to={`/u/${encodeURIComponent(getUsernameForLink(w.name))}`} className="text-primary hover:underline">
+                            {w.name}
+                          </Link>
+                        </td>
+                        <td className="text-xs text-muted-foreground">
+                          {(() => {
+                            const tokens = ['DESO', 'Openfund', 'Focus', 'dUSDC', 'dBTC', 'dETH', 'dSOL'] as const;
+                            const items: { key: string; label: string; amt: number }[] = [];
+                            const hasStakeBreakdown = w.desoStaked != null || w.desoUnstaked != null;
+                            const staked = w.desoStaked ?? 0;
+                            const unstaked = w.desoUnstaked ?? 0;
+                            for (const token of tokens) {
+                              const amt = w.balances[token] ?? 0;
+                              if (amt <= 0) continue;
+                              if (token === 'DESO' && hasStakeBreakdown && (staked > 0 || unstaked > 0)) {
+                                if (unstaked > 0) items.push({ key: 'DESO-unstaked', label: 'DESO (unstaked)', amt: unstaked });
+                                if (staked > 0) items.push({ key: 'DESO-staked', label: 'DESO (staked)', amt: staked });
+                              } else {
+                                items.push({ key: token, label: token, amt });
+                              }
+                            }
+                            const ccv1 = w.ccv1ValueDeso ?? 0;
+                            if (ccv1 > 0) items.push({ key: 'CCv1', label: 'CCv1', amt: ccv1 });
+                            if (items.length === 0) return <span className="text-muted-foreground/60">—</span>;
+                            return items.map(({ key, label, amt }) => (
+                              <span key={key} className="mr-3">
+                                <span className="text-foreground font-mono">{fmt(amt)}</span> {label}
+                              </span>
+                            ));
+                          })()}
+                        </td>
+                        <td className="text-right font-mono text-sm">{formatUsd(w.usdValue)}</td>
+                      </tr>
+                    ))}
+                </>
+              )}
               <tr className="border-t border-border font-medium">
                 <td colSpan={2} className="text-xs pt-2">
                   Total

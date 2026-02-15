@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Minus } from 'lucide-react';
 
 const SMALL_SECTION_THRESHOLD = 50_000; // Sections below this start collapsed
+const DESO_BULL_OTHERS_THRESHOLD = 10; // DeSo Bulls with < $10 grouped as "Others"
 
 const BADGE_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
@@ -40,6 +41,7 @@ export default function WalletTable() {
 
   const allWallets = useMemo(() => wallets.map((w) => {
     const b = w.balances;
+    const ccv1Usd = (w.ccv1ValueDeso ?? 0) * marketData.desoPrice;
     const usdValue =
       (b.DESO || 0) * marketData.desoPrice +
       (b.dUSDC || 0) +
@@ -47,7 +49,8 @@ export default function WalletTable() {
       (b.Openfund || 0) * marketData.openfundPrice +
       (b.dBTC || 0) * marketData.btcPrice +
       (b.dETH || 0) * marketData.ethPrice +
-      (b.dSOL || 0) * marketData.solPrice;
+      (b.dSOL || 0) * marketData.solPrice +
+      ccv1Usd;
     return { ...w, usdValue };
   }), [wallets, marketData]);
 
@@ -104,6 +107,9 @@ export default function WalletTable() {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [openOthers, setOpenOthers] = useState(false);
+  const toggleOthers = () => setOpenOthers((p) => !p);
+
   const totalUsd = allWallets.reduce((s, w) => s + w.usdValue, 0);
 
   function WalletRow({ w }: { w: (typeof allWallets)[0] }) {
@@ -135,6 +141,8 @@ export default function WalletTable() {
                 items.push({ key: token, label: token, amt });
               }
             }
+            const ccv1 = w.ccv1ValueDeso ?? 0;
+            if (ccv1 > 0) items.push({ key: 'CCv1', label: 'CCv1', amt: ccv1 });
             return items.map(({ key, label, amt }) => (
               <span key={key} className="mr-3">
                 <span className="text-foreground font-mono">{fmt(amt)}</span> {label}
@@ -151,6 +159,11 @@ export default function WalletTable() {
     const items = grouped[sectionKey];
     const total = sectionTotals[sectionKey];
     const isOpen = openSections[sectionKey];
+
+    const isDesoBulls = sectionKey === 'DESO_BULL';
+    const mainItems = isDesoBulls ? items.filter((w) => w.usdValue >= DESO_BULL_OTHERS_THRESHOLD) : items;
+    const othersItems = isDesoBulls ? items.filter((w) => w.usdValue < DESO_BULL_OTHERS_THRESHOLD) : [];
+    const othersTotal = othersItems.reduce((s, w) => s + w.usdValue, 0);
 
     return (
       <>
@@ -174,7 +187,41 @@ export default function WalletTable() {
             </div>
           </td>
         </tr>
-        {isOpen && items.map((w) => <WalletRow key={w.name} w={w} />)}
+        {isOpen && (
+          <>
+            {mainItems.map((w) => (
+              <WalletRow key={w.name} w={w} />
+            ))}
+            {othersItems.length > 0 && (
+              <>
+                <tr
+                  role="button"
+                  tabIndex={0}
+                  onClick={toggleOthers}
+                  onKeyDown={(e) => e.key === 'Enter' && toggleOthers()}
+                  className="cursor-pointer hover:bg-[var(--table-row-hover)] transition-colors border-b border-border bg-muted/20"
+                >
+                  <td className="py-2 pl-6">
+                    <div className="flex items-center gap-2">
+                      {openOthers ? (
+                        <Minus className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        Others (&lt;${DESO_BULL_OTHERS_THRESHOLD}, {othersItems.length} wallet{othersItems.length !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                  </td>
+                  <td><ClassBadge classification="DESO_BULL" /></td>
+                  <td className="text-xs text-muted-foreground">—</td>
+                  <td className="text-right font-mono text-sm">{formatUsd(othersTotal)}</td>
+                </tr>
+                {openOthers && othersItems.map((w) => <WalletRow key={w.name} w={w} />)}
+              </>
+            )}
+          </>
+        )}
       </>
     );
   }

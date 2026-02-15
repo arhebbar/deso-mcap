@@ -9,6 +9,8 @@ export interface WalletData {
   desoStaked?: number;
   /** DESO unstaked (when known). Total DESO = desoStaked + desoUnstaked. */
   desoUnstaked?: number;
+  /** Net value of CCv1 (Creator Coin v1) holdings in DESO */
+  ccv1ValueDeso?: number;
 }
 
 export interface MarketData {
@@ -68,6 +70,7 @@ export const FOUNDATION_WALLETS: WalletData[] = [
     balances: { DESO: 95_000, Openfund: 2_000_000, Focus: 200_000_000, dUSDC: 80_000 },
     usdValue: 750_000,
   },
+  { name: 'deso10Mdaubet', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
 
 export const AMM_WALLETS: WalletData[] = [
@@ -100,6 +103,33 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Gabrielist', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'RobertGraham', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: '0xAustin', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Krassenstein', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Chadix', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Dirham', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'EileenCoyle', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'LuisEddie', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Homey', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'tobiasschmid', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'CreativeG', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'BKPower8', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'rajmal', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DrMoz', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Gatucu', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'mcMarsh', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ImJigarShah', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'MrTriplet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'FedeDM', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'SeWiJuga', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'PeeBoy17', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Pixelangelo', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'NFTLegacy', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ElizabethTubbs', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ThisDayInMusicHistory', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DonBarnhart', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'TangledBrush918', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Moggel', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ReihanRei', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'przemyslawdygdon', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'BenErsing', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Darian_Parrish', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'VishalGulia (incl. VishalWallet, NIX0057)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
