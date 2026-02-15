@@ -37,7 +37,7 @@ const WALLET_CONFIG = [
   { username: 'Darian_Parrish', displayName: null },
   { username: 'VishalGulia', displayName: null },
   { username: 'ZeroToOne', displayName: null },
-  { username: 'whoisanku', displayName: null },
+  { username: 'anku', displayName: null },
   { username: 'fllwthrvr', displayName: null },
   { username: 'PremierNS', displayName: null },
   { username: 'WhaleDShark', displayName: null },
@@ -140,7 +140,7 @@ async function main() {
   }
 
   console.log('\n4. DeSo Bulls specifically:');
-  const desoBulls = ['Randhir (Me)', 'HighKey', 'JordanLintz', 'LukeLintz', 'StarGeezer', 'DesocialWorld', 'Edokoevoet', 'Gabrielist', 'RobertGraham', '0xAustin', 'BenErsing', 'Darian_Parrish', 'VishalGulia', 'ZeroToOne', 'whoisanku', 'fllwthrvr', 'PremierNS', 'WhaleDShark'];
+  const desoBulls = ['Randhir (Me)', 'HighKey', 'JordanLintz', 'LukeLintz', 'StarGeezer', 'DesocialWorld', 'Edokoevoet', 'Gabrielist', 'RobertGraham', '0xAustin', 'BenErsing', 'Darian_Parrish', 'VishalGulia', 'ZeroToOne', 'anku', 'fllwthrvr', 'PremierNS', 'WhaleDShark'];
   for (const name of desoBulls) {
     const pk = usernameToPk.get(name);
     if (!pk) {

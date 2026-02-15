@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalances } from '@/api/walletApi';
 import { getWalletCache, setWalletCache, type CachedWalletEntry } from '@/lib/walletCache';
@@ -106,6 +107,19 @@ export function useWalletData() {
   for (const w of wallets) {
     if (w.name === 'focus' && w.balances.Focus) delete w.balances.Focus;
   }
+
+  // Log staked values to console for verification
+  useEffect(() => {
+    const stakedRows = wallets.map((w) => ({
+      name: w.name,
+      classification: w.classification,
+      staked: w.desoStaked ?? 0,
+      unstaked: w.desoUnstaked ?? 0,
+      total: (w.desoStaked ?? 0) + (w.desoUnstaked ?? 0),
+    }));
+    console.table(stakedRows);
+    console.log('Staked DESO by account:', Object.fromEntries(stakedRows.map((r) => [r.name, r.staked])));
+  }, [wallets]);
 
   const ammWallets = wallets.filter((w) => w.classification === 'AMM');
   const foundationWallets = wallets.filter((w) => w.classification === 'FOUNDATION');

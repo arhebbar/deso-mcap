@@ -62,7 +62,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Darian_Parrish', classification: 'DESO_BULL' },
   { username: 'VishalGulia', classification: 'DESO_BULL' },
   { username: 'ZeroToOne', classification: 'DESO_BULL' },
-  { username: 'whoisanku', classification: 'DESO_BULL' },
+  { username: 'anku', classification: 'DESO_BULL' },
   { username: 'fllwthrvr', classification: 'DESO_BULL' },
   { username: 'PremierNS', classification: 'DESO_BULL' },
   { username: 'WhaleDShark', classification: 'DESO_BULL' },
@@ -299,12 +299,17 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
   const stakeByPk = new Map<string, { unstaked: number; staked: number }>();
   for (const pk of publicKeys) {
     const user = usersList.find((u) => u.PublicKeyBase58Check === pk);
-    // DESOBalanceNanos = spendable (liquid) balance; Spendable_DESO = DESOBalanceNanos / 1e9
-    const spendable = (user?.DESOBalanceNanos ?? user?.BalanceNanos ?? 0) / NANOS_PER_DESO;
+    const balanceNanos = user?.BalanceNanos ?? 0;
+    const desoBalanceNanos = user?.DESOBalanceNanos ?? balanceNanos;
+    const lockedNanos = user?.LockedBalanceNanos;
+    // Spendable = DESOBalanceNanos (liquid); when undefined, use BalanceNanos
+    const spendable = desoBalanceNanos / NANOS_PER_DESO;
     let staked = stakedByPk.get(pk) ?? 0;
-    // Option 2 fallback: if validator API returned nothing, try LockedBalanceNanos from get-users-stateless (when node exposes it)
-    if (staked === 0 && user?.LockedBalanceNanos != null) {
-      staked = user.LockedBalanceNanos / NANOS_PER_DESO;
+    if (staked === 0 && lockedNanos != null) {
+      staked = lockedNanos / NANOS_PER_DESO;
+    } else if (staked === 0 && balanceNanos > 0 && desoBalanceNanos < balanceNanos) {
+      // Fallback: Staked = BalanceNanos - DESOBalanceNanos (total - spendable)
+      staked = (balanceNanos - desoBalanceNanos) / NANOS_PER_DESO;
     }
     stakeByPk.set(pk, { unstaked: spendable, staked });
   }
@@ -351,3 +356,11 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
 }
 
 export { WALLET_CONFIG };
+
+/** Map display name to username for /u/:username links */
+export function getUsernameForLink(displayName: string): string {
+  const config = WALLET_CONFIG.find(
+    (c) => (c.displayName ?? c.username) === displayName
+  );
+  return config?.username ?? displayName;
+}

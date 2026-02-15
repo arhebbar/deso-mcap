@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useWalletData } from '@/hooks/useWalletData';
+import { getUsernameForLink } from '@/api/walletApi';
 import { useLiveData } from '@/hooks/useLiveData';
 import { formatUsd, formatRelativeTime } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -107,9 +109,14 @@ export default function WalletTable() {
   const totalUsd = allWallets.reduce((s, w) => s + w.usdValue, 0);
 
   function WalletRow({ w }: { w: (typeof allWallets)[0] }) {
+    const username = getUsernameForLink(w.name);
     return (
       <tr>
-        <td className="font-mono text-xs">{w.name}</td>
+        <td className="font-mono text-xs">
+          <Link to={`/u/${encodeURIComponent(username)}`} className="text-primary hover:underline">
+            {w.name}
+          </Link>
+        </td>
         <td><ClassBadge classification={w.classification} /></td>
         <td className="text-xs text-muted-foreground">
           {(() => {

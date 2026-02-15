@@ -20,7 +20,7 @@ const DESO_BULLS = [
   { username: 'Darian_Parrish' },
   { username: 'VishalGulia' },
   { username: 'ZeroToOne' },
-  { username: 'whoisanku' },
+  { username: 'anku' },
   { username: 'fllwthrvr' },
   { username: 'PremierNS' },
   { username: 'WhaleDShark' },

@@ -43,7 +43,7 @@ Gringotts_Wizarding_Bank, focus, openfund, AMM_DESO_24_PlAEU, AMM_DESO_23_GrYpe,
 - WhaleDShark: Openfund 52K, Focus 33.5M, dUSDC 1.1K
 
 ### DeSo Bulls with NONE (not in first 20 pages)
-- BenErsing, whoisanku
+- BenErsing, anku
 
 ---
 

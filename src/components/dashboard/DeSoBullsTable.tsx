@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useWalletData } from '@/hooks/useWalletData';
+import { getUsernameForLink } from '@/api/walletApi';
 import { useLiveData } from '@/hooks/useLiveData';
 import { formatUsd, formatRelativeTime } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,7 +68,11 @@ export default function DeSoBullsTable() {
             <tbody>
               {allWallets.map((w) => (
                 <tr key={w.name}>
-                  <td className="font-mono text-xs">{w.name}</td>
+                  <td className="font-mono text-xs">
+                    <Link to={`/u/${encodeURIComponent(getUsernameForLink(w.name))}`} className="text-primary hover:underline">
+                      {w.name}
+                    </Link>
+                  </td>
                   <td className="text-xs text-muted-foreground">
                     {(() => {
                       const tokens = ['DESO', 'Openfund', 'Focus', 'dUSDC', 'dBTC', 'dETH', 'dSOL'] as const;

@@ -107,7 +107,7 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Darian_Parrish', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'VishalGulia', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ZeroToOne', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'whoisanku', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'anku', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'fllwthrvr', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'PremierNS', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'WhaleDShark', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
