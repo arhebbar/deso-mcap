@@ -23,10 +23,7 @@ export default function DeSoBullsTable() {
         (b.dSOL || 0) * marketData.solPrice;
       return { ...w, usdValue };
     });
-    // Randhir (Me) first, then rest sorted by USD value descending
-    const randhir = withUsd.find((w) => w.name === 'Randhir (Me)');
-    const rest = withUsd.filter((w) => w.name !== 'Randhir (Me)').sort((a, b) => b.usdValue - a.usdValue);
-    return randhir ? [randhir, ...rest] : rest;
+    return [...withUsd].sort((a, b) => b.usdValue - a.usdValue);
   }, [desoBullsWallets, marketData]);
 
   const totalUsd = allWallets.reduce((s, w) => s + w.usdValue, 0);

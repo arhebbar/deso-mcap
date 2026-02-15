@@ -62,9 +62,7 @@ export default function WalletTable() {
       if (groups[w.classification as SectionKey]) groups[w.classification as SectionKey].push(w);
     }
     const desoBulls = groups.DESO_BULL;
-    const randhir = desoBulls.find((w) => w.name === 'Randhir (Me)');
-    const rest = desoBulls.filter((w) => w.name !== 'Randhir (Me)').sort((a, b) => b.usdValue - a.usdValue);
-    const sortedDesoBulls = randhir ? [randhir, ...rest] : rest;
+    const sortedDesoBulls = [...desoBulls].sort((a, b) => b.usdValue - a.usdValue);
     return {
       FOUNDATION: [...groups.FOUNDATION].sort((a, b) => b.usdValue - a.usdValue),
       AMM: [...groups.AMM].sort((a, b) => b.usdValue - a.usdValue),
