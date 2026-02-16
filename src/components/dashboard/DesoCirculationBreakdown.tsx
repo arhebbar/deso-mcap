@@ -7,18 +7,20 @@ function fmtDeso(n: number) {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : n.toFixed(2);
 }
 
-function TreeNode({ node, depth, total, path, openKeys, toggleKey }: {
+function TreeNode({ node, depth, total, path, openKeys, toggleKey, cachedAt }: {
   node: CirculationNode;
   depth: number;
   total: number;
   path: string;
   openKeys: Set<string>;
   toggleKey: (k: string) => void;
+  cachedAt?: number;
 }) {
   const hasChildren = node.children && node.children.length > 0;
   const key = path;
   const isOpen = openKeys.has(key);
   const pct = total > 0 ? (node.amount / total) * 100 : 0;
+  const isCreatorCoins = node.label === 'Creator Coins v1';
 
   return (
     <>
@@ -37,7 +39,14 @@ function TreeNode({ node, depth, total, path, openKeys, toggleKey }: {
         ) : (
           <span className="w-4 shrink-0" />
         )}
-        <span className={`flex-1 ${depth === 0 ? 'font-medium' : 'text-muted-foreground'}`}>{node.label}</span>
+        <span className={`flex-1 ${depth === 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+          {node.label}
+          {isCreatorCoins && cachedAt != null && (
+            <span className="ml-1.5 text-[10px] text-muted-foreground/80 font-normal" title={`Cached ${new Date(cachedAt).toLocaleDateString()}`}>
+              (cached {new Date(cachedAt).toLocaleDateString()})
+            </span>
+          )}
+        </span>
         <span className="font-mono text-xs tabular-nums">{fmtDeso(node.amount)}</span>
         <span className="text-xs text-muted-foreground w-12 text-right">{pct.toFixed(1)}%</span>
       </div>
@@ -51,6 +60,7 @@ function TreeNode({ node, depth, total, path, openKeys, toggleKey }: {
             path={`${key}/${child.label}`}
             openKeys={openKeys}
             toggleKey={toggleKey}
+            cachedAt={child.label === 'Creator Coins v1' ? cachedAt : undefined}
           />
         ))}
     </>
@@ -58,7 +68,7 @@ function TreeNode({ node, depth, total, path, openKeys, toggleKey }: {
 }
 
 export default function DesoCirculationBreakdown() {
-  const { total, root, isLoading } = useDesoCirculationBreakdown();
+  const { total, root, isLoading, ccv1CachedAt } = useDesoCirculationBreakdown();
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set(['Staked', 'Not Staked']));
 
   const toggleKey = (key: string) => {
@@ -93,6 +103,7 @@ export default function DesoCirculationBreakdown() {
               path={node.label}
               openKeys={openKeys}
               toggleKey={toggleKey}
+              cachedAt={ccv1CachedAt}
             />
           ))}
         </div>

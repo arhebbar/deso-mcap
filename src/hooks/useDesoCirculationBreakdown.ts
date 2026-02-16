@@ -32,7 +32,7 @@ export function useDesoCirculationBreakdown() {
   const walletData = useWalletData();
   const stakedData = useStakedDesoData();
   const { marketData } = useLiveData();
-  const { ccv1NetworkTotalDeso } = useCCv1NetworkTotal();
+  const { ccv1NetworkTotalDeso, ccv1CachedAt } = useCCv1NetworkTotal();
 
   const breakdown = useMemo(() => {
     const totalSupply = marketData.desoTotalSupply;
@@ -51,17 +51,23 @@ export function useDesoCirculationBreakdown() {
       founderDeso,
       desoBullsDeso,
       ammWallets,
+      wallets,
       ccv1TotalDeso,
     } = walletData;
     const ccv1Deso = ccv1NetworkTotalDeso ?? ccv1TotalDeso;
 
-    const ammOpenfundDeso = ammWallets
-      .filter((w) => w.name.includes('openfund'))
-      .reduce((s, w) => s + (w.balances.DESO || 0), 0);
-    const ammFocusDeso = ammWallets
-      .filter((w) => w.name.includes('focus'))
-      .reduce((s, w) => s + (w.balances.DESO || 0), 0);
-    const ammDesoOnly = ammDeso - ammOpenfundDeso - ammFocusDeso;
+    const { openfundPrice, focusPrice, desoPrice } = marketData;
+
+    const totalOpenfundTokens = wallets.reduce((s, w) => s + (w.balances.Openfund || 0), 0);
+    const openfundDesoLocked = desoPrice > 0 ? (totalOpenfundTokens * openfundPrice) / desoPrice : 0;
+
+    const totalFocusTokens = wallets.reduce((s, w) => {
+      if (w.name === 'focus') return s;
+      return s + (w.balances.Focus || 0);
+    }, 0);
+    const focusDesoLocked = desoPrice > 0 ? (totalFocusTokens * focusPrice) / desoPrice : 0;
+
+    const ammDesoOnly = ammDeso;
 
     const foundationUnstaked = Math.max(0, foundationDeso - coreStaked.foundation - communityStaked.foundation);
     const founderUnstaked = Math.max(0, founderDeso - coreStaked.coreTeam - communityStaked.coreTeam);
@@ -70,8 +76,8 @@ export function useDesoCirculationBreakdown() {
     const accounted =
       totalStaked +
       ccv1Deso +
-      ammOpenfundDeso +
-      ammFocusDeso +
+      openfundDesoLocked +
+      focusDesoLocked +
       ammDesoOnly +
       foundationUnstaked +
       founderUnstaked +
@@ -110,8 +116,8 @@ export function useDesoCirculationBreakdown() {
       amount: totalSupply - totalStaked,
       children: [
         { label: 'Creator Coins v1', amount: ccv1Deso },
-        { label: 'Openfund Tokens bought using DESO - Core + Community', amount: ammOpenfundDeso },
-        { label: 'Focus Tokens bought using DESO - Core + Community', amount: ammFocusDeso },
+        { label: 'Openfund Tokens bought using DESO - Core + Community', amount: openfundDesoLocked },
+        { label: 'Focus Tokens bought using DESO - Core + Community', amount: focusDesoLocked },
         {
           label: 'DESO',
           amount: foundationUnstaked + founderUnstaked + desoBullsUnstaked + freeFloatUnstaked + ammDesoOnly,
@@ -129,16 +135,22 @@ export function useDesoCirculationBreakdown() {
       total: totalSupply,
       root: [stakedNode, notStakedNode],
       isLoading: walletData.isLoading || stakedData.isLoading,
+      ccv1CachedAt,
     };
   }, [
     marketData.desoTotalSupply,
+    marketData.desoPrice,
+    marketData.openfundPrice,
+    marketData.focusPrice,
     stakedData.validatorBuckets,
     walletData.ammDeso,
     walletData.foundationDeso,
     walletData.founderDeso,
     walletData.desoBullsDeso,
+    walletData.wallets,
     walletData.ammWallets,
     ccv1NetworkTotalDeso,
+    ccv1CachedAt,
     walletData.ccv1TotalDeso,
     walletData.isLoading,
     stakedData.isLoading,

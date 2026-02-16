@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchCCv1NetworkTotalDeso } from '@/api/walletApi';
-import { getCCv1NetworkCache, setCCv1NetworkCache } from '@/lib/ccv1NetworkCache';
+import { getCCv1NetworkCache, setCCv1NetworkCache, CCV1_CACHE_TTL_MS } from '@/lib/ccv1NetworkCache';
 
 const QUERY_KEY = ['ccv1-network-total'];
-const STALE_TIME = 24 * 60 * 60 * 1000; // 24h
 
 /**
  * Fetches total DESO locked in Creator Coins v1 (network-wide) via GraphQL.
- * Ordered by value DESC; first 10K creators capture ~99%. Uses cached value when available.
- * Fetch ~70s with limit; cache persists 24h.
+ * Uses cached value when available; refreshes only if cache is older than 1 week.
  */
 export function useCCv1NetworkTotal() {
   const cached = getCCv1NetworkCache();
@@ -20,15 +18,17 @@ export function useCCv1NetworkTotal() {
       setCCv1NetworkCache(deso);
       return deso;
     },
-    staleTime: STALE_TIME,
-    gcTime: STALE_TIME,
+    staleTime: CCV1_CACHE_TTL_MS,
+    gcTime: CCV1_CACHE_TTL_MS,
     retry: 1,
+    enabled: cached == null,
     initialData: cached?.deso,
     placeholderData: cached?.deso,
   });
 
   return {
     ccv1NetworkTotalDeso: query.data ?? cached?.deso ?? undefined,
+    ccv1CachedAt: cached?.timestamp ?? (query.data != null ? Date.now() : undefined),
     isLoading: query.isLoading && query.data == null && cached == null,
     isFetching: query.isFetching,
   };
