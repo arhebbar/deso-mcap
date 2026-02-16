@@ -121,8 +121,8 @@ export function useWalletData() {
       unstaked: w.desoUnstaked ?? 0,
       total: (w.desoStaked ?? 0) + (w.desoUnstaked ?? 0),
     }));
-    console.table(stakedRows);
-    console.log('Staked DESO by account:', Object.fromEntries(stakedRows.map((r) => [r.name, r.staked])));
+    //console.table(stakedRows);
+    //console.log('Staked DESO by account:', Object.fromEntries(stakedRows.map((r) => [r.name, r.staked])));
   }, [wallets]);
 
   const ammWallets = wallets.filter((w) => w.classification === 'AMM');

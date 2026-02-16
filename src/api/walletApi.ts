@@ -53,6 +53,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'openfund', classification: 'FOUNDATION' },
   { username: 'Deso', classification: 'FOUNDATION' },
   { username: 'deso10Mdaubet', classification: 'FOUNDATION' },
+  { username: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION' },
   // AMM
   { username: 'AMM_DESO_24_PlAEU', classification: 'AMM' },
   { username: 'AMM_DESO_23_GrYpe', classification: 'AMM' },
@@ -117,6 +118,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'mcMarshstaking', displayName: 'mcMarsh', classification: 'DESO_BULL', mergeKey: 'mcMarsh' },
   { username: 'ImJigarShah', displayName: 'ImJigarShah', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
   { username: 'thesarcasm', displayName: 'ImJigarShah', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
+  { username: 'Johan_Holmberg', classification: 'DESO_BULL' },
   { username: 'MrTriplet', classification: 'DESO_BULL' },
   { username: 'FedeDM', displayName: 'FedeDM', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
   { username: 'FedeDM_Guardian', displayName: 'FedeDM', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
@@ -196,13 +198,10 @@ const ALL_LOCKED_STAKE_ENTRIES_QUERY = `
   }
 `;
 
-const CREATOR_COIN_BALANCES_QUERY = `
-  query CreatorCoinBalances($pks: [String!]!, $after: Cursor) {
-    creatorCoinBalances(first: 500, filter: { holder: { publicKey: { in: $pks } } }, after: $after) {
-      nodes {
-        totalValueNanos
-        holder { publicKey }
-      }
+const CREATOR_COIN_BALANCES_SINGLE_QUERY = `
+  query CreatorCoinBalancesSingle($pk: String!, $after: Cursor) {
+    creatorCoinBalances(first: 500, filter: { holder: { publicKey: { equalTo: $pk } } }, after: $after) {
+      nodes { totalValueNanos }
       pageInfo { hasNextPage endCursor }
     }
   }
@@ -210,48 +209,120 @@ const CREATOR_COIN_BALANCES_QUERY = `
 
 type StakeEntry = { validatorPk: string; amount: number };
 
-/** Fetch CCv1 (Creator Coin v1) net value in DESO per public key via GraphQL. */
+/** Fetch CCv1 (Creator Coin v1) net value in DESO per public key via GraphQL.
+ * Sums totalValueNanos/1e9 for each holder (same method as randhir-ccv1.mjs).
+ * Per-user queries avoid statement timeout; runs 5 in parallel. */
 async function fetchCcV1ValueByPublicKey(
   publicKeys: string[]
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (publicKeys.length === 0) return out;
 
-  let after: string | null = null;
-  do {
-    const res = await fetch(DESO_GRAPHQL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: CREATOR_COIN_BALANCES_QUERY,
-        variables: { pks: publicKeys, after },
-      }),
-    });
-    if (!res.ok) break;
-    const data = (await res.json()) as {
-      data?: {
-        creatorCoinBalances?: {
-          nodes?: Array<{ totalValueNanos?: string; holder?: { publicKey?: string } }>;
-          pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
-        };
-      };
-      errors?: Array<{ message?: string }>;
-    };
-    if (data?.errors?.length) break;
-    const conn = data?.data?.creatorCoinBalances;
-    const nodes = conn?.nodes ?? [];
-    for (const n of nodes) {
-      const pk = n.holder?.publicKey;
-      if (pk) {
-        const nanos = parseFloat(n.totalValueNanos ?? '0');
-        out.set(pk, (out.get(pk) ?? 0) + nanos / NANOS_PER_DESO);
-      }
+  const CONCURRENCY = 5;
+  for (let i = 0; i < publicKeys.length; i += CONCURRENCY) {
+    const batch = publicKeys.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (pk) => {
+        let total = 0;
+        let after: string | null = null;
+        do {
+          const res = await fetch(DESO_GRAPHQL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: CREATOR_COIN_BALANCES_SINGLE_QUERY,
+              variables: { pk, after },
+            }),
+          });
+          if (!res.ok) return { pk, total: 0 };
+          const data = (await res.json()) as {
+            data?: {
+              creatorCoinBalances?: {
+                nodes?: Array<{ totalValueNanos?: string }>;
+                pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+              };
+            };
+            errors?: Array<{ message?: string }>;
+          };
+          if (data?.errors?.length) return { pk, total };
+          const nodes = data?.data?.creatorCoinBalances?.nodes ?? [];
+          for (const n of nodes) {
+            total += parseFloat(n.totalValueNanos ?? '0') / NANOS_PER_DESO;
+          }
+          const conn = data?.data?.creatorCoinBalances;
+          after = conn?.pageInfo?.hasNextPage ? (conn?.pageInfo?.endCursor ?? null) : null;
+        } while (after);
+        return { pk, total };
+      })
+    );
+    for (const { pk, total } of results) {
+      if (total > 0) out.set(pk, total);
     }
-    const hasNext = conn?.pageInfo?.hasNextPage ?? false;
-    after = hasNext ? (conn?.pageInfo?.endCursor ?? null) : null;
-  } while (after);
+  }
 
   return out;
+}
+
+const CCV1_ACCOUNTS_QUERY = `
+  query CCv1Accounts($first: Int!, $after: Cursor) {
+    accounts(first: $first, after: $after, filter: { desoLockedNanos: { greaterThan: "0" } }, orderBy: DESO_LOCKED_NANOS_DESC) {
+      nodes { desoLockedNanos }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+/** Fetch total NET CCv1 (DESO locked in Creator Coins v1) via GraphQL.
+ * Ordered by desoLockedNanos DESC so top creators come first (~99% in first 10K).
+ * @param limit - Optional. Stop after N creators for fast ~99% approx (e.g. 10000). */
+export async function fetchCCv1NetworkTotalDeso(limit?: number): Promise<number> {
+  const PAGE_SIZE = 1000;
+  const RETRIES = 3;
+  let totalNanos = 0n;
+  let count = 0;
+  let after: string | null = null;
+
+  do {
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < RETRIES; attempt++) {
+      try {
+        const res = await fetch(DESO_GRAPHQL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: CCV1_ACCOUNTS_QUERY,
+            variables: { first: PAGE_SIZE, after },
+          }),
+        });
+        const text = await res.text();
+        let data: { data?: { accounts?: { nodes?: Array<{ desoLockedNanos?: string }>; pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } } }; errors?: Array<{ message?: string }> };
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(`Invalid JSON: ${text.slice(0, 200)}`);
+        }
+        if (data?.errors?.length) throw new Error(JSON.stringify(data.errors));
+        const conn = data?.data?.accounts;
+        const nodes = conn?.nodes ?? [];
+        for (const n of nodes) {
+          totalNanos += BigInt(n.desoLockedNanos ?? '0');
+          count++;
+        }
+        after = conn?.pageInfo?.hasNextPage ? (conn?.pageInfo?.endCursor ?? null) : null;
+        if (limit != null && count >= limit) after = null;
+        break;
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        if (attempt < RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        }
+      }
+    }
+    if (lastError) throw lastError;
+    if (after) await new Promise((r) => setTimeout(r, 300));
+  } while (after);
+
+  return Number(totalNanos) / NANOS_PER_DESO;
 }
 
 async function fetchAllStakeNodes(

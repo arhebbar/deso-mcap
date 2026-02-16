@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useWalletData } from './useWalletData';
 import { useStakedDesoData } from './useStakedDesoData';
 import { useLiveData } from './useLiveData';
+import { useCCv1NetworkTotal } from './useCCv1NetworkTotal';
 import type { AllStakedDesoBucket } from '@/api/walletApi';
 
 export interface CirculationNode {
@@ -31,6 +32,7 @@ export function useDesoCirculationBreakdown() {
   const walletData = useWalletData();
   const stakedData = useStakedDesoData();
   const { marketData } = useLiveData();
+  const { ccv1NetworkTotalDeso } = useCCv1NetworkTotal();
 
   const breakdown = useMemo(() => {
     const totalSupply = marketData.desoTotalSupply;
@@ -51,6 +53,7 @@ export function useDesoCirculationBreakdown() {
       ammWallets,
       ccv1TotalDeso,
     } = walletData;
+    const ccv1Deso = ccv1NetworkTotalDeso ?? ccv1TotalDeso;
 
     const ammOpenfundDeso = ammWallets
       .filter((w) => w.name.includes('openfund'))
@@ -66,7 +69,7 @@ export function useDesoCirculationBreakdown() {
 
     const accounted =
       totalStaked +
-      ccv1TotalDeso +
+      ccv1Deso +
       ammOpenfundDeso +
       ammFocusDeso +
       ammDesoOnly +
@@ -106,7 +109,7 @@ export function useDesoCirculationBreakdown() {
       label: 'Not Staked',
       amount: totalSupply - totalStaked,
       children: [
-        { label: 'Creator Coins v1', amount: ccv1TotalDeso },
+        { label: 'Creator Coins v1', amount: ccv1Deso },
         { label: 'Openfund Tokens bought using DESO - Core + Community', amount: ammOpenfundDeso },
         { label: 'Focus Tokens bought using DESO - Core + Community', amount: ammFocusDeso },
         {
@@ -135,6 +138,7 @@ export function useDesoCirculationBreakdown() {
     walletData.founderDeso,
     walletData.desoBullsDeso,
     walletData.ammWallets,
+    ccv1NetworkTotalDeso,
     walletData.ccv1TotalDeso,
     walletData.isLoading,
     stakedData.isLoading,

@@ -71,6 +71,7 @@ export const FOUNDATION_WALLETS: WalletData[] = [
     usdValue: 750_000,
   },
   { name: 'deso10Mdaubet', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
 
 export const AMM_WALLETS: WalletData[] = [
@@ -117,6 +118,7 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Gatucu', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'mcMarsh', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ImJigarShah', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Johan_Holmberg', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'MrTriplet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'FedeDM', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'SeWiJuga', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
