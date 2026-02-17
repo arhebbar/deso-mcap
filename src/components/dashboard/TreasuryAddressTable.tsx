@@ -60,7 +60,7 @@ export default function TreasuryAddressTable() {
           </span>
         ) : null}
       </div>
-      {isLoading ? (
+      {(isLoading && !cachedAt) ? (
         <Skeleton className="h-48 w-full rounded" />
       ) : (
         <div className="overflow-x-auto min-h-[120px]">

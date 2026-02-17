@@ -80,7 +80,8 @@ export default function DesoCirculationBreakdown() {
     });
   };
 
-  if (isLoading) {
+  const hasDataToShow = total > 0 && root.length > 0;
+  if (isLoading && !hasDataToShow) {
     return (
       <div className="chart-container">
         <h3 className="section-title mb-4">Overall DESO in Circulation</h3>

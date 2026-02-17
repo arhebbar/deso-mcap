@@ -95,7 +95,7 @@ export default function TrendCharts() {
         ))}
       </div>
       <div className="h-72 relative">
-        {isLoading ? (
+        {(isLoading && chartData.length === 0) ? (
           <Skeleton className="h-full w-full rounded" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">

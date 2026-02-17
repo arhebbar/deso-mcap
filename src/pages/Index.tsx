@@ -10,7 +10,6 @@ import WalletTable from '@/components/dashboard/WalletTable';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
 import { useLiveData } from '@/hooks/useLiveData';
 import { formatUsd, formatRatio, formatPercent } from '@/lib/formatters';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const Index = () => {
   const {
@@ -42,31 +41,23 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
       <main className="p-6 space-y-6 max-w-[1600px] mx-auto">
-        {/* KPI Row */}
+        {/* KPI Row - show cached/static values first, then refresh with live data */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 rounded-xl" />
-            ))
-          ) : (
-            <>
-              <KpiCard label="DESO Market Cap" value={formatUsd(marketCap)} subtitle={`$${marketData.desoPrice.toFixed(2)}/DESO`} />
-              <KpiCard label="Float-Adjusted MCap" value={formatUsd(floatAdjustedMcap)} subtitle={`${formatPercent(freeFloat / marketData.desoTotalSupply)} float`} />
-              <KpiCard label="BTC Treasury" value={formatUsd(btcTreasuryValue)} subtitle={`$${marketData.btcPrice.toLocaleString()}/BTC`} />
-              <KpiCard
-                label="Treasury Coverage"
-                value={formatRatio(treasuryCoverage)}
-                subtitle="BTC / MCap"
-                status={treasuryCoverage > 1 ? 'positive' : 'warning'}
-              />
-              <KpiCard
-                label="dUSDC Backing"
-                value={formatRatio(dusdcBacking)}
-                subtitle={dusdcBacking >= 1 ? 'Fully Backed' : 'Underbacked'}
-                status={dusdcBacking >= 1 ? 'positive' : 'negative'}
-              />
-            </>
-          )}
+          <KpiCard label="DESO Market Cap" value={formatUsd(marketCap)} subtitle={isLoading ? 'Updating…' : `$${marketData.desoPrice.toFixed(2)}/DESO`} />
+          <KpiCard label="Float-Adjusted MCap" value={formatUsd(floatAdjustedMcap)} subtitle={isLoading ? 'Updating…' : `${formatPercent(freeFloat / marketData.desoTotalSupply)} float`} />
+          <KpiCard label="BTC Treasury" value={formatUsd(btcTreasuryValue)} subtitle={isLoading ? 'Updating…' : `$${marketData.btcPrice.toLocaleString()}/BTC`} />
+          <KpiCard
+            label="Treasury Coverage"
+            value={formatRatio(treasuryCoverage)}
+            subtitle="BTC / MCap"
+            status={treasuryCoverage > 1 ? 'positive' : 'warning'}
+          />
+          <KpiCard
+            label="dUSDC Backing"
+            value={formatRatio(dusdcBacking)}
+            subtitle={dusdcBacking >= 1 ? 'Fully Backed' : 'Underbacked'}
+            status={dusdcBacking >= 1 ? 'positive' : 'negative'}
+          />
         </div>
 
         <div className="glow-line" />
