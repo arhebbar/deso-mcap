@@ -48,3 +48,18 @@ export function setTreasuryCache(data: CachedTreasuryRow[]): void {
     // localStorage may be full or disabled
   }
 }
+
+/** Aggregate BTC/ETH/SOL totals from cached address rows (for default when API returns nothing). */
+export function getTreasuryTotalsFromCache(): { btc: number; eth: number; sol: number } | null {
+  const cached = getTreasuryCache();
+  if (!cached?.data?.length) return null;
+  let btc = 0;
+  let eth = 0;
+  let sol = 0;
+  for (const row of cached.data) {
+    btc += row.holdings?.BTC ?? 0;
+    eth += row.holdings?.ETH ?? 0;
+    sol += row.holdings?.SOL ?? 0;
+  }
+  return { btc, eth, sol };
+}

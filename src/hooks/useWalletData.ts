@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalances } from '@/api/walletApi';
 import { getWalletCache, setWalletCache, type CachedWalletEntry } from '@/lib/walletCache';
@@ -15,9 +15,9 @@ type DataSource = 'live' | 'cached' | 'static';
  * order book doesn't appear in get-users-stateless UsersYouHODL).
  */
 function mergeWithStatic(
-  api: { name: string; classification: string; balances: Record<string, number>; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>; ccv1ValueDeso?: number },
+  api: { name: string; classification: string; balances: Record<string, number>; usdValue?: number; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>; ccv1ValueDeso?: number },
   staticByName: Map<string, (typeof STATIC_WALLETS)[0]>
-) {
+): (typeof STATIC_WALLETS)[0] {
   const fallback = staticByName.get(api.name);
   const apiBal = api.balances ?? {};
   const fallbackBal = fallback?.balances ?? {};
@@ -30,6 +30,8 @@ function mergeWithStatic(
   }
   return {
     ...api,
+    classification: api.classification as (typeof STATIC_WALLETS)[0]['classification'],
+    usdValue: api.usdValue ?? fallback?.usdValue ?? 0,
     balances: mergedBalances,
     desoStaked: api.desoStaked ?? fallback?.desoStaked,
     desoUnstaked: api.desoUnstaked ?? fallback?.desoUnstaked,
@@ -55,7 +57,7 @@ export function useWalletData() {
   const hasMeaningfulData = apiWallets.length > 0 && apiWallets.some(
     (w) => Object.values(w.balances ?? {}).some((v) => v > 0)
   );
-  const staticByName = new Map(STATIC_WALLETS.map((w) => [w.name, w]));
+  const staticByName = useMemo(() => new Map(STATIC_WALLETS.map((w) => [w.name, w])), []);
 
   let wallets: typeof STATIC_WALLETS;
   let dataSource: DataSource;
@@ -63,7 +65,6 @@ export function useWalletData() {
 
   if (hasMeaningfulData) {
     wallets = apiWallets.map((api) => mergeWithStatic(api, staticByName));
-    setWalletCache(wallets as CachedWalletEntry[]);
     dataSource = 'live';
   } else {
     const cached = getWalletCache();
@@ -112,34 +113,46 @@ export function useWalletData() {
     if (w.name === 'focus' && w.balances.Focus) delete w.balances.Focus;
   }
 
-  // Log staked values to console for verification
+  // Persist to cache only when we have live data (avoid side effects during render)
   useEffect(() => {
-    const stakedRows = wallets.map((w) => ({
-      name: w.name,
-      classification: w.classification,
-      staked: w.desoStaked ?? 0,
-      unstaked: w.desoUnstaked ?? 0,
-      total: (w.desoStaked ?? 0) + (w.desoUnstaked ?? 0),
-    }));
-    //console.table(stakedRows);
-    //console.log('Staked DESO by account:', Object.fromEntries(stakedRows.map((r) => [r.name, r.staked])));
-  }, [wallets]);
+    if (dataSource === 'live' && wallets.length > 0) {
+      setWalletCache(wallets as CachedWalletEntry[]);
+    }
+  }, [dataSource, wallets]);
 
-  const ammWallets = wallets.filter((w) => w.classification === 'AMM');
-  const foundationWallets = wallets.filter((w) => w.classification === 'FOUNDATION');
-  const desoBullsWallets = wallets.filter((w) => w.classification === 'DESO_BULL');
+  const ammWallets = useMemo(() => wallets.filter((w) => w.classification === 'AMM'), [wallets]);
+  const foundationWallets = useMemo(() => wallets.filter((w) => w.classification === 'FOUNDATION'), [wallets]);
+  const desoBullsWallets = useMemo(() => wallets.filter((w) => w.classification === 'DESO_BULL'), [wallets]);
 
-  const ammDeso = ammWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
-  const foundationDeso = foundationWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
-  const founderDeso = wallets
-    .filter((w) => w.classification === 'FOUNDER')
-    .reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
-  const desoBullsDeso = desoBullsWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
-
-  const foundationDusdc =
-    foundationWallets.length > 0 ? foundationWallets[0].balances.dUSDC ?? 0 : 0;
-
-  const ccv1TotalDeso = wallets.reduce((sum, w) => sum + (w.ccv1ValueDeso ?? 0), 0);
+  const { ammDeso, foundationDeso, founderDeso, ammDesoUnstaked, foundationDesoUnstaked, founderDesoUnstaked, desoBullsDeso, foundationDusdc, ccv1TotalDeso } = useMemo(() => {
+    /** Unstaked DESO only (avoids double-counting with network staked in free-float). */
+    const unstakedDeso = (w: { balances: Record<string, number>; desoUnstaked?: number; desoStaked?: number }) => {
+      if (w.desoUnstaked != null && w.desoUnstaked >= 0) return w.desoUnstaked;
+      const total = w.balances.DESO ?? 0;
+      const staked = w.desoStaked ?? 0;
+      return Math.max(0, total - staked);
+    };
+    const amm = ammWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const foundation = foundationWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const founder = wallets.filter((w) => w.classification === 'FOUNDER').reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const ammUnstaked = ammWallets.reduce((sum, w) => sum + unstakedDeso(w), 0);
+    const foundationUnstaked = foundationWallets.reduce((sum, w) => sum + unstakedDeso(w), 0);
+    const founderUnstaked = wallets.filter((w) => w.classification === 'FOUNDER').reduce((sum, w) => sum + unstakedDeso(w), 0);
+    const bulls = desoBullsWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const dusdc = foundationWallets.length > 0 ? foundationWallets[0].balances.dUSDC ?? 0 : 0;
+    const ccv1 = wallets.reduce((sum, w) => sum + (w.ccv1ValueDeso ?? 0), 0);
+    return {
+      ammDeso: amm,
+      foundationDeso: foundation,
+      founderDeso: founder,
+      ammDesoUnstaked: ammUnstaked,
+      foundationDesoUnstaked: foundationUnstaked,
+      founderDesoUnstaked: founderUnstaked,
+      desoBullsDeso: bulls,
+      foundationDusdc: dusdc,
+      ccv1TotalDeso: ccv1,
+    };
+  }, [wallets, ammWallets, foundationWallets, desoBullsWallets]);
 
   return {
     wallets,
@@ -149,10 +162,14 @@ export function useWalletData() {
     ammDeso,
     foundationDeso,
     founderDeso,
+    ammDesoUnstaked,
+    foundationDesoUnstaked,
+    founderDesoUnstaked,
     desoBullsDeso,
     foundationDusdc,
     ccv1TotalDeso,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isLive: dataSource === 'live',
     dataSource,
     cachedAt,

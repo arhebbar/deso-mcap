@@ -74,19 +74,39 @@ async function fetchBtcHistoricalPrices(days: number): Promise<Map<string, numbe
 }
 
 
+/** Optional: pass QueryClient to reuse cached wallet/treasury/prices and avoid duplicate API calls */
+export type QueryClientLike = {
+  ensureQueryData: <T>(options: { queryKey: unknown[]; queryFn: () => Promise<T>; staleTime?: number }) => Promise<T>;
+};
+
 /**
  * Fetches real historical data for the Trends chart.
  * - Market Cap: from CoinGecko DESO market_caps
  * - BTC Treasury: BTC holdings × BTC price (from CryptoCompare histoday)
  * - AMM Liquidity: USD value of all AMM tokens (DESO, dUSDC, Focus, Openfund)
+ * When queryClient is provided, reuses cached wallet/treasury/live-prices when fresh to avoid duplicate fetches.
  */
-export async function fetchHistoricalData(days: number): Promise<HistoricalDataPoint[]> {
+export async function fetchHistoricalData(
+  days: number,
+  queryClient?: QueryClientLike
+): Promise<HistoricalDataPoint[]> {
+  const stale2m = 2 * 60 * 1000;
+  const walletPromise = queryClient
+    ? queryClient.ensureQueryData({ queryKey: ['wallet-balances'], queryFn: fetchWalletBalances, staleTime: stale2m })
+    : fetchWalletBalances();
+  const treasuryPromise = queryClient
+    ? queryClient.ensureQueryData({ queryKey: ['treasury-balances'], queryFn: fetchTreasuryBalances, staleTime: stale2m })
+    : fetchTreasuryBalances();
+  const pricesPromise = queryClient
+    ? queryClient.ensureQueryData({ queryKey: ['live-prices'], queryFn: fetchLivePrices, staleTime: 30_000 })
+    : fetchLivePrices();
+
   const [desoRes, livePricesResult, walletData, treasuryData, btcHoldingsByDate] =
     await Promise.all([
       fetchMarketChart(DESO_COIN_ID, days),
-      fetchLivePrices().catch(() => null),
-      fetchWalletBalances().catch(() => []),
-      fetchTreasuryBalances().catch(() => null),
+      pricesPromise.catch(() => null),
+      walletPromise.catch(() => []),
+      treasuryPromise.catch(() => null),
       fetchBtcHistoricalHoldings(days).catch(() => new Map<string, number>()),
     ]);
 

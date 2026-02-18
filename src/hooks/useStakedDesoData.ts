@@ -12,6 +12,7 @@ export function useStakedDesoData() {
   return {
     validatorBuckets: query.data ?? [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isLive: !!query.data,
   };
 }

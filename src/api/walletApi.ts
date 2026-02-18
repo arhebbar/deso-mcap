@@ -861,10 +861,14 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
 
   const publicKeys = Array.from(trackedByPk.keys());
 
-  // 2. Fetch all holders for each token (Openfund, Focus, dUSDC, etc.) - one shot per token
+  // 2. Fetch all holders for each token in parallel (Openfund, Focus, dUSDC, etc.)
   const tokenHoldingsByPk = new Map<string, Map<string, number>>();
-  for (const { username, tokenName } of TOKEN_USERNAMES) {
-    const holders = await fetchTokenHolders(username, tokenName);
+  const holderMaps = await Promise.all(
+    TOKEN_USERNAMES.map(({ username, tokenName }) => fetchTokenHolders(username, tokenName))
+  );
+  for (let i = 0; i < TOKEN_USERNAMES.length; i++) {
+    const { tokenName } = TOKEN_USERNAMES[i];
+    const holders = holderMaps[i];
     for (const [hodlerPk, amt] of holders) {
       if (trackedByPk.has(hodlerPk) && amt > 0) {
         let m = tokenHoldingsByPk.get(hodlerPk);

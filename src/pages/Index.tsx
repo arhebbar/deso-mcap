@@ -1,14 +1,18 @@
+import { useState } from 'react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
-import CapitalStructureChart from '@/components/dashboard/CapitalStructureChart';
+import CapitalStructureTable from '@/components/dashboard/CapitalStructureTable';
 import TrendCharts from '@/components/dashboard/TrendCharts';
-import DesoCirculationBreakdown from '@/components/dashboard/DesoCirculationBreakdown';
-import StakedDesoTable from '@/components/dashboard/StakedDesoTable';
-import UnstakedDesoTable from '@/components/dashboard/UnstakedDesoTable';
+import DesoInCirculationTable from '@/components/dashboard/DesoInCirculationTable';
+import AssetsBreakdownBar from '@/components/dashboard/AssetsBreakdownBar';
+import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
 import WalletTable from '@/components/dashboard/WalletTable';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
+import FreeFloatSection from '@/components/dashboard/FreeFloatSection';
 import { useLiveData } from '@/hooks/useLiveData';
+import { useWalletData } from '@/hooks/useWalletData';
+import { useCirculationTable } from '@/hooks/useCirculationTable';
 import { formatUsd, formatRatio, formatPercent } from '@/lib/formatters';
 
 const Index = () => {
@@ -21,21 +25,27 @@ const Index = () => {
     btcTreasuryValue,
     treasuryCoverage,
     dusdcBacking,
-    externalAssets,
-    internalEcosystem,
-    intangible,
     isLive,
     isLoading,
     lastUpdated,
   } = useLiveData();
+  const { foundationDeso, founderDeso, desoBullsDeso } = useWalletData();
+  const circulation = useCirculationTable();
+  const [highlightedSupplySegment, setHighlightedSupplySegment] = useState<string | null>(null);
+  const [tableSectionFilter, setTableSectionFilter] = useState<SectionFilter | undefined>(undefined);
 
+  const totalSupply = marketData.desoTotalSupply;
+  // Use same staked total as Capital Structure / circulation so both charts match
+  const staked = circulation.isLoading ? marketData.desoStaked : circulation.staked.total;
+  const others = Math.max(0, totalSupply - staked - foundationDeso - ammDeso - founderDeso - desoBullsDeso);
   const supplyData = [
-    { name: 'Staked', value: marketData.desoStaked },
-    { name: 'Free Float', value: freeFloat },
-    { name: 'Foundation', value: 0 },
+    { name: 'Staked', value: staked },
+    { name: 'Foundation', value: foundationDeso },
     { name: 'AMM', value: ammDeso },
-    { name: 'Founder', value: 0 },
-  ];
+    { name: 'Core Team', value: founderDeso },
+    { name: 'DeSo Bulls', value: desoBullsDeso },
+    { name: 'Others', value: others },
+  ].filter((d) => d.value > 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,26 +72,35 @@ const Index = () => {
 
         <div className="glow-line" />
 
-        {/* Charts Row */}
+        {/* Charts Row: Doughnut as filter on left, Heatmap on right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SupplyPieChart data={supplyData} />
-          <CapitalStructureChart external={externalAssets} internal={internalEcosystem} intangible={intangible} />
+          <SupplyPieChart
+            data={supplyData}
+            desoPrice={marketData.desoPrice}
+            totalSupply={totalSupply}
+            highlightedSegment={highlightedSupplySegment}
+            onSegmentClick={(name) => setHighlightedSupplySegment((prev) => (prev === name ? null : name))}
+          />
+          <CapitalStructureTable highlightedSegment={highlightedSupplySegment} />
         </div>
 
         {/* Trend Charts */}
         <TrendCharts />
 
-        {/* DESO Circulation Breakdown */}
-        <DesoCirculationBreakdown />
+        {/* DESO in Circulation – single table with 3-level drilldown */}
+        <DesoInCirculationTable />
 
-        {/* Staked DESO Table */}
-        <StakedDesoTable />
-
-        {/* Unstaked DESO (named wallets, excl. staked) */}
-        <UnstakedDesoTable />
+        {/* Assets bar: click section to expand only that section in table below */}
+        <AssetsBreakdownBar
+          selectedSection={tableSectionFilter}
+          onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
+        />
 
         {/* Wallet Table (Foundation, Team, DeSo Bulls) */}
-        <WalletTable />
+        <WalletTable expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter} />
+
+        {/* Free Float: unaccounted total + anonymous wallets sorted high to low */}
+        <FreeFloatSection />
 
         {/* Foundation Treasury + AMM Funds */}
         <TreasuryAddressTable />

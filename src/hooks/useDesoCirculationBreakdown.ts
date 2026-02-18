@@ -8,6 +8,8 @@ import type { AllStakedDesoBucket } from '@/api/walletApi';
 export interface CirculationNode {
   label: string;
   amount: number;
+  /** USD value (amount × price for DESO; computed for tokens) */
+  usdValue?: number;
   children?: CirculationNode[];
 }
 
@@ -87,45 +89,51 @@ export function useDesoCirculationBreakdown() {
     const stakedNode: CirculationNode = {
       label: 'Staked',
       amount: totalStaked,
+      usdValue: totalStaked * desoPrice,
       children: [
         {
           label: 'Core Validators',
           amount: coreStaked.foundation + coreStaked.coreTeam + coreStaked.desoBulls + coreStaked.freeFloat,
+          usdValue: (coreStaked.foundation + coreStaked.coreTeam + coreStaked.desoBulls + coreStaked.freeFloat) * desoPrice,
           children: [
-            { label: 'Foundation', amount: coreStaked.foundation },
-            { label: 'Core Team', amount: coreStaked.coreTeam },
-            { label: 'DeSo Bulls', amount: coreStaked.desoBulls },
-            { label: 'Free Float', amount: coreStaked.freeFloat },
+            { label: 'Foundation', amount: coreStaked.foundation, usdValue: coreStaked.foundation * desoPrice },
+            { label: 'Core Team', amount: coreStaked.coreTeam, usdValue: coreStaked.coreTeam * desoPrice },
+            { label: 'DeSo Bulls', amount: coreStaked.desoBulls, usdValue: coreStaked.desoBulls * desoPrice },
+            { label: 'Others', amount: coreStaked.freeFloat, usdValue: coreStaked.freeFloat * desoPrice },
           ],
         },
         {
           label: 'Community Validators',
           amount: communityStaked.foundation + communityStaked.coreTeam + communityStaked.desoBulls + communityStaked.freeFloat,
+          usdValue: (communityStaked.foundation + communityStaked.coreTeam + communityStaked.desoBulls + communityStaked.freeFloat) * desoPrice,
           children: [
-            { label: 'Foundation', amount: communityStaked.foundation },
-            { label: 'Core Team', amount: communityStaked.coreTeam },
-            { label: 'DeSo Bulls', amount: communityStaked.desoBulls },
-            { label: 'Free Float', amount: communityStaked.freeFloat },
+            { label: 'Foundation', amount: communityStaked.foundation, usdValue: communityStaked.foundation * desoPrice },
+            { label: 'Core Team', amount: communityStaked.coreTeam, usdValue: communityStaked.coreTeam * desoPrice },
+            { label: 'DeSo Bulls', amount: communityStaked.desoBulls, usdValue: communityStaked.desoBulls * desoPrice },
+            { label: 'Others', amount: communityStaked.freeFloat, usdValue: communityStaked.freeFloat * desoPrice },
           ],
         },
       ],
     };
 
+    const notStakedTotal = totalSupply - totalStaked;
     const notStakedNode: CirculationNode = {
       label: 'Not Staked',
-      amount: totalSupply - totalStaked,
+      amount: notStakedTotal,
+      usdValue: ccv1Deso * desoPrice + openfundDesoLocked * desoPrice + focusDesoLocked * desoPrice + (foundationUnstaked + founderUnstaked + desoBullsUnstaked + freeFloatUnstaked + ammDesoOnly) * desoPrice,
       children: [
-        { label: 'Creator Coins v1', amount: ccv1Deso },
-        { label: 'Openfund Tokens bought using DESO - Core + Community', amount: openfundDesoLocked },
-        { label: 'Focus Tokens bought using DESO - Core + Community', amount: focusDesoLocked },
+        { label: 'Creator Coins v1', amount: ccv1Deso, usdValue: ccv1Deso * desoPrice },
+        { label: 'Openfund Tokens bought using DESO - Core + Community', amount: openfundDesoLocked, usdValue: openfundDesoLocked * desoPrice },
+        { label: 'Focus Tokens bought using DESO - Core + Community', amount: focusDesoLocked, usdValue: focusDesoLocked * desoPrice },
         {
           label: 'DESO',
           amount: foundationUnstaked + founderUnstaked + desoBullsUnstaked + freeFloatUnstaked + ammDesoOnly,
+          usdValue: (foundationUnstaked + founderUnstaked + desoBullsUnstaked + freeFloatUnstaked + ammDesoOnly) * desoPrice,
           children: [
-            { label: 'Foundation', amount: foundationUnstaked },
-            { label: 'Core Team', amount: founderUnstaked },
-            { label: 'DeSo Bulls', amount: desoBullsUnstaked },
-            { label: 'Free Float', amount: freeFloatUnstaked + ammDesoOnly },
+            { label: 'Foundation', amount: foundationUnstaked, usdValue: foundationUnstaked * desoPrice },
+            { label: 'Core Team', amount: founderUnstaked, usdValue: founderUnstaked * desoPrice },
+            { label: 'DeSo Bulls', amount: desoBullsUnstaked, usdValue: desoBullsUnstaked * desoPrice },
+            { label: 'Free Float', amount: freeFloatUnstaked + ammDesoOnly, usdValue: (freeFloatUnstaked + ammDesoOnly) * desoPrice },
           ],
         },
       ],

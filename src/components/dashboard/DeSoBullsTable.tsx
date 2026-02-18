@@ -10,7 +10,7 @@ import { Plus, Minus } from 'lucide-react';
 const DESO_BULL_OTHERS_THRESHOLD = 10; // DeSo Bulls with < $10 grouped as "Others"
 
 export default function DeSoBullsTable() {
-  const { desoBullsWallets, isLoading, isLive, dataSource, cachedAt } = useWalletData();
+  const { desoBullsWallets, isLoading, isFetching, isLive, dataSource, cachedAt } = useWalletData();
   const { marketData } = useLiveData();
   const [openOthers, setOpenOthers] = useState(false);
 
@@ -44,7 +44,11 @@ export default function DeSoBullsTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">DeSo Bulls</h3>
-        {isLive ? (
+        {(isLoading || isFetching) ? (
+          <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
+            Updating…
+          </span>
+        ) : isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>

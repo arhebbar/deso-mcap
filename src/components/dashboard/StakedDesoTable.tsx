@@ -33,7 +33,7 @@ function fmtDeso(n: number) {
 }
 
 export default function StakedDesoTable() {
-  const { validatorBuckets, isLoading, isLive } = useStakedDesoData();
+  const { validatorBuckets, isLoading, isFetching, isLive } = useStakedDesoData();
   const { marketData } = useLiveData();
 
   const [openSections, setOpenSections] = useState<Set<'core' | 'community'>>(new Set());
@@ -173,14 +173,18 @@ export default function StakedDesoTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">Staked DESO</h3>
-        {isLive ? (
+        {(isLoading || isFetching) ? (
+          <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
+            Updating…
+          </span>
+        ) : isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>
         ) : (
           <span
             className="text-[10px] text-amber-500/90 font-medium uppercase tracking-wider"
-            title="Loading stake data..."
+            title="Stake data not yet loaded"
           >
             Loading…
           </span>

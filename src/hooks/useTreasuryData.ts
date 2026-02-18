@@ -1,9 +1,12 @@
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTreasuryBalances, fetchTreasuryBalancesPerAddress, STATIC_TREASURY_ADDRESSES } from '@/api/treasuryApi';
-import { getTreasuryCache, setTreasuryCache, type CachedTreasuryRow } from '@/lib/treasuryCache';
+import { getTreasuryCache, setTreasuryCache, getTreasuryTotalsFromCache, type CachedTreasuryRow } from '@/lib/treasuryCache';
+import { EXTERNAL_TREASURY } from '@/data/desoData';
 
 /**
  * Fetches external treasury balances (BTC, ETH, SOL) from blockchain APIs.
+ * When API returns nothing or all zeros, defaults to cached totals (or static EXTERNAL_TREASURY).
  */
 export function useTreasuryData() {
   const query = useQuery({
@@ -14,13 +17,22 @@ export function useTreasuryData() {
   });
 
   const data = query.data;
+  const apiHasValue = data && (data.btcAmount > 0 || data.ethAmount > 0 || data.solAmount > 0);
+  const cachedTotals = getTreasuryTotalsFromCache();
+  const staticBtc = EXTERNAL_TREASURY.btcHoldings;
+  const staticEth = EXTERNAL_TREASURY.ethHotWallet + EXTERNAL_TREASURY.ethColdWallet;
+  const staticSol = EXTERNAL_TREASURY.solColdWallet;
+
+  const btcAmount = apiHasValue ? data!.btcAmount : (cachedTotals?.btc ?? staticBtc);
+  const ethAmount = apiHasValue ? data!.ethAmount : (cachedTotals?.eth ?? staticEth);
+  const solAmount = apiHasValue ? data!.solAmount : (cachedTotals?.sol ?? staticSol);
 
   return {
-    btcAmount: data?.btcAmount ?? 0,
-    ethAmount: data?.ethAmount ?? 0,
-    solAmount: data?.solAmount ?? 0,
+    btcAmount,
+    ethAmount,
+    solAmount,
     isLoading: query.isLoading,
-    isLive: !!data,
+    isLive: !!apiHasValue,
   };
 }
 
@@ -55,7 +67,7 @@ export function useTreasuryAddresses() {
   });
 
   const apiData = query.data ?? [];
-  const staticByName = new Map(STATIC_TREASURY_ADDRESSES.map((r) => [r.address, r]));
+  const staticByName = useMemo(() => new Map(STATIC_TREASURY_ADDRESSES.map((r) => [r.address, r])), []);
 
   const hasMeaningfulData =
     apiData.length > 0 &&
@@ -70,7 +82,6 @@ export function useTreasuryAddresses() {
       const fallback = staticByName.get(api.address);
       return fallback ? mergeWithStatic(api, fallback) : api;
     });
-    setTreasuryCache(addresses);
     isLive = true;
   } else {
     const cached = getTreasuryCache();
@@ -94,9 +105,17 @@ export function useTreasuryAddresses() {
     addresses = STATIC_TREASURY_ADDRESSES;
   }
 
+  // Persist to cache only when we have live data (avoid side effects during render)
+  useEffect(() => {
+    if (isLive && addresses.length > 0) {
+      setTreasuryCache(addresses);
+    }
+  }, [isLive, addresses]);
+
   return {
     addresses,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isLive,
     cachedAt,
   };

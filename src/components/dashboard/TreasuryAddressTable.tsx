@@ -31,7 +31,7 @@ function truncateAddress(addr: string): string {
 }
 
 export default function TreasuryAddressTable() {
-  const { addresses, isLoading, isLive, cachedAt } = useTreasuryAddresses();
+  const { addresses, isLoading, isFetching, isLive, cachedAt } = useTreasuryAddresses();
   const { marketData } = useLiveData();
 
   const rows = addresses.map((row) => {
@@ -50,7 +50,11 @@ export default function TreasuryAddressTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">Foundation Treasury + AMM Funds</h3>
-        {isLive ? (
+        {(isLoading || isFetching) ? (
+          <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
+            Updating…
+          </span>
+        ) : isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>

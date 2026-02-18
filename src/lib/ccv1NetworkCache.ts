@@ -11,6 +11,7 @@ export interface CachedCCv1Total {
   timestamp: number;
 }
 
+/** Returns cache only if within TTL (valid for skipping refetch). */
 export function getCCv1NetworkCache(): CachedCCv1Total | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -18,6 +19,19 @@ export function getCCv1NetworkCache(): CachedCCv1Total | null {
     const parsed = JSON.parse(raw) as CachedCCv1Total;
     if (typeof parsed?.deso !== 'number' || typeof parsed?.timestamp !== 'number') return null;
     if (Date.now() - parsed.timestamp > CCV1_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns last cached value even when expired (for stale-while-revalidate display). */
+export function getCCv1StaleCache(): CachedCCv1Total | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedCCv1Total;
+    if (typeof parsed?.deso !== 'number' || typeof parsed?.timestamp !== 'number') return null;
     return parsed;
   } catch {
     return null;

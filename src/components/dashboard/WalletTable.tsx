@@ -26,7 +26,7 @@ function ClassBadge({ classification }: { classification: string }) {
   return <span className={cls}>{BADGE_LABELS[classification] ?? classification}</span>;
 }
 
-type SectionKey = 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
+export type SectionKey = 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   FOUNDATION: 'Foundation',
@@ -35,8 +35,15 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   DESO_BULL: 'DeSo Bulls',
 };
 
-export default function WalletTable() {
-  const { wallets, isLoading, isLive, dataSource, cachedAt } = useWalletData();
+/** When set, only this section is expanded; when null, all collapsed. When undefined, use internal state. */
+type ExpandedSectionOnly = SectionKey | null | undefined;
+
+interface WalletTableProps {
+  expandedSectionOnly?: ExpandedSectionOnly;
+}
+
+export default function WalletTable({ expandedSectionOnly }: WalletTableProps = {}) {
+  const { wallets, isLoading, isFetching, isLive, dataSource, cachedAt } = useWalletData();
   const { marketData } = useLiveData();
 
   const allWallets = useMemo(() => wallets.map((w) => {
@@ -81,7 +88,7 @@ export default function WalletTable() {
     DESO_BULL: grouped.DESO_BULL.reduce((s, w) => s + w.usdValue, 0),
   }), [grouped]);
 
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
+  const [internalOpenSections, setInternalOpenSections] = useState<Record<SectionKey, boolean>>({
     FOUNDATION: true,
     AMM: true,
     FOUNDER: true,
@@ -95,7 +102,7 @@ export default function WalletTable() {
     if (total === 0) return; // Wait for data
     hasInitialized.current = true;
     const shouldCollapse = (t: number) => t > 0 && t < SMALL_SECTION_THRESHOLD;
-    setOpenSections({
+    setInternalOpenSections({
       FOUNDATION: !shouldCollapse(sectionTotals.FOUNDATION),
       AMM: !shouldCollapse(sectionTotals.AMM),
       FOUNDER: !shouldCollapse(sectionTotals.FOUNDER),
@@ -103,8 +110,19 @@ export default function WalletTable() {
     });
   }, [sectionTotals.FOUNDATION, sectionTotals.AMM, sectionTotals.FOUNDER, sectionTotals.DESO_BULL]);
 
+  const isControlled = expandedSectionOnly !== undefined;
+  const openSections: Record<SectionKey, boolean> = isControlled
+    ? {
+        FOUNDATION: expandedSectionOnly === 'FOUNDATION',
+        AMM: expandedSectionOnly === 'AMM',
+        FOUNDER: expandedSectionOnly === 'FOUNDER',
+        DESO_BULL: expandedSectionOnly === 'DESO_BULL',
+      }
+    : internalOpenSections;
+
   const toggleSection = (key: SectionKey) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    if (isControlled) return; // Bar chart controls expansion; clicking row does nothing or parent could handle
+    setInternalOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const [openOthers, setOpenOthers] = useState(false);
@@ -230,7 +248,11 @@ export default function WalletTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">Tracked Foundation, Team and DeSo Bulls Wallets</h3>
-        {isLive ? (
+        {(isLoading || isFetching) ? (
+          <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
+            Updating…
+          </span>
+        ) : isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>

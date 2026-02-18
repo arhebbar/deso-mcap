@@ -9,6 +9,8 @@ export interface WalletData {
   desoStaked?: number;
   /** DESO unstaked (when known). Total DESO = desoStaked + desoUnstaked. */
   desoUnstaked?: number;
+  /** Per-validator stake breakdown (from API). */
+  stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>;
   /** Net value of CCv1 (Creator Coin v1) holdings in DESO */
   ccv1ValueDeso?: number;
 }
@@ -245,13 +247,22 @@ export const EXTERNAL_TREASURY = {
   totalUsdc: 7_000_000,
 };
 
+/** CCv2 AMM liquidity – approximate DESO locked in Creator Coin v2 AMMs (~$130K at $5.9) */
+export const CCV2_AMM_DESO = 22_000;
+
 // Derived calculations
 export function calcMarketCap(data: MarketData) {
   return data.desoTotalSupply * data.desoPrice;
 }
 
-export function calcFreeFloat(data: MarketData, ammDeso: number, foundationDeso: number, founderDeso: number) {
-  return data.desoTotalSupply - data.desoStaked - ammDeso - foundationDeso - founderDeso;
+/** Free float = supply minus staked minus AMM/Foundation/Founder *unstaked* DESO (unstaked avoids double-counting staked). */
+export function calcFreeFloat(
+  data: MarketData,
+  ammDesoUnstaked: number,
+  foundationDesoUnstaked: number,
+  founderDesoUnstaked: number
+) {
+  return data.desoTotalSupply - data.desoStaked - ammDesoUnstaked - foundationDesoUnstaked - founderDesoUnstaked;
 }
 
 export function calcDusdcBackingRatio(foundationDusdc?: number): number {

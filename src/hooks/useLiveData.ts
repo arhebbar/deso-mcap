@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchLivePrices, type LivePrices } from '@/api/priceApi';
-import { fetchDesoExchangeRate, type DesoNodeData } from '@/api/desoApi';
 import {
   MARKET_DATA,
   EXTERNAL_TREASURY,
@@ -39,6 +38,9 @@ function buildDashboardData(
     ammDeso: number;
     foundationDeso: number;
     founderDeso: number;
+    ammDesoUnstaked: number;
+    foundationDesoUnstaked: number;
+    founderDesoUnstaked: number;
     foundationDusdc: number;
     ammWallets: { balances: Record<string, number> }[];
   },
@@ -49,40 +51,42 @@ function buildDashboardData(
     isLive: boolean;
   }
 ): LiveDashboardData {
+  // Use live prices when available; never show $0 when we have static fallbacks
   const marketData: MarketData = prices
     ? {
         ...MARKET_DATA,
-        desoPrice: prices.desoPrice,
-        btcPrice: prices.btcPrice,
-        ethPrice: prices.ethPrice,
-        solPrice: prices.solPrice,
+        desoPrice: prices.desoPrice > 0 ? prices.desoPrice : MARKET_DATA.desoPrice,
+        btcPrice: prices.btcPrice > 0 ? prices.btcPrice : MARKET_DATA.btcPrice,
+        ethPrice: prices.ethPrice > 0 ? prices.ethPrice : MARKET_DATA.ethPrice,
+        solPrice: prices.solPrice > 0 ? prices.solPrice : MARKET_DATA.solPrice,
       }
     : MARKET_DATA;
 
   const marketCap = calcMarketCap(marketData);
-  const { ammDeso, foundationDeso, founderDeso, foundationDusdc, ammWallets } = walletData;
-  const freeFloat = calcFreeFloat(marketData, ammDeso, foundationDeso, founderDeso);
+  const safeMarketCap = marketCap > 0 ? marketCap : calcMarketCap(MARKET_DATA);
+  const { ammDeso, foundationDeso, founderDeso, ammDesoUnstaked, foundationDesoUnstaked, founderDesoUnstaked, foundationDusdc, ammWallets } = walletData;
+  const freeFloat = calcFreeFloat(marketData, ammDesoUnstaked, foundationDesoUnstaked, founderDesoUnstaked);
   const floatAdjustedMcap = freeFloat * marketData.desoPrice;
 
-  const btcHoldings = treasuryData.isLive ? treasuryData.btcAmount : EXTERNAL_TREASURY.btcHoldings;
-  const ethHoldings = treasuryData.isLive ? treasuryData.ethAmount : EXTERNAL_TREASURY.ethHotWallet + EXTERNAL_TREASURY.ethColdWallet;
-  const solHoldings = treasuryData.isLive ? treasuryData.solAmount : EXTERNAL_TREASURY.solColdWallet;
+  const btcHoldings = treasuryData.btcAmount;
+  const ethHoldings = treasuryData.ethAmount;
+  const solHoldings = treasuryData.solAmount;
 
   const btcTreasuryValue = btcHoldings * marketData.btcPrice;
   const ethValue = ethHoldings * marketData.ethPrice;
   const solValue = solHoldings * marketData.solPrice;
 
-  const treasuryCoverage = (btcHoldings * marketData.btcPrice) / marketCap;
+  const treasuryCoverage = safeMarketCap > 0 ? (btcHoldings * marketData.btcPrice) / safeMarketCap : 0;
   const dusdcBacking = calcDusdcBackingRatio(foundationDusdc);
 
   const externalAssets = btcTreasuryValue + ethValue + solValue + EXTERNAL_TREASURY.totalUsdc;
   const ammLiquidity = getAmmLiquidityUsd(marketData, ammWallets);
   const internalEcosystem = ammLiquidity;
-  const intangible = Math.max(0, marketCap - externalAssets - internalEcosystem);
+  const intangible = Math.max(0, safeMarketCap - externalAssets - internalEcosystem);
 
   return {
     marketData,
-    marketCap,
+    marketCap: safeMarketCap,
     ammDeso,
     ammLiquidity,
     freeFloat,
@@ -108,43 +112,33 @@ export function useLiveData() {
     retry: 2,
   });
 
-  // Also fetch DeSo node rate as a fallback / cross-check
-  const desoQuery = useQuery({
-    queryKey: ['deso-exchange-rate'],
-    queryFn: fetchDesoExchangeRate,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-    retry: 2,
-  });
-
-  // Prefer CoinGecko prices, but use DeSo node price as fallback for DESO
-  const prices: LivePrices | null = pricesQuery.data
-    ? {
-        ...pricesQuery.data,
-        desoPrice: pricesQuery.data.desoPrice || desoQuery.data?.desoPrice || MARKET_DATA.desoPrice,
-      }
-    : desoQuery.data
-      ? {
-          desoPrice: desoQuery.data.desoPrice,
-          btcPrice: desoQuery.data.btcPriceFromDeso || MARKET_DATA.btcPrice,
-          ethPrice: MARKET_DATA.ethPrice,
-          solPrice: MARKET_DATA.solPrice,
-        }
-      : null;
+  // Single source: fetchLivePrices tries CoinGecko then fallback (CryptoCompare + DeSo get-exchange-rate)
+  const prices: LivePrices | null = pricesQuery.data ?? null;
 
   const useStaticWallets = !walletData.isLive || walletData.ammWallets.length === 0;
   const walletPayload = useStaticWallets
-    ? {
-        ammDeso: AMM_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0),
-        foundationDeso: FOUNDATION_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0),
-        founderDeso: FOUNDER_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0),
-        foundationDusdc: FOUNDATION_WALLETS[0]?.balances.dUSDC ?? 0,
-        ammWallets: AMM_WALLETS,
-      }
+    ? (() => {
+        const amm = AMM_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0);
+        const foundation = FOUNDATION_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0);
+        const founder = FOUNDER_WALLETS.reduce((s, w) => s + (w.balances.DESO || 0), 0);
+        return {
+          ammDeso: amm,
+          foundationDeso: foundation,
+          founderDeso: founder,
+          ammDesoUnstaked: amm,
+          foundationDesoUnstaked: foundation,
+          founderDesoUnstaked: founder,
+          foundationDusdc: FOUNDATION_WALLETS[0]?.balances.dUSDC ?? 0,
+          ammWallets: AMM_WALLETS,
+        };
+      })()
     : {
         ammDeso: walletData.ammDeso,
         foundationDeso: walletData.foundationDeso,
         founderDeso: walletData.founderDeso,
+        ammDesoUnstaked: walletData.ammDesoUnstaked,
+        foundationDesoUnstaked: walletData.foundationDesoUnstaked,
+        founderDesoUnstaked: walletData.founderDesoUnstaked,
         foundationDusdc: walletData.foundationDusdc,
         ammWallets: walletData.ammWallets,
       };
@@ -158,8 +152,8 @@ export function useLiveData() {
 
   return {
     ...dashboardData,
-    isLoading: pricesQuery.isLoading && desoQuery.isLoading,
-    isError: pricesQuery.isError && desoQuery.isError,
-    lastUpdated: pricesQuery.dataUpdatedAt || desoQuery.dataUpdatedAt || null,
+    isLoading: pricesQuery.isLoading,
+    isError: pricesQuery.isError,
+    lastUpdated: pricesQuery.dataUpdatedAt ?? null,
   };
 }

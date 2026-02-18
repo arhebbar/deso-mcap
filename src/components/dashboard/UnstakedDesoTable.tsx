@@ -36,7 +36,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 };
 
 export default function UnstakedDesoTable() {
-  const { wallets, isLoading, isLive, dataSource, cachedAt } = useWalletData();
+  const { wallets, isLoading, isFetching, isLive, dataSource, cachedAt } = useWalletData();
   const { marketData } = useLiveData();
 
   /** Same as WalletTable but excludes staked DESO from value and display */
@@ -231,7 +231,11 @@ export default function UnstakedDesoTable() {
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-title mb-0">Unstaked DESO</h3>
-        {isLive ? (
+        {(isLoading || isFetching) ? (
+          <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
+            Updating…
+          </span>
+        ) : isLive ? (
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
             Live data
           </span>

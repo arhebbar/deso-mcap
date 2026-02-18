@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useDesoCirculationBreakdown, type CirculationNode } from '@/hooks/useDesoCirculationBreakdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import { formatUsd } from '@/lib/formatters';
 
 function fmtDeso(n: number) {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : n.toFixed(2);
 }
+
+const NO_DATA_LABELS = new Set(['Core Team', 'DeSo Bulls']);
 
 function TreeNode({ node, depth, total, path, openKeys, toggleKey, cachedAt }: {
   node: CirculationNode;
@@ -21,6 +24,10 @@ function TreeNode({ node, depth, total, path, openKeys, toggleKey, cachedAt }: {
   const isOpen = openKeys.has(key);
   const pct = total > 0 ? (node.amount / total) * 100 : 0;
   const isCreatorCoins = node.label === 'Creator Coins v1';
+  const isNoDataPlaceholder = NO_DATA_LABELS.has(node.label) && node.amount === 0;
+  const amountText = isNoDataPlaceholder ? '—' : fmtDeso(node.amount);
+  const pctText = isNoDataPlaceholder ? '—' : `${pct.toFixed(1)}%`;
+  const usdText = node.usdValue != null ? formatUsd(node.usdValue) : '—';
 
   return (
     <>
@@ -47,8 +54,9 @@ function TreeNode({ node, depth, total, path, openKeys, toggleKey, cachedAt }: {
             </span>
           )}
         </span>
-        <span className="font-mono text-xs tabular-nums">{fmtDeso(node.amount)}</span>
-        <span className="text-xs text-muted-foreground w-12 text-right">{pct.toFixed(1)}%</span>
+        <span className="font-mono text-xs tabular-nums w-20 text-right" title={isNoDataPlaceholder ? 'Staked or wallet data not available yet' : undefined}>{amountText}</span>
+        <span className="font-mono text-xs tabular-nums w-20 text-right text-muted-foreground">{usdText}</span>
+        <span className="text-xs text-muted-foreground w-12 text-right">{pctText}</span>
       </div>
       {hasChildren && isOpen &&
         node.children!.map((child) => (
@@ -84,16 +92,25 @@ export default function DesoCirculationBreakdown() {
   if (isLoading && !hasDataToShow) {
     return (
       <div className="chart-container">
-        <h3 className="section-title mb-4">Overall DESO in Circulation</h3>
+        <h3 className="section-title mb-4">DESO in Circulation</h3>
         <Skeleton className="h-64 w-full rounded" />
       </div>
     );
   }
 
+  const totalUsd = root.reduce((s, n) => s + (n.usdValue ?? 0), 0);
+
   return (
     <div className="chart-container">
-      <h3 className="section-title mb-4">Overall DESO in Circulation</h3>
+      <h3 className="section-title mb-4">DESO in Circulation</h3>
       <div className="rounded-lg border border-border bg-card/50 overflow-hidden">
+        <div className="px-4 pt-3 pb-1 flex gap-2 text-xs text-muted-foreground border-b border-border">
+          <span className="w-4 shrink-0" />
+          <span className="flex-1">Category</span>
+          <span className="w-20 text-right">DESO</span>
+          <span className="w-20 text-right">US$</span>
+          <span className="w-12 text-right">%</span>
+        </div>
         <div className="p-4 space-y-0">
           {root.map((node) => (
             <TreeNode
@@ -111,6 +128,7 @@ export default function DesoCirculationBreakdown() {
         <div className="border-t border-border px-4 py-2 flex justify-between text-sm font-medium">
           <span>Total</span>
           <span className="font-mono">{fmtDeso(total)} DESO</span>
+          <span className="font-mono text-muted-foreground">{formatUsd(totalUsd)}</span>
         </div>
       </div>
     </div>
