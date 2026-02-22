@@ -100,7 +100,7 @@ export default function FreeFloatSection() {
     });
 
     return { freeFloatDeso, freeFloatUsd, anonymousWallets: sorted.slice(0, 100) };
-  }, [freeFloat, marketData, validatorBuckets, sortField, sortDesc, balanceByPk]);
+  }, [freeFloat, marketData, validatorBuckets, wallets, sortField, sortDesc, balanceByPk]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

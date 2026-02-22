@@ -229,11 +229,11 @@ export function useCirculationTable(): CirculationTableData {
 
     const openfundTotal = wallets.reduce((s, w) => s + (w.balances.Openfund ?? 0), 0);
     const openfundDesoEquiv = desoPrice > 0 ? (openfundTotal * prices.openfund) / desoPrice : 0;
-    const focusTotal = wallets.reduce((s: number, w) => (w.name === 'focus' ? s : s + Number(w.balances.Focus ?? 0)), 0);
+    const focusTotal = wallets.reduce((s, w) => (w.name === 'focus' ? s : s + (w.balances.Focus ?? 0), 0));
     const focusDesoEquiv = desoPrice > 0 ? (focusTotal * prices.focus) / desoPrice : 0;
-    const walletDesoTotal = wallets.reduce((s, w) => s + Number(w.balances.DESO ?? 0), 0);
-    const validatorStakedTotal = validators.reduce((s, v) => s + Number(v.amount), 0);
-    const desoUnstakedTotal = walletDesoTotal - validatorStakedTotal;
+    const desoUnstakedTotal =
+      wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0) -
+      validators.reduce((s, v) => s + v.amount, 0);
     const desoUnstaked = Math.max(0, desoUnstakedTotal);
     const dBtcTotal = wallets.reduce((s, w) => s + (w.balances.dBTC ?? 0), 0);
     const dEthTotal = wallets.reduce((s, w) => s + (w.balances.dETH ?? 0), 0);
@@ -253,7 +253,7 @@ export function useCirculationTable(): CirculationTableData {
       ? ccv2UserTokenAmms.reduce((s, a) => s + a.deso, 0)
       : CCV2_AMM_DESO;
     const ccv2Usd = ccv2UserTokenAmms.length > 0
-      ? ccv2UserTokenAmms.reduce((s, a) => s + a.usdValue, 0)
+      ? ccv2UserTokenAmms.reduce((s, a) => s + (a.usdValue > 0 ? a.usdValue : a.deso * desoPrice), 0)
       : CCV2_AMM_DESO * desoPrice;
     const ccv2ByCategory = ccv2UserTokenAmms.length > 0
       ? ccv2UserTokenAmms.map((a) => ({
@@ -461,5 +461,20 @@ export function useCirculationTable(): CirculationTableData {
       isLoading: walletData.isLoading || stakedData.isLoading,
       ccv1CachedAt,
     };
-  }, [walletData, stakedData.validatorBuckets, stakedData.isLoading, marketData.desoPrice, marketData.desoTotalSupply, marketData.btcPrice, marketData.ethPrice, marketData.solPrice, marketData.openfundPrice, marketData.focusPrice, ccv1NetworkTotalDeso, ccv1CachedAt]);
+  }, [
+    walletData.wallets,
+    walletData.ccv1TotalDeso,
+    walletData.isLoading,
+    stakedData.validatorBuckets,
+    stakedData.isLoading,
+    marketData.desoTotalSupply,
+    marketData.desoPrice,
+    marketData.btcPrice,
+    marketData.ethPrice,
+    marketData.solPrice,
+    marketData.openfundPrice,
+    marketData.focusPrice,
+    ccv1NetworkTotalDeso,
+    ccv1CachedAt,
+  ]);
 }
