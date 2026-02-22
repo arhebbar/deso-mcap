@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLivePrices, type LivePrices } from '@/api/priceApi';
+import { getPriceCache, setPriceCache } from '@/lib/priceCache';
 import {
   MARKET_DATA,
   EXTERNAL_TREASURY,
@@ -110,7 +112,12 @@ export function useLiveData() {
     refetchInterval: 60_000, // refresh every 60s
     staleTime: 30_000,
     retry: 2,
+    placeholderData: () => getPriceCache() ?? undefined,
   });
+
+  useEffect(() => {
+    if (pricesQuery.data) setPriceCache(pricesQuery.data);
+  }, [pricesQuery.data]);
 
   // Single source: fetchLivePrices tries CoinGecko then fallback (CryptoCompare + DeSo get-exchange-rate)
   const prices: LivePrices | null = pricesQuery.data ?? null;

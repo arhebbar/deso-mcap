@@ -80,6 +80,7 @@ describe('4. Interactions – Assets breakdown bar', () => {
       { wrapper: createWrapper() }
     );
     expect(screen.getByText(/Assets by Section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Click a column/i)).toBeInTheDocument();
   });
 
   it('renders with selected section', async () => {
@@ -90,7 +91,8 @@ describe('4. Interactions – Assets breakdown bar', () => {
       />,
       { wrapper: createWrapper() }
     );
-    expect(screen.getByText('Foundation')).toBeInTheDocument();
-    expect(screen.getByText('AMM')).toBeInTheDocument();
+    // Assets bar shows section labels in column chart and in legend (multiple matches)
+    expect(screen.getAllByText('Foundation').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('AMM').length).toBeGreaterThanOrEqual(1);
   });
 });

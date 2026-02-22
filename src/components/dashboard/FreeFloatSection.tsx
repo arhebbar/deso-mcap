@@ -1,12 +1,15 @@
 /**
  * Free Float: total unaccounted DESO (and USD) plus list of anonymous (untracked) wallets
  * sorted by Unstaked DESO (top 10), with sort options. Wallets are clickable to wallet.deso.com.
+ * Fetches balance (get-users-stateless) for anonymous wallet PKs so displayed holdings match chain.
  */
 
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useStakedDesoData } from '@/hooks/useStakedDesoData';
 import { useWalletData } from '@/hooks/useWalletData';
+import { fetchBalancesForPublicKeys } from '@/api/walletApi';
 import { formatUsd } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUpDown } from 'lucide-react';
@@ -26,12 +29,28 @@ export default function FreeFloatSection() {
   const [sortField, setSortField] = useState<SortField>('unstaked');
   const [sortDesc, setSortDesc] = useState(true);
 
+  const anonymousPks = useMemo(() => {
+    const pks = new Set<string>();
+    for (const b of validatorBuckets) {
+      for (const r of [...b.foundation, ...b.community]) {
+        if (r.classification === 'COMMUNITY') pks.add(r.stakerPk);
+      }
+    }
+    return Array.from(pks);
+  }, [validatorBuckets]);
+
+  const { data: balanceByPk } = useQuery({
+    queryKey: ['anonymous-wallet-balances', [...anonymousPks].sort().join(',')],
+    queryFn: () => fetchBalancesForPublicKeys(anonymousPks),
+    enabled: anonymousPks.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+
   const { freeFloatDeso, freeFloatUsd, anonymousWallets } = useMemo(() => {
     const freeFloatDeso = freeFloat;
     const freeFloatUsd = freeFloatDeso * marketData.desoPrice;
 
     const byPk = new Map<string, { name: string; pk: string; staked: number; unstaked: number; tokens: Record<string, number> }>();
-    const trackedPks = new Set(wallets.map((w) => w.name.toLowerCase()));
 
     for (const b of validatorBuckets) {
       for (const r of [...b.foundation, ...b.community]) {
@@ -46,8 +65,11 @@ export default function FreeFloatSection() {
       }
     }
 
-    // Note: Anonymous wallets are untracked, so we don't have their unstaked/token balances
-    // We only have staked amounts from the validator data
+    // Unstaked = total DESO (from chain) - staked; fetch balances so displayed holdings match chain
+    for (const [pk, w] of byPk) {
+      const totalDeso = balanceByPk?.get(pk) ?? 0;
+      w.unstaked = Math.max(0, totalDeso - w.staked);
+    }
 
     const walletsList = Array.from(byPk.values()).map((w) => {
       const tokensUsd = Object.entries(w.tokens).reduce((sum, [token, amt]) => {
@@ -77,8 +99,8 @@ export default function FreeFloatSection() {
       return sortDesc ? bVal - aVal : aVal - bVal;
     });
 
-    return { freeFloatDeso, freeFloatUsd, anonymousWallets: sorted.slice(0, 10) };
-  }, [freeFloat, marketData, validatorBuckets, wallets, sortField, sortDesc]);
+    return { freeFloatDeso, freeFloatUsd, anonymousWallets: sorted.slice(0, 100) };
+  }, [freeFloat, marketData, validatorBuckets, sortField, sortDesc, balanceByPk]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -100,8 +122,10 @@ export default function FreeFloatSection() {
 
   return (
     <div className="chart-container">
-      <h3 className="section-title">Free Float</h3>
-      <p className="text-xs text-muted-foreground mb-3">Unaccounted DESO (supply minus staked minus tracked wallets). Anonymous = untracked stakers.</p>
+      <h3 className="section-title">FREE FLOAT excluding Core, Foundation and DeSo Bulls Community</h3>
+      <p className="text-xs text-muted-foreground mb-3">
+        Unaccounted DESO (supply minus staked minus tracked wallets). Wallets are extracted from the same anonymous staker list as below; Top 100 untagged can be added to Token Holdings over time to shrink the Others row.
+      </p>
       <div className="mb-4 p-4 rounded-lg bg-muted/30">
         <div className="text-2xl font-bold tabular-nums">{formatUsd(freeFloatUsd)}</div>
         <div className="text-sm text-muted-foreground mt-1">
@@ -109,7 +133,7 @@ export default function FreeFloatSection() {
         </div>
       </div>
       <div>
-        <h4 className="text-sm font-medium mb-2">Top 10 Anonymous wallets (click wallet to open in DeSo Wallet)</h4>
+        <h4 className="text-sm font-medium mb-2">First 100 Anonymous wallets (click wallet to open in DeSo Wallet)</h4>
         {anonymousWallets.length === 0 ? (
           <p className="text-xs text-muted-foreground">No untracked stakers in current data.</p>
         ) : (

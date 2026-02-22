@@ -15,7 +15,7 @@ type DataSource = 'live' | 'cached' | 'static';
  * order book doesn't appear in get-users-stateless UsersYouHODL).
  */
 function mergeWithStatic(
-  api: { name: string; classification: string; balances: Record<string, number>; usdValue?: number; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>; ccv1ValueDeso?: number },
+  api: { name: string; classification: string; balances: Record<string, number>; usdValue?: number; desoStaked?: number; desoUnstaked?: number; stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>; ccv1ValueDeso?: number; ccv2ValueUsd?: number },
   staticByName: Map<string, (typeof STATIC_WALLETS)[0]>
 ): (typeof STATIC_WALLETS)[0] {
   const fallback = staticByName.get(api.name);
@@ -37,6 +37,7 @@ function mergeWithStatic(
     desoUnstaked: api.desoUnstaked ?? fallback?.desoUnstaked,
     stakedByValidator: api.stakedByValidator ?? (fallback as { stakedByValidator?: typeof api.stakedByValidator })?.stakedByValidator,
     ccv1ValueDeso: api.ccv1ValueDeso ?? (fallback as { ccv1ValueDeso?: number })?.ccv1ValueDeso,
+    ccv2ValueUsd: api.ccv2ValueUsd ?? (fallback as { ccv2ValueUsd?: number })?.ccv2ValueUsd,
   };
 }
 
@@ -51,6 +52,7 @@ export function useWalletData() {
     queryFn: fetchWalletBalances,
     staleTime: 2 * 60 * 1000,
     retry: 2,
+    placeholderData: () => getWalletCache()?.data ?? undefined,
   });
 
   const apiWallets = query.data ?? [];
@@ -96,6 +98,7 @@ export function useWalletData() {
           desoUnstaked: c?.desoUnstaked ?? fallback?.desoUnstaked,
           stakedByValidator: c?.stakedByValidator ?? (fallback as { stakedByValidator?: typeof c.stakedByValidator })?.stakedByValidator,
           ccv1ValueDeso: c?.ccv1ValueDeso ?? (fallback as { ccv1ValueDeso?: number })?.ccv1ValueDeso,
+          ccv2ValueUsd: c?.ccv2ValueUsd ?? (fallback as { ccv2ValueUsd?: number })?.ccv2ValueUsd,
         };
       });
       dataSource = 'cached';

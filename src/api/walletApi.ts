@@ -6,7 +6,7 @@
  * Uses blockproducer.deso.org for get-hodlers (same as Openfund: https://openfund.com/d/openfund)
  */
 
-import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES } from '@/data/desoData';
+import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES, getCCv2UserTokenAmms } from '@/data/desoData';
 
 /** Use Vite proxy in dev, Vercel rewrites in prod to avoid CORS */
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
@@ -43,6 +43,8 @@ export interface WalletData {
   stakedByValidator?: StakedByValidator[];
   /** Net value of CCv1 (Creator Coin v1) holdings in DESO, from GraphQL creatorCoinBalances */
   ccv1ValueDeso?: number;
+  /** USD value of CCv2 user-token holdings (share of creator-coin AMM pools attributed to this account) */
+  ccv2ValueUsd?: number;
 }
 
 const WALLET_CONFIG: WalletConfig[] = [
@@ -55,6 +57,8 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Deso', classification: 'FOUNDATION' },
   { username: 'deso10Mdaubet', classification: 'FOUNDATION' },
   { username: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION' },
+  { username: 'DaoDaoDistributions', classification: 'FOUNDATION' },
+  { username: 'merlin', classification: 'FOUNDATION' },
   // AMM
   { username: 'AMM_DESO_24_PlAEU', classification: 'AMM' },
   { username: 'AMM_DESO_23_GrYpe', classification: 'AMM' },
@@ -62,6 +66,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'AMM_openfund_12_gOR1b', classification: 'AMM' },
   { username: 'AMM_DESO_19_W5vn0', classification: 'AMM' },
   { username: 'AMM_openfund_13_1gbih', classification: 'AMM' },
+  { username: 'AMM_WhaleDShark_76_SWfzF', displayName: 'WhaleDShark (AMM)', classification: 'AMM' },
   // Founding Team
   { username: 'Whoami', classification: 'FOUNDER' },
   { username: 'Nader', classification: 'FOUNDER' },
@@ -77,6 +82,17 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'JacksonDean', classification: 'FOUNDER' },
   { username: 'TyFischer', classification: 'FOUNDER' },
   { username: 'happy_penguin', classification: 'FOUNDER' },
+  // Core Validators (Core Team)
+  { username: 'NOT_AN_AGI', classification: 'FOUNDER' },
+  { username: 'STAKE_TO_ME_OR_ELSE', classification: 'FOUNDER' },
+  { username: 'REVOLUTIONARY_STAKING', classification: 'FOUNDER' },
+  { username: 'simple_man_staking', classification: 'FOUNDER' },
+  { username: 'respect_for_yield', classification: 'FOUNDER' },
+  { username: 'AmericanStakers', classification: 'FOUNDER' },
+  { username: 'UtopianCondition', classification: 'FOUNDER' },
+  { username: 'yumyumstake', classification: 'FOUNDER' },
+  { username: 'DesoSpaceStation', classification: 'FOUNDER' },
+  { username: 'SAFU_Stake', classification: 'FOUNDER' },
   // DeSo Bulls (same fetch method as Foundation/Founder)
   { username: 'Randhir', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
   { username: 'RandhirStakingWallet', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
@@ -85,6 +101,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Bhagyasri', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
   { username: 'HighKey', displayName: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'JordanLintz', displayName: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', mergeKey: 'HighKey' },
+  { username: 'jacksonlintz', displayName: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'LukeLintz', displayName: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'HighKeyValidator', displayName: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', mergeKey: 'HighKey' },
   { username: 'StarGeezer', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', classification: 'DESO_BULL', mergeKey: 'StarGeezer' },
@@ -98,6 +115,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'RobertGraham', classification: 'DESO_BULL' },
   { username: '0xAustin', displayName: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', mergeKey: '0xAustin' },
   { username: '0xVault', displayName: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', mergeKey: '0xAustin' },
+  { username: '0xAustinValidator', displayName: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', mergeKey: '0xAustin' },
   { username: '0xBen_', classification: 'DESO_BULL' },
   { username: 'Darian_Parrish', displayName: 'Darian_Parrish (incl. DariansWallet)', classification: 'DESO_BULL', mergeKey: 'Darian_Parrish' },
   { username: 'DariansWallet', displayName: 'Darian_Parrish (incl. DariansWallet)', classification: 'DESO_BULL', mergeKey: 'Darian_Parrish' },
@@ -111,6 +129,17 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'PremierNS', classification: 'DESO_BULL' },
   { username: 'WhaleDShark', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
   { username: 'WhaleDVault', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
+  { username: 'dharmesh', displayName: 'dharmesh', classification: 'DESO_BULL' },
+  { username: 'hubspot', classification: 'DESO_BULL' },
+  { username: 'Stantontv', classification: 'DESO_BULL' },
+  { username: 'MayumiJapan', classification: 'DESO_BULL' },
+  { username: 'SwiftD', classification: 'DESO_BULL' },
+  { username: 'avrce', classification: 'DESO_BULL' },
+  { username: 'Kunge', classification: 'DESO_BULL' },
+  { username: 'leojay', classification: 'DESO_BULL' },
+  { username: 'Fungibles', classification: 'DESO_BULL' },
+  { username: 'NodebitsDAO', classification: 'DESO_BULL' },
+  { username: '100', classification: 'DESO_BULL' },
   { username: 'Crowd33', displayName: 'Crowd33 (incl. CrowdWallet)', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
   { username: 'CrowdWallet', displayName: 'Crowd33 (incl. CrowdWallet)', classification: 'DESO_BULL', mergeKey: 'Crowd33' },
   // Long-term community members
@@ -134,7 +163,8 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'jemarsh', displayName: 'mcMarsh (incl. jemarsh, mcMarshstaking)', classification: 'DESO_BULL', mergeKey: 'mcMarsh' },
   { username: 'ImJigarShah', displayName: 'ImJigarShah (incl. thesarcasm)', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
   { username: 'thesarcasm', displayName: 'ImJigarShah (incl. thesarcasm)', classification: 'DESO_BULL', mergeKey: 'ImJigarShah' },
-  { username: 'Johan_Holmberg', classification: 'DESO_BULL' },
+  { username: 'Johan_Holmberg', displayName: 'Johan_Holmberg (incl. J_Vault)', classification: 'DESO_BULL', mergeKey: 'Johan_Holmberg' },
+  { username: 'J_Vault', displayName: 'Johan_Holmberg (incl. J_Vault)', classification: 'DESO_BULL', mergeKey: 'Johan_Holmberg' },
   { username: 'MrTriplet', classification: 'DESO_BULL' },
   { username: 'FedeDM', displayName: 'FedeDM (incl. FedeDM_Guardian)', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
   { username: 'FedeDM_Guardian', displayName: 'FedeDM (incl. FedeDM_Guardian)', classification: 'DESO_BULL', mergeKey: 'FedeDM' },
@@ -197,7 +227,8 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'CompDec', classification: 'DESO_BULL' },
   { username: 'RajLahoti', classification: 'DESO_BULL' },
   { username: 'StubbornDad', classification: 'DESO_BULL' },
-  { username: 'TheBitcloutDog', classification: 'DESO_BULL' },
+  { username: 'TheBitcloutDog', displayName: 'TheBitcloutDog (incl. TheBitcloutDogVault)', classification: 'DESO_BULL', mergeKey: 'TheBitcloutDog' },
+  { username: 'TheBitcloutDogVault', displayName: 'TheBitcloutDog (incl. TheBitcloutDogVault)', classification: 'DESO_BULL', mergeKey: 'TheBitcloutDog' },
   { username: 'SharkGang', displayName: 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', classification: 'DESO_BULL', mergeKey: 'SharkGang' },
   { username: 'Metaphilosopher', displayName: 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', classification: 'DESO_BULL', mergeKey: 'SharkGang' },
   { username: 'SharkToken', displayName: 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', classification: 'DESO_BULL', mergeKey: 'SharkGang' },
@@ -523,6 +554,40 @@ async function fetchStakedByPublicKey(
   return result;
 }
 
+/** Fetch DESO balance (total) per public key for untracked wallets. Used by Free Float to show accurate holdings. */
+export async function fetchBalancesForPublicKeys(
+  publicKeys: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (publicKeys.length === 0) return out;
+  const BATCH = 100;
+  for (let i = 0; i < publicKeys.length; i += BATCH) {
+    const batch = publicKeys.slice(i, i + BATCH);
+    try {
+      const res = (await desoPost('/get-users-stateless', {
+        PublicKeysBase58Check: batch,
+        SkipForLeaderboard: true,
+        IncludeBalance: true,
+      })) as {
+        UserList?: Array<{
+          PublicKeyBase58Check?: string;
+          BalanceNanos?: number;
+          DESOBalanceNanos?: number;
+        }>;
+      };
+      for (const u of res.UserList ?? []) {
+        const pk = u.PublicKeyBase58Check;
+        if (!pk) continue;
+        const balanceNanos = u.DESOBalanceNanos ?? u.BalanceNanos ?? 0;
+        out.set(pk, balanceNanos / NANOS_PER_DESO);
+      }
+    } catch {
+      // ignore failed batch
+    }
+  }
+  return out;
+}
+
 /** Resolve public keys to usernames via get-users-stateless (ProfileEntryResponse.Username) */
 async function fetchUsernamesForPks(pks: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
@@ -705,6 +770,59 @@ export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
     return b.total - a.total;
   });
   return buckets;
+}
+
+/**
+ * Fetch creator coin (CCv2) holders via get-hodlers-for-public-key with IsDAOCoin: false.
+ * Returns map of holder publicKey -> balance in nanos (for share ratio; totalSupply = sum of values).
+ */
+async function fetchCreatorCoinHolders(creatorUsername: string): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  try {
+    let lastKey = '';
+    for (;;) {
+      const res = await fetch(`${HODLERS_API}/get-hodlers-for-public-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          Username: creatorUsername,
+          LastPublicKeyBase58Check: lastKey,
+          NumToFetch: 200,
+          FetchAll: false,
+          IsDAOCoin: false,
+        }),
+      });
+      if (!res.ok) break;
+      const data = (await res.json()) as {
+        Hodlers?: Array<{
+          HODLerPublicKeyBase58Check?: string;
+          BalanceNanos?: number;
+          BalanceNanosUint256?: string;
+        }>;
+        LastPublicKeyBase58Check?: string;
+      };
+      const hodlers = data?.Hodlers ?? [];
+      for (const h of hodlers) {
+        const pk = h.HODLerPublicKeyBase58Check;
+        if (!pk) continue;
+        const nanos = parseCreatorCoinBalanceNanos(h);
+        if (nanos > 0) out.set(pk, (out.get(pk) ?? 0) + nanos);
+      }
+      lastKey = data?.LastPublicKeyBase58Check ?? '';
+      if (hodlers.length < 200 || !lastKey) break;
+    }
+  } catch {
+    // ignore
+  }
+  return out;
+}
+
+function parseCreatorCoinBalanceNanos(entry: { BalanceNanos?: number; BalanceNanosUint256?: string }): number {
+  if (entry.BalanceNanosUint256) {
+    const hex = entry.BalanceNanosUint256.replace(/^0x/, '');
+    return Number(BigInt('0x' + hex));
+  }
+  return entry.BalanceNanos ?? 0;
 }
 
 /** Token creator usernames for get-hodlers-for-public-key (fetches all holders of that token) */
@@ -944,7 +1062,9 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
   }
 
   const results: WalletData[] = [];
+  const pksPerResult: string[][] = [];
   for (const [groupKey, pksInGroup] of groupKeyToPks) {
+    pksPerResult.push(pksInGroup);
     const meta = trackedByPk.get(pksInGroup[0])!;
     const balances: Record<string, number> = {};
 
@@ -997,6 +1117,24 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       stakedByValidator: stakedByValidator.length > 0 ? stakedByValidator : undefined,
       ccv1ValueDeso: ccv1ValueDeso > 0 ? ccv1ValueDeso : undefined,
     });
+  }
+
+  // 5. CCv2 user-token AMMs: attribute pool value to accounts by creator-coin holder share
+  const ccv2Amms = getCCv2UserTokenAmms(results);
+  const ccv2ValueByPk = new Map<string, number>();
+  for (const amm of ccv2Amms) {
+    const holders = await fetchCreatorCoinHolders(amm.profileName);
+    const totalNanos = [...holders.values()].reduce((s, n) => s + n, 0);
+    if (totalNanos === 0) continue;
+    for (const [pk, nanos] of holders) {
+      const share = nanos / totalNanos;
+      ccv2ValueByPk.set(pk, (ccv2ValueByPk.get(pk) ?? 0) + share * amm.usdValue);
+    }
+  }
+  for (let i = 0; i < results.length; i++) {
+    const pks = pksPerResult[i];
+    const ccv2Usd = pks.reduce((s, pk) => s + (ccv2ValueByPk.get(pk) ?? 0), 0);
+    if (ccv2Usd > 0) results[i].ccv2ValueUsd = ccv2Usd;
   }
 
   return results;

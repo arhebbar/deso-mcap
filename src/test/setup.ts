@@ -1,6 +1,14 @@
-import "@testing-library/jest-dom";
+import '@testing-library/jest-dom';
 
-Object.defineProperty(window, "matchMedia", {
+// Suppress Recharts "width(0) and height(0)" in jsdom (no real layout)
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const msg = typeof args[0] === 'string' ? args[0] : String(args[0]);
+  if (msg.includes('width(0) and height(0) of chart')) return;
+  originalConsoleError.apply(console, args);
+};
+
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
     matches: false,

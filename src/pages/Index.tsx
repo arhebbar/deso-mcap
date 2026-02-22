@@ -7,8 +7,9 @@ import TrendCharts from '@/components/dashboard/TrendCharts';
 import DesoInCirculationTable from '@/components/dashboard/DesoInCirculationTable';
 import AssetsBreakdownBar from '@/components/dashboard/AssetsBreakdownBar';
 import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
-import WalletTable from '@/components/dashboard/WalletTable';
+import CapitalStructureBreakdownChart from '@/components/dashboard/CapitalStructureBreakdownChart';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
+import TokenHoldingsTable from '@/components/dashboard/TokenHoldingsTable';
 import FreeFloatSection from '@/components/dashboard/FreeFloatSection';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useWalletData } from '@/hooks/useWalletData';
@@ -90,14 +91,19 @@ const Index = () => {
         {/* DESO in Circulation – single table with 3-level drilldown */}
         <DesoInCirculationTable />
 
-        {/* Assets bar: click section to expand only that section in table below */}
-        <AssetsBreakdownBar
-          selectedSection={tableSectionFilter}
-          onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
-        />
+        {/* Assets by Section + Capital Structure by Section side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AssetsBreakdownBar
+            selectedSection={tableSectionFilter}
+            onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
+          />
+          <CapitalStructureBreakdownChart />
+        </div>
 
-        {/* Wallet Table (Foundation, Team, DeSo Bulls) */}
-        <WalletTable expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter} />
+        {/* Token Holdings: Category + Accounts + token columns; bar click expands/filters by section */}
+        <TokenHoldingsTable
+          expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter}
+        />
 
         {/* Free Float: unaccounted total + anonymous wallets sorted high to low */}
         <FreeFloatSection />

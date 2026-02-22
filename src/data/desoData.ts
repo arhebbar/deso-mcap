@@ -13,6 +13,8 @@ export interface WalletData {
   stakedByValidator?: Array<{ validatorPk: string; validatorName?: string; amount: number }>;
   /** Net value of CCv1 (Creator Coin v1) holdings in DESO */
   ccv1ValueDeso?: number;
+  /** USD value of CCv2 (user-token AMM) holdings attributed to this account from creator-coin holder share */
+  ccv2ValueUsd?: number;
 }
 
 export interface MarketData {
@@ -75,6 +77,8 @@ export const FOUNDATION_WALLETS: WalletData[] = [
   },
   { name: 'deso10Mdaubet', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'DaoDaoDistributions', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'merlin', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
 
 export const AMM_WALLETS: WalletData[] = [
@@ -84,6 +88,8 @@ export const AMM_WALLETS: WalletData[] = [
   { name: 'AMM_openfund_12_gOR1b', classification: 'AMM', balances: { Openfund: 5_046_000 }, usdValue: 439_000 },
   { name: 'AMM_DESO_19_W5vn0', classification: 'AMM', balances: { DESO: 74_048 }, usdValue: 428_000 },
   { name: 'AMM_openfund_13_1gbih', classification: 'AMM', balances: { Openfund: 1_207_000 }, usdValue: 105_000 },
+  /** WhaleDShark user token AMM pool (~$44K); value proxies total WhaleDShark token holder value. name matches API displayName for merge. */
+  { name: 'WhaleDShark (AMM)', classification: 'AMM', balances: { DESO: 7_458 }, usdValue: 44_000 },
 ];
 
 export const FOUNDER_WALLETS: WalletData[] = [
@@ -106,12 +112,22 @@ export const FOUNDER_WALLETS: WalletData[] = [
   { name: 'JacksonDean', classification: 'FOUNDER', balances: {}, usdValue: 0 },
   { name: 'TyFischer', classification: 'FOUNDER', balances: {}, usdValue: 0 },
   { name: 'happy_penguin', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'NOT_AN_AGI', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'STAKE_TO_ME_OR_ELSE', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'REVOLUTIONARY_STAKING', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'simple_man_staking', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'respect_for_yield', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'AmericanStakers', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'UtopianCondition', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'yumyumstake', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'DesoSpaceStation', classification: 'FOUNDER', balances: {}, usdValue: 0 },
+  { name: 'SAFU_Stake', classification: 'FOUNDER', balances: {}, usdValue: 0 },
 ];
 
 /** DeSo Bulls - community holders. No static fallback; API/cache only. */
 export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Randhir (Me)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator, jacksonlintz)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Gabrielist (incl. gabrielvault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -131,7 +147,7 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Gatucu', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'mcMarsh (incl. jemarsh, mcMarshstaking)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ImJigarShah (incl. thesarcasm)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'Johan_Holmberg', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Johan_Holmberg (incl. J_Vault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'MrTriplet', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'FedeDM (incl. FedeDM_Guardian)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'SeWiJuga', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -186,12 +202,23 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'fllwthrvr', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'PremierNS', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'dharmesh', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'hubspot', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Stantontv', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'MayumiJapan', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'SwiftD', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'avrce', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Kunge', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'leojay', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Fungibles', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'NodebitsDAO', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: '100', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Crowd33 (incl. CrowdWallet)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ChaseSteely', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'CompDec', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'RajLahoti', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'StubbornDad', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'TheBitcloutDog', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'TheBitcloutDog (incl. TheBitcloutDogVault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Degen_doge', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'PaulyHart', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -247,7 +274,34 @@ export const EXTERNAL_TREASURY = {
   totalUsdc: 7_000_000,
 };
 
-/** CCv2 AMM liquidity – approximate DESO locked in Creator Coin v2 AMMs (~$130K at $5.9) */
+/** Token name (second segment of AMM_<Token>_*) that are native/DAO, not user creator tokens. Lowercase for case-insensitive match. */
+const NATIVE_AMM_TOKENS = new Set(['deso', 'focus', 'openfund']);
+
+/**
+ * Extract CCv2 user-token AMMs from wallet list.
+ * Second segment of AMM username = profile name (e.g. AMM_WhaleDShark_76_SWfzF → WhaleDShark).
+ * Display name "X (AMM)" also maps to profile X. Native AMMs (DESO, focus, openfund) are excluded.
+ */
+export function getCCv2UserTokenAmms(wallets: { name: string; classification: string; balances: Record<string, number>; usdValue?: number }[]): { profileName: string; deso: number; usdValue: number }[] {
+  const out: { profileName: string; deso: number; usdValue: number }[] = [];
+  for (const w of wallets) {
+    if (w.classification !== 'AMM') continue;
+    let profileName: string | null = null;
+    if (w.name.endsWith(' (AMM)')) {
+      profileName = w.name.slice(0, -7);
+    } else if (w.name.startsWith('AMM_')) {
+      const part = w.name.split('_')[1];
+      profileName = part ?? null;
+    }
+    if (!profileName || NATIVE_AMM_TOKENS.has(profileName.toLowerCase())) continue;
+    const deso = w.balances?.DESO ?? 0;
+    const usdValue = w.usdValue ?? 0;
+    out.push({ profileName, deso, usdValue });
+  }
+  return out;
+}
+
+/** CCv2 AMM liquidity – fallback when no wallet-derived CCv2 user-token AMMs (~$130K at $5.9) */
 export const CCV2_AMM_DESO = 22_000;
 
 // Derived calculations

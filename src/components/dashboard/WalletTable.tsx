@@ -129,6 +129,10 @@ export default function WalletTable({ expandedSectionOnly }: WalletTableProps = 
   const toggleOthers = () => setOpenOthers((p) => !p);
 
   const totalUsd = allWallets.reduce((s, w) => s + w.usdValue, 0);
+  const trackedDeso = allWallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0);
+  const totalSupply = marketData.desoTotalSupply;
+  const othersDeso = Math.max(0, totalSupply - trackedDeso);
+  const othersUsd = othersDeso * marketData.desoPrice;
 
   function WalletRow({ w }: { w: (typeof allWallets)[0] }) {
     const username = getUsernameForLink(w.name);
@@ -282,9 +286,19 @@ export default function WalletTable({ expandedSectionOnly }: WalletTableProps = 
               <SectionTable sectionKey="AMM" />
               <SectionTable sectionKey="FOUNDER" />
               <SectionTable sectionKey="DESO_BULL" />
+              {othersDeso > 0 && (
+                <tr className="border-b border-border bg-muted/20">
+                  <td className="py-2 pl-6 font-medium text-sm">Others</td>
+                  <td className="text-xs text-muted-foreground">—</td>
+                  <td className="text-xs text-muted-foreground">
+                    {othersDeso >= 1_000_000 ? `${(othersDeso / 1_000_000).toFixed(2)}M` : othersDeso >= 1_000 ? `${(othersDeso / 1_000).toFixed(1)}K` : othersDeso.toFixed(2)} DESO
+                  </td>
+                  <td className="text-right font-mono text-sm">{formatUsd(othersUsd)}</td>
+                </tr>
+              )}
               <tr className="border-t border-border font-medium">
-                <td colSpan={3} className="text-xs pt-2">Total</td>
-                <td className="text-right font-mono text-sm pt-2">{formatUsd(totalUsd)}</td>
+                <td colSpan={3} className="text-xs pt-2">Total (tracked + others = {totalSupply >= 1_000_000 ? `${(totalSupply / 1_000_000).toFixed(1)}M` : totalSupply} DESO)</td>
+                <td className="text-right font-mono text-sm pt-2">{formatUsd(totalUsd + othersUsd)}</td>
               </tr>
             </tbody>
           </table>

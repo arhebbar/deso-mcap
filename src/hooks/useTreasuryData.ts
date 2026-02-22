@@ -68,6 +68,11 @@ export function useTreasuryAddresses() {
 
   const apiData = query.data ?? [];
   const staticByName = useMemo(() => new Map(STATIC_TREASURY_ADDRESSES.map((r) => [r.address, r])), []);
+  const cached = getTreasuryCache();
+  const cachedByAddr = useMemo(
+    () => (cached?.data?.length ? new Map(cached.data.map((c) => [c.address, c])) : new Map<string, CachedTreasuryRow>()),
+    [cached?.data]
+  );
 
   const hasMeaningfulData =
     apiData.length > 0 &&
@@ -80,6 +85,11 @@ export function useTreasuryAddresses() {
   if (hasMeaningfulData) {
     addresses = apiData.map((api) => {
       const fallback = staticByName.get(api.address);
+      const apiHasValue = Object.values(api.holdings ?? {}).some((v) => v > 0);
+      if (!apiHasValue && fallback) {
+        const cachedRow = cachedByAddr.get(api.address);
+        if (cachedRow) return mergeWithStatic(cachedRow, fallback);
+      }
       return fallback ? mergeWithStatic(api, fallback) : api;
     });
     isLive = true;

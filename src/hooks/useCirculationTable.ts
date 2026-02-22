@@ -10,7 +10,7 @@ import { useWalletData } from './useWalletData';
 import { useStakedDesoData } from './useStakedDesoData';
 import { useLiveData } from './useLiveData';
 import { useCCv1NetworkTotal } from './useCCv1NetworkTotal';
-import { CCV2_AMM_DESO } from '@/data/desoData';
+import { CCV2_AMM_DESO, getCCv2UserTokenAmms } from '@/data/desoData';
 import type { AllStakedDesoBucket, AllStakedDesoRow } from '@/api/walletApi';
 
 export const TOP_N = 15;
@@ -229,11 +229,11 @@ export function useCirculationTable(): CirculationTableData {
 
     const openfundTotal = wallets.reduce((s, w) => s + (w.balances.Openfund ?? 0), 0);
     const openfundDesoEquiv = desoPrice > 0 ? (openfundTotal * prices.openfund) / desoPrice : 0;
-    const focusTotal = wallets.reduce((s, w) => (w.name === 'focus' ? s : s + (w.balances.Focus ?? 0), 0));
+    const focusTotal = wallets.reduce((s: number, w) => (w.name === 'focus' ? s : s + Number(w.balances.Focus ?? 0)), 0);
     const focusDesoEquiv = desoPrice > 0 ? (focusTotal * prices.focus) / desoPrice : 0;
-    const desoUnstakedTotal =
-      wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0) -
-      validators.reduce((s, v) => s + v.amount, 0);
+    const walletDesoTotal = wallets.reduce((s, w) => s + Number(w.balances.DESO ?? 0), 0);
+    const validatorStakedTotal = validators.reduce((s, v) => s + Number(v.amount), 0);
+    const desoUnstakedTotal = walletDesoTotal - validatorStakedTotal;
     const desoUnstaked = Math.max(0, desoUnstakedTotal);
     const dBtcTotal = wallets.reduce((s, w) => s + (w.balances.dBTC ?? 0), 0);
     const dEthTotal = wallets.reduce((s, w) => s + (w.balances.dETH ?? 0), 0);
@@ -248,7 +248,20 @@ export function useCirculationTable(): CirculationTableData {
     const dSolByCat = byCategoryForToken('dSOL');
     const dUsdcByCat = byCategoryForToken('dUSDC');
 
-    const ccv2Usd = CCV2_AMM_DESO * desoPrice;
+    const ccv2UserTokenAmms = getCCv2UserTokenAmms(wallets);
+    const ccv2Deso = ccv2UserTokenAmms.length > 0
+      ? ccv2UserTokenAmms.reduce((s, a) => s + a.deso, 0)
+      : CCV2_AMM_DESO;
+    const ccv2Usd = ccv2UserTokenAmms.length > 0
+      ? ccv2UserTokenAmms.reduce((s, a) => s + a.usdValue, 0)
+      : CCV2_AMM_DESO * desoPrice;
+    const ccv2ByCategory = ccv2UserTokenAmms.length > 0
+      ? ccv2UserTokenAmms.map((a) => ({
+          label: a.profileName,
+          amount: a.deso,
+          usdValue: a.usdValue > 0 ? a.usdValue : a.deso * desoPrice,
+        }))
+      : [{ label: 'AMM', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
 
     const sections: TokenSection[] = [
       {
@@ -326,14 +339,14 @@ export function useCirculationTable(): CirculationTableData {
       {
         id: 'ccv2amm',
         label: 'CCv2 AMMs',
-        amount: CCV2_AMM_DESO,
+        amount: ccv2Deso,
         unit: 'DESO',
         usdValue: ccv2Usd,
-        byCategory: [{ label: 'AMM', amount: CCV2_AMM_DESO, usdValue: ccv2Usd }],
+        byCategory: ccv2ByCategory,
       },
     ];
 
-    const unstakedDesoEquiv = ccv1Deso + openfundDesoEquiv + focusDesoEquiv + desoUnstaked + CCV2_AMM_DESO;
+    const unstakedDesoEquiv = ccv1Deso + openfundDesoEquiv + focusDesoEquiv + desoUnstaked + ccv2Deso;
     const unstakedUsd = sections.reduce((s, x) => s + x.usdValue, 0);
 
     // Compute Non-Foundation holdings excluding staked for Native Tokens
@@ -348,10 +361,16 @@ export function useCirculationTable(): CirculationTableData {
     const dethNonFoundation = nonFoundationExcludingStaked('dETH');
     const dsolNonFoundation = nonFoundationExcludingStaked('dSOL');
 
-    // Native DESO breakdown (excluding staked)
+    // Unstaked DESO breakdown: tracked by category + Others (everything not in 12.2M tracked)
+    const sumTrackedDeso = wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0);
     const nativeDesoByCat = byCategoryForToken('DESO');
-    const nativeDesoTotal = nativeDesoByCat.reduce((s, c) => s + c.amount, 0);
-    const nativeDesoUsd = nativeDesoByCat.reduce((s, c) => s + c.usdValue, 0);
+    const othersUnstakedDeso = Math.max(0, totalSupply - sumTrackedDeso);
+    const nativeDesoByCatWithOthers = [
+      ...nativeDesoByCat,
+      ...(othersUnstakedDeso > 0 ? [{ label: 'Others', amount: othersUnstakedDeso, usdValue: othersUnstakedDeso * desoPrice }] : []),
+    ];
+    const nativeDesoTotal = nativeDesoByCatWithOthers.reduce((s, c) => s + c.amount, 0); // tracked + Others = totalSupply
+    const nativeDesoUsd = nativeDesoByCatWithOthers.reduce((s, c) => s + c.usdValue, 0);
 
     const breakdown: UnstakedBreakdown = {
       nativeTokens: {
@@ -409,18 +428,18 @@ export function useCirculationTable(): CirculationTableData {
       userTokens: {
         id: 'ccv2amm',
         label: 'DESO User Tokens (CCv2 AMMs)',
-        amount: CCV2_AMM_DESO,
+        amount: ccv2Deso,
         unit: 'DESO',
         usdValue: ccv2Usd,
-        byCategory: [{ label: 'AMM', amount: CCV2_AMM_DESO, usdValue: ccv2Usd }],
+        byCategory: ccv2ByCategory,
       },
       nativeDeso: {
-        id: 'native-deso',
-        label: 'Native DESO',
+        id: 'unstaked-deso',
+        label: 'Unstaked DESO',
         amount: nativeDesoTotal,
         unit: 'DESO',
         usdValue: nativeDesoUsd,
-        byCategory: nativeDesoByCat,
+        byCategory: nativeDesoByCatWithOthers,
       },
     };
 
@@ -442,20 +461,5 @@ export function useCirculationTable(): CirculationTableData {
       isLoading: walletData.isLoading || stakedData.isLoading,
       ccv1CachedAt,
     };
-  }, [
-    walletData.wallets,
-    walletData.ccv1TotalDeso,
-    walletData.isLoading,
-    stakedData.validatorBuckets,
-    stakedData.isLoading,
-    marketData.desoTotalSupply,
-    marketData.desoPrice,
-    marketData.btcPrice,
-    marketData.ethPrice,
-    marketData.solPrice,
-    marketData.openfundPrice,
-    marketData.focusPrice,
-    ccv1NetworkTotalDeso,
-    ccv1CachedAt,
-  ]);
+  }, [walletData, stakedData.validatorBuckets, stakedData.isLoading, marketData.desoPrice, marketData.desoTotalSupply, marketData.btcPrice, marketData.ethPrice, marketData.solPrice, marketData.openfundPrice, marketData.focusPrice, ccv1NetworkTotalDeso, ccv1CachedAt]);
 }
