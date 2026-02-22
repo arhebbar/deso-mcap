@@ -1,0 +1,386 @@
+{
+  "data": [
+    {
+      "name": "Gringotts_Wizarding_Bank",
+      "classification": "FOUNDATION",
+      "balances": {
+        "Openfund": 4014282.467800351,
+        "Focus": 1517548313.704059,
+        "dUSDC": 6619671.444766083,
+        "DESO": 76113.368148343
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 76113.368148343
+    },
+    {
+      "name": "FOCUS_COLD_000",
+      "classification": "FOUNDATION",
+      "balances": {
+        "DESO": 205587.807405111
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 205587.807405111
+    },
+    {
+      "name": "focus",
+      "classification": "FOUNDATION",
+      "balances": {
+        "dUSDC": 488.110014043948,
+        "DESO": 37.630457748
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 37.630457748
+    },
+    {
+      "name": "openfund",
+      "classification": "FOUNDATION",
+      "balances": {
+        "Focus": 2097848454.8263295,
+        "dUSDC": 55930.113839103105,
+        "DESO": 6526.938869839
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 6526.938869839
+    },
+    {
+      "name": "Deso",
+      "classification": "FOUNDATION",
+      "balances": {
+        "Openfund": 24999.999999999996,
+        "dUSDC": 4500.06,
+        "DESO": 27.862720756
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 27.862720756
+    },
+    {
+      "name": "AMM_DESO_24_PlAEU",
+      "classification": "AMM",
+      "balances": {
+        "dUSDC": 1419688.1574927599,
+        "DESO": 90852.156468626
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 90852.156468626
+    },
+    {
+      "name": "AMM_DESO_23_GrYpe",
+      "classification": "AMM",
+      "balances": {
+        "dUSDC": 3709.0965303775,
+        "DESO": 250494.333255145
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 250494.333255145
+    },
+    {
+      "name": "AMM_focus_12_nzWku",
+      "classification": "AMM",
+      "balances": {
+        "Focus": 1766422667.1366076,
+        "DESO": 26450.910201677
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 26450.910201677
+    },
+    {
+      "name": "AMM_openfund_12_gOR1b",
+      "classification": "AMM",
+      "balances": {
+        "Openfund": 572625.4136509018,
+        "DESO": 70174.065022838
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 70174.065022838
+    },
+    {
+      "name": "AMM_DESO_19_W5vn0",
+      "classification": "AMM",
+      "balances": {
+        "DESO": 70000.000034527
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 70000.000034527
+    },
+    {
+      "name": "AMM_openfund_13_1gbih",
+      "classification": "AMM",
+      "balances": {
+        "Openfund": 1299965.8389156777,
+        "DESO": 18455.587502453
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 18455.587502453
+    },
+    {
+      "name": "Whoami",
+      "classification": "FOUNDER",
+      "balances": {
+        "Openfund": 5147451.028582459,
+        "dUSDC": 35687.431002501384,
+        "DESO": 661.699967392
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 661.699967392
+    },
+    {
+      "name": "Nader",
+      "classification": "FOUNDER",
+      "balances": {
+        "Openfund": 12529935.01067339,
+        "Focus": 4221919.898889173,
+        "dUSDC": 832.8478242916043,
+        "DESO": 2235.954474905
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 2235.954474905
+    },
+    {
+      "name": "Mossified",
+      "classification": "FOUNDER",
+      "balances": {
+        "Openfund": 2830327.8085510307,
+        "Focus": 38084905.26362667,
+        "dUSDC": 43.077858562494605,
+        "DESO": 91.445723224
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 91.445723224
+    },
+    {
+      "name": "LazyNina",
+      "classification": "FOUNDER",
+      "balances": {
+        "Openfund": 27755.41463008919,
+        "Focus": 9048596.388489079,
+        "dUSDC": 33.947600135608425,
+        "DESO": 2.932405344
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 2.932405344
+    },
+    {
+      "name": "Randhir (Me)",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 440788.4191683438,
+        "Focus": 57721956.38373841,
+        "DESO": 19.694455206
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 19.694455206
+    },
+    {
+      "name": "HighKey",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 2241148236.5718966,
+        "DESO": 0.020192689
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.020192689
+    },
+    {
+      "name": "JordanLintz",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 544502.8078465094,
+        "Focus": 201328184.03730345,
+        "DESO": 0.00742846
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.00742846
+    },
+    {
+      "name": "LukeLintz",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 230394526.1533292,
+        "DESO": 0.063143308
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.063143308
+    },
+    {
+      "name": "StarGeezer",
+      "classification": "DESO_BULL",
+      "balances": {
+        "dUSDC": 11.47,
+        "DESO": 0.509604649
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.509604649
+    },
+    {
+      "name": "DesocialWorld",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 16346683.032934075,
+        "DESO": 18.798650236
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 18.798650236
+    },
+    {
+      "name": "Edokoevoet",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 24999.999999999996,
+        "Focus": 224992.83869132944,
+        "DESO": 91.294776752
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 91.294776752
+    },
+    {
+      "name": "Gabrielist",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 37736.49821340312,
+        "dUSDC": 6050.771522703899,
+        "DESO": 136.158079235
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 136.158079235
+    },
+    {
+      "name": "RobertGraham",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 131801.0844704455,
+        "Focus": 42783.847149512505,
+        "dUSDC": 21.022836395181397,
+        "DESO": 0.718299896
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.718299896
+    },
+    {
+      "name": "0xAustin",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 272513,
+        "Focus": 7723537.2104985,
+        "DESO": 1029.721367494
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 1029.721367494
+    },
+    {
+      "name": "0xBen_",
+      "classification": "DESO_BULL",
+      "balances": {
+        "DESO": 7.59e-7
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 7.59e-7
+    },
+    {
+      "name": "Darian_Parrish",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 620.6656650856257,
+        "Focus": 1744495.5219451592,
+        "dUSDC": 89.2856288016313,
+        "DESO": 104.038897888
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 104.038897888
+    },
+    {
+      "name": "VishalGulia",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 217198065.51234084,
+        "DESO": 15.932937608
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 15.932937608
+    },
+    {
+      "name": "ZeroToOne",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Focus": 128931184.67978634,
+        "DESO": 101.345313528
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 101.345313528
+    },
+    {
+      "name": "whoisanku",
+      "classification": "DESO_BULL",
+      "balances": {},
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0
+    },
+    {
+      "name": "fllwthrvr",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 4378.560739396422,
+        "Focus": 1593719.3521736406,
+        "DESO": 0.295734637
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 0.295734637
+    },
+    {
+      "name": "PremierNS",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 3496540.1108024837,
+        "DESO": 1.695126636
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 1.695126636
+    },
+    {
+      "name": "WhaleDShark",
+      "classification": "DESO_BULL",
+      "balances": {
+        "Openfund": 52047.015206129836,
+        "Focus": 33507330.57931888,
+        "dUSDC": 1058.1500000004032,
+        "DESO": 8.495210465
+      },
+      "usdValue": 0,
+      "desoStaked": 0,
+      "desoUnstaked": 8.495210465
+    }
+  ],
+  "timestamp": 1771131392808,
+  "version": 9
+}
