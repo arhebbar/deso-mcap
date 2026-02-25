@@ -1,6 +1,6 @@
 /**
  * Free Float: total unaccounted DESO (and USD) plus list of anonymous (untracked) wallets
- * sorted by Unstaked DESO (top 10), with sort options. Wallets are clickable to wallet.deso.com.
+ * sorted by Unstaked DESO (top 10), with sort options. Wallets are clickable to explorer.deso.com.
  * Fetches balance (get-users-stateless) for anonymous wallet PKs so displayed holdings match chain.
  */
 
@@ -8,11 +8,12 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useStakedDesoData } from '@/hooks/useStakedDesoData';
-import { useWalletData } from '@/hooks/useWalletData';
 import { fetchBalancesForPublicKeys } from '@/api/walletApi';
 import { formatUsd } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUpDown } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 type SortField = 'unstaked' | 'staked' | 'usd';
 
@@ -25,19 +26,24 @@ function fmtDeso(n: number) {
 export default function FreeFloatSection() {
   const { marketData, freeFloat } = useLiveData();
   const { validatorBuckets, isLoading } = useStakedDesoData();
-  const { wallets } = useWalletData();
-  const [sortField, setSortField] = useState<SortField>('unstaked');
+  const [sortField, setSortField] = useState<SortField>('usd');
   const [sortDesc, setSortDesc] = useState(true);
+  const [includeTracked, setIncludeTracked] = useState(false);
+  const [namedOnly, setNamedOnly] = useState(false);
 
   const anonymousPks = useMemo(() => {
     const pks = new Set<string>();
     for (const b of validatorBuckets) {
       for (const r of [...b.foundation, ...b.community]) {
-        if (r.classification === 'COMMUNITY') pks.add(r.stakerPk);
+        if (includeTracked) {
+          pks.add(r.stakerPk);
+        } else if (r.classification === 'COMMUNITY') {
+          pks.add(r.stakerPk);
+        }
       }
     }
     return Array.from(pks);
-  }, [validatorBuckets]);
+  }, [validatorBuckets, includeTracked]);
 
   const { data: balanceByPk } = useQuery({
     queryKey: ['anonymous-wallet-balances', [...anonymousPks].sort().join(',')],
@@ -50,17 +56,18 @@ export default function FreeFloatSection() {
     const freeFloatDeso = freeFloat;
     const freeFloatUsd = freeFloatDeso * marketData.desoPrice;
 
-    const byPk = new Map<string, { name: string; pk: string; staked: number; unstaked: number; tokens: Record<string, number> }>();
+    const byPk = new Map<string, { name: string; pk: string; staked: number; unstaked: number; tokens: Record<string, number>; isNamed: boolean }>();
 
     for (const b of validatorBuckets) {
       for (const r of [...b.foundation, ...b.community]) {
-        if (r.classification !== 'COMMUNITY') continue;
+        if (!includeTracked && r.classification !== 'COMMUNITY') continue;
         const cur = byPk.get(r.stakerPk);
         const name = r.stakerName || `${r.stakerPk.slice(0, 8)}…`;
+        const isNamed = r.hasUsername;
         if (cur) {
-          byPk.set(r.stakerPk, { ...cur, staked: cur.staked + r.amount });
+          byPk.set(r.stakerPk, { ...cur, staked: cur.staked + r.amount, isNamed: cur.isNamed || isNamed });
         } else {
-          byPk.set(r.stakerPk, { name, pk: r.stakerPk, staked: r.amount, unstaked: 0, tokens: {} });
+          byPk.set(r.stakerPk, { name, pk: r.stakerPk, staked: r.amount, unstaked: 0, tokens: {}, isNamed });
         }
       }
     }
@@ -93,14 +100,15 @@ export default function FreeFloatSection() {
       };
     });
 
-    const sorted = [...walletsList].sort((a, b) => {
+    const filtered = namedOnly ? walletsList.filter((w) => w.isNamed) : walletsList;
+    const sorted = [...filtered].sort((a, b) => {
       const aVal = sortField === 'unstaked' ? a.unstaked : sortField === 'staked' ? a.staked : a.totalUsd;
       const bVal = sortField === 'unstaked' ? b.unstaked : sortField === 'staked' ? b.staked : b.totalUsd;
       return sortDesc ? bVal - aVal : aVal - bVal;
     });
 
-    return { freeFloatDeso, freeFloatUsd, anonymousWallets: sorted.slice(0, 100) };
-  }, [freeFloat, marketData, validatorBuckets, wallets, sortField, sortDesc, balanceByPk]);
+    return { freeFloatDeso, freeFloatUsd, anonymousWallets: sorted.slice(0, includeTracked ? 200 : 100) };
+  }, [freeFloat, marketData, validatorBuckets, sortField, sortDesc, balanceByPk, includeTracked, namedOnly]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -122,10 +130,20 @@ export default function FreeFloatSection() {
 
   return (
     <div className="chart-container">
-      <h3 className="section-title">FREE FLOAT excluding Core, Foundation and DeSo Bulls Community</h3>
+      <h3 className="section-title">FREE FLOAT</h3>
       <p className="text-xs text-muted-foreground mb-3">
-        Unaccounted DESO (supply minus staked minus tracked wallets). Wallets are extracted from the same anonymous staker list as below; Top 100 untagged can be added to Token Holdings over time to shrink the Others row.
+        Unaccounted DESO (supply minus staked minus tracked wallets). Sorted by Total Value (US$) by default. Use toggles to include Foundation/AMM/DeSo Bulls or to show only Top named accounts across DESO.
       </p>
+      <div className="flex flex-wrap items-center gap-6 mb-3">
+        <div className="flex items-center gap-2">
+          <Switch id="include-tracked" checked={includeTracked} onCheckedChange={setIncludeTracked} />
+          <Label htmlFor="include-tracked" className="text-sm cursor-pointer">Include Foundation / AMM / DeSo Bulls</Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch id="named-only" checked={namedOnly} onCheckedChange={setNamedOnly} />
+          <Label htmlFor="named-only" className="text-sm cursor-pointer">Named accounts only (exclude anonymous wallets)</Label>
+        </div>
+      </div>
       <div className="mb-4 p-4 rounded-lg bg-muted/30">
         <div className="text-2xl font-bold tabular-nums">{formatUsd(freeFloatUsd)}</div>
         <div className="text-sm text-muted-foreground mt-1">
@@ -133,7 +151,7 @@ export default function FreeFloatSection() {
         </div>
       </div>
       <div>
-        <h4 className="text-sm font-medium mb-2">First 100 Anonymous wallets (click wallet to open in DeSo Wallet)</h4>
+        <h4 className="text-sm font-medium mb-2">First 100 Anonymous wallets (click to open in DeSo Explorer)</h4>
         {anonymousWallets.length === 0 ? (
           <p className="text-xs text-muted-foreground">No untracked stakers in current data.</p>
         ) : (
@@ -188,7 +206,7 @@ export default function FreeFloatSection() {
                     <tr key={w.pk} className="border-b border-border/50 hover:bg-muted/30">
                       <td className="py-1.5 pr-4">
                         <a
-                          href={`https://wallet.deso.com/?tab=activity&user=${encodeURIComponent(w.pk)}`}
+                          href={`https://explorer.deso.com/u/${encodeURIComponent(w.name !== `${w.pk.slice(0, 8)}…` ? w.name : w.pk)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-mono text-xs text-primary hover:underline block"

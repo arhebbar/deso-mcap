@@ -88,8 +88,36 @@ export const AMM_WALLETS: WalletData[] = [
   { name: 'AMM_openfund_12_gOR1b', classification: 'AMM', balances: { Openfund: 5_046_000 }, usdValue: 439_000 },
   { name: 'AMM_DESO_19_W5vn0', classification: 'AMM', balances: { DESO: 74_048 }, usdValue: 428_000 },
   { name: 'AMM_openfund_13_1gbih', classification: 'AMM', balances: { Openfund: 1_207_000 }, usdValue: 105_000 },
-  /** WhaleDShark user token AMM pool (~$44K); value proxies total WhaleDShark token holder value. name matches API displayName for merge. */
+  /** CCv2 user-token AMM pools. name matches API displayName for merge. Static fallback when API/cache missing; API fills DESO/usdValue. */
   { name: 'WhaleDShark (AMM)', classification: 'AMM', balances: { DESO: 7_458 }, usdValue: 44_000 },
+  { name: 'AB (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Beyside (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: '0xWallStreetBets (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Dejak (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'ElonTusk (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Gabrielist (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Debevic (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'DeSocialWorld (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Desendor (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'CryptoChrist (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'BountyCoin (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'BSCoin (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Arnoud (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'AMurloc (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'allindeso (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'excelsacoffee (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'edokoevoet (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'JianYang (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Kaanha (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Randhir (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'turts (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'WhaleFud (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Ribbitz (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'SuchWow (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'StayFocused (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'MayBeam (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'Diamondhand (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
+  { name: 'DlANA (AMM)', classification: 'AMM', balances: { DESO: 0 }, usdValue: 0 },
 ];
 
 export const FOUNDER_WALLETS: WalletData[] = [
@@ -276,6 +304,27 @@ export const EXTERNAL_TREASURY = {
 
 /** Token name (second segment of AMM_<Token>_*) that are native/DAO, not user creator tokens. Lowercase for case-insensitive match. */
 const NATIVE_AMM_TOKENS = new Set(['deso', 'focus', 'openfund']);
+
+/**
+ * Canonical list of CCv2 user-token profile names (from AMM_WALLETS).
+ * Ensures the circulation table always shows all rows even when cache/API are incomplete.
+ */
+export function getCCv2ProfileNames(): string[] {
+  const out: string[] = [];
+  for (const w of AMM_WALLETS) {
+    if (w.classification !== 'AMM') continue;
+    let profileName: string | null = null;
+    if (w.name.endsWith(' (AMM)')) {
+      profileName = w.name.slice(0, -7);
+    } else if (w.name.startsWith('AMM_')) {
+      const part = w.name.split('_')[1];
+      profileName = part ?? null;
+    }
+    if (!profileName || NATIVE_AMM_TOKENS.has(profileName.toLowerCase())) continue;
+    out.push(profileName);
+  }
+  return out;
+}
 
 /**
  * Extract CCv2 user-token AMMs from wallet list.

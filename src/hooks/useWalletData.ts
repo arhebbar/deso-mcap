@@ -66,7 +66,29 @@ export function useWalletData() {
   let cachedAt: number | undefined;
 
   if (hasMeaningfulData) {
-    wallets = apiWallets.map((api) => mergeWithStatic(api, staticByName));
+    // Union of API results and static so Token Holdings / circulation always show all configured wallets (e.g. all 29 CCv2 AMMs)
+    const apiByName = new Map(apiWallets.map((api) => [api.name, api]));
+    const allNames = new Set([
+      ...apiByName.keys(),
+      ...STATIC_WALLETS.map((w) => w.name),
+    ]);
+    wallets = Array.from(allNames).map((name) => {
+      const api = apiByName.get(name);
+      const fallback = staticByName.get(name);
+      if (api) return mergeWithStatic(api, staticByName);
+      if (fallback) return { ...fallback };
+      return {
+        name,
+        classification: (fallback?.classification ?? 'FOUNDATION') as (typeof STATIC_WALLETS)[0]['classification'],
+        balances: fallback?.balances ?? {},
+        usdValue: fallback?.usdValue ?? 0,
+        desoStaked: fallback?.desoStaked,
+        desoUnstaked: fallback?.desoUnstaked,
+        stakedByValidator: fallback?.stakedByValidator,
+        ccv1ValueDeso: fallback?.ccv1ValueDeso,
+        ccv2ValueUsd: (fallback as { ccv2ValueUsd?: number })?.ccv2ValueUsd,
+      };
+    });
     dataSource = 'live';
   } else {
     const cached = getWalletCache();

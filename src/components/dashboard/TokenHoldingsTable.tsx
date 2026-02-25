@@ -9,6 +9,8 @@ import { useMemo, useState, useEffect, Fragment } from 'react';
 import { useTokenHoldingsTable, type TokenHoldingsRow, type HoldingsCategory } from '@/hooks/useTokenHoldingsTable';
 import { formatUsd, formatNumberShort } from '@/lib/formatters';
 import { Plus, Minus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
 
 const SECTION_FILTER_TO_CATEGORY: Record<NonNullable<SectionFilter>, HoldingsCategory> = {
@@ -29,21 +31,21 @@ function categoryDisplayName(cat: HoldingsCategory): string {
   return cat === 'Others' ? FREE_FLOAT_LABEL : cat;
 }
 
-const TOKEN_COLS = ['DESOStaked', 'DESOUnstaked', 'DESO', 'OpenFund', 'Focus', 'dUSDC', 'dBTC', 'dETH', 'dSOL', 'CCv1', 'CCv2'] as const;
+// Order: DESO Staked, OpenFund, Focus, CCv1, CCv2, dUSDC, dBTC, dETH, dSOL, DESO Unstaked (no DESO Total; row total in Total column)
+const TOKEN_COLS = ['DESOStaked', 'OpenFund', 'Focus', 'CCv1', 'CCv2', 'dUSDC', 'dBTC', 'dETH', 'dSOL', 'DESOUnstaked'] as const;
 type TokenCol = (typeof TOKEN_COLS)[number];
 
 const TOKEN_COL_LABELS: Record<TokenCol, string> = {
   DESOStaked: 'DESO Staked',
-  DESOUnstaked: 'DESO Unstaked',
-  DESO: 'DESO Total',
   OpenFund: 'OpenFund',
   Focus: 'Focus',
+  CCv1: 'CCv1',
+  CCv2: 'CCv2',
   dUSDC: 'dUSDC',
   dBTC: 'dBTC',
   dETH: 'dETH',
   dSOL: 'dSOL',
-  CCv1: 'CCv1',
-  CCv2: 'CCv2',
+  DESOUnstaked: 'DESO Unstaked',
 };
 
 function getSortKey(row: TokenHoldingsRow, col: TokenCol | 'category' | 'account' | 'total' | 'defaultOrder'): number | string {
@@ -68,6 +70,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   const [sortCol, setSortCol] = useState<TokenCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [useDefaultOrder, setUseDefaultOrder] = useState(true);
+  const [namedOnly, setNamedOnly] = useState(false);
 
   const categoryFromFilter = expandedSectionOnly != null ? SECTION_FILTER_TO_CATEGORY[expandedSectionOnly] : undefined;
 
@@ -87,10 +90,11 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
 
   const { headerRows, dataRows, footerRows } = useMemo(() => {
     const header = rows.filter((r) => r.type === 'issued' || r.type === 'price');
-    const data = rows.filter((r) => r.type === 'account');
+    let data = rows.filter((r) => r.type === 'account');
+    if (namedOnly) data = data.filter((r) => r.isNamed === true);
     const footer = rows.filter((r) => r.type === 'overallTotal');
     return { headerRows: header, dataRows: data, footerRows: footer };
-  }, [rows]);
+  }, [rows, namedOnly]);
 
   const sortedDataRows = useMemo(() => {
     let sorted = [...dataRows];
@@ -204,7 +208,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
 
     // Token Price row: show in $ or in DESO (price_usd / desoPrice)
     if (row.type === 'price') {
-      if (col === 'DESOStaked' || col === 'DESOUnstaked' || col === 'DESO') return '–';
+      if (col === 'DESOStaked' || col === 'DESOUnstaked') return '–';
       if (v == null) return '–';
       const priceUsd =
         col === 'OpenFund' || col === 'Focus' ? (v as number) * prices.deso : (v as number);
@@ -222,7 +226,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     // Data rows (account/overallTotal): show Value in US$ or # of Tokens; null = '–'
     if (v == null) return '–';
     const mult =
-      col === 'DESOStaked' || col === 'DESOUnstaked' || col === 'DESO' || col === 'CCv1' || col === 'CCv2'
+      col === 'DESOStaked' || col === 'DESOUnstaked' || col === 'CCv1' || col === 'CCv2'
         ? prices.deso
         : col === 'OpenFund'
           ? prices.openfund
@@ -254,13 +258,20 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
 
   return (
     <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="p-4 border-b border-border flex items-center justify-between">
+      <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Token Holdings</h2>
           <p className="text-xs text-muted-foreground mt-1">
             Sort by any column to see top holders by category (Foundation, Core Team, AMMs, DeSo Bulls).
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch id="token-holdings-named-only" checked={namedOnly} onCheckedChange={setNamedOnly} />
+            <Label htmlFor="token-holdings-named-only" className="text-sm cursor-pointer whitespace-nowrap">
+              Named accounts only
+            </Label>
+          </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Show:</span>
@@ -301,6 +312,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
           >
             Default Order
           </button>
+        </div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -366,7 +378,9 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     {renderCell(row, col)}
                   </td>
                 ))}
-                <td className="text-right py-1.5 px-3">–</td>
+                <td className="text-right py-1.5 px-3">
+                  {row.type === 'issued' && row.totalUsd != null ? formatTotal(row.totalUsd) : '–'}
+                </td>
               </tr>
             ))}
             {useDefaultOrder

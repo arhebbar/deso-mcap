@@ -10,7 +10,7 @@ import { useWalletData } from './useWalletData';
 import { useStakedDesoData } from './useStakedDesoData';
 import { useLiveData } from './useLiveData';
 import { useCCv1NetworkTotal } from './useCCv1NetworkTotal';
-import { CCV2_AMM_DESO, getCCv2UserTokenAmms } from '@/data/desoData';
+import { CCV2_AMM_DESO, getCCv2ProfileNames, getCCv2UserTokenAmms } from '@/data/desoData';
 import type { AllStakedDesoBucket, AllStakedDesoRow } from '@/api/walletApi';
 
 export const TOP_N = 15;
@@ -60,13 +60,18 @@ export interface TokenSection {
   othersCount?: number;
   othersAmount?: number;
   othersUsd?: number;
+  /** Price per token (for Price column); Openfund/Focus in USD, then DESO equiv */
+  price?: number;
+  /** # of tokens in circulation (excl. own tokens for Openfund/Focus) */
+  tokenCount?: number;
 }
 
 export interface UnstakedBreakdown {
-  nativeTokens: { openfund: TokenSection; focus: TokenSection };
+  /** User/Project Tokens: Openfund, Focus, CCv2 AMMs */
+  nativeTokens: { openfund: TokenSection; focus: TokenSection; userTokens: TokenSection };
   currencyTokens: { dusdc: TokenSection; dbtc: TokenSection; deth: TokenSection; dsol: TokenSection };
-  userTokens: TokenSection; // CCv2 AMMs
-  nativeDeso: TokenSection; // Native DESO broken down by category
+  /** DESO - Unstaked: native DESO by category (Foundation, AMM, Core, DeSo Bulls, Others) */
+  nativeDeso: TokenSection;
 }
 
 export interface CirculationTableData {
@@ -227,10 +232,16 @@ export function useCirculationTable(): CirculationTableData {
       ].filter((x) => x.amount > 0);
     }
 
+    const openfundAccountBalance = wallets.find((w) => w.name === 'openfund')?.balances.Openfund ?? 0;
     const openfundTotal = wallets.reduce((s, w) => s + (w.balances.Openfund ?? 0), 0);
-    const openfundDesoEquiv = desoPrice > 0 ? (openfundTotal * prices.openfund) / desoPrice : 0;
-    const focusTotal = wallets.reduce((s, w) => (w.name === 'focus' ? s : s + (w.balances.Focus ?? 0), 0));
-    const focusDesoEquiv = desoPrice > 0 ? (focusTotal * prices.focus) / desoPrice : 0;
+    const openfundCirculation = Math.max(0, openfundTotal - openfundAccountBalance);
+    const openfundCirculationDesoEquiv = desoPrice > 0 ? (openfundCirculation * prices.openfund) / desoPrice : 0;
+    const openfundCirculationUsd = openfundCirculation * prices.openfund;
+    /** Focus: 165B total; 120B in Focus account; circulation = 45B */
+    const FOCUS_CIRCULATION = 45_000_000_000;
+    const focusTotal = wallets.reduce((s, w) => (w.name === 'focus' ? s : s + (w.balances.Focus ?? 0)), 0);
+    const focusDesoEquiv = desoPrice > 0 ? (FOCUS_CIRCULATION * prices.focus) / desoPrice : 0;
+    const focusCirculationUsd = FOCUS_CIRCULATION * prices.focus;
     const desoUnstakedTotal =
       wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0) -
       validators.reduce((s, v) => s + v.amount, 0);
@@ -248,20 +259,39 @@ export function useCirculationTable(): CirculationTableData {
     const dSolByCat = byCategoryForToken('dSOL');
     const dUsdcByCat = byCategoryForToken('dUSDC');
 
-    const ccv2UserTokenAmms = getCCv2UserTokenAmms(wallets);
-    const ccv2Deso = ccv2UserTokenAmms.length > 0
-      ? ccv2UserTokenAmms.reduce((s, a) => s + a.deso, 0)
-      : CCV2_AMM_DESO;
-    const ccv2Usd = ccv2UserTokenAmms.length > 0
-      ? ccv2UserTokenAmms.reduce((s, a) => s + (a.usdValue > 0 ? a.usdValue : a.deso * desoPrice), 0)
-      : CCV2_AMM_DESO * desoPrice;
-    const ccv2ByCategory = ccv2UserTokenAmms.length > 0
-      ? ccv2UserTokenAmms.map((a) => ({
-          label: a.profileName,
-          amount: a.deso,
-          usdValue: a.usdValue > 0 ? a.usdValue : a.deso * desoPrice,
-        }))
+    /** CCv2 AMM value = Focus×price + Openfund×price + DESO×price + dUSDC + dBTC×price + ... (full value held in AMMs) */
+    const ccv2WalletAmms = getCCv2UserTokenAmms(wallets);
+    const ccv2WalletMap = new Map(ccv2WalletAmms.map((a) => [a.profileName, a]));
+    const ccv2ProfileNames = getCCv2ProfileNames();
+    const ccv2Wallets = wallets.filter((w) => {
+      if (w.classification !== 'AMM') return false;
+      const name = w.name.endsWith(' (AMM)') ? w.name.slice(0, -7) : (w.name.startsWith('AMM_') ? w.name.split('_')[1] : null);
+      return name && !['deso', 'focus', 'openfund'].includes(name.toLowerCase());
+    });
+    const ccv2FullValueByProfile = new Map<string, number>();
+    for (const w of ccv2Wallets) {
+      const profileName = w.name.endsWith(' (AMM)') ? w.name.slice(0, -7) : (w.name.split('_')[1] ?? '');
+      if (!profileName) continue;
+      const b = w.balances;
+      const fullUsd =
+        (b.Focus ?? 0) * prices.focus +
+        (b.Openfund ?? 0) * prices.openfund +
+        (b.DESO ?? 0) * desoPrice +
+        (b.dUSDC ?? 0) +
+        (b.dBTC ?? 0) * prices.btc +
+        (b.dETH ?? 0) * prices.eth +
+        (b.dSOL ?? 0) * prices.sol;
+      ccv2FullValueByProfile.set(profileName, (ccv2FullValueByProfile.get(profileName) ?? 0) + fullUsd);
+    }
+    const ccv2ByCategory = ccv2ProfileNames.length > 0
+      ? ccv2ProfileNames.map((profileName) => {
+          const usdVal = ccv2FullValueByProfile.get(profileName) ?? ccv2WalletMap.get(profileName)?.usdValue ?? 0;
+          const deso = desoPrice > 0 ? usdVal / desoPrice : 0;
+          return { label: profileName, amount: deso, usdValue: usdVal };
+        })
       : [{ label: 'AMM', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
+    const ccv2Deso = ccv2ByCategory.reduce((s, c) => s + c.amount, 0) || (desoPrice > 0 ? (CCV2_AMM_DESO * desoPrice) / desoPrice : CCV2_AMM_DESO);
+    const ccv2Usd = ccv2ByCategory.reduce((s, c) => s + c.usdValue, 0) || CCV2_AMM_DESO * desoPrice;
 
     const sections: TokenSection[] = [
       {
@@ -275,26 +305,30 @@ export function useCirculationTable(): CirculationTableData {
       {
         id: 'openfund',
         label: 'Openfund',
-        amount: openfundDesoEquiv,
+        amount: openfundCirculationDesoEquiv,
         unit: 'DESO',
-        usdValue: openfundTotal * prices.openfund,
+        usdValue: openfundCirculationUsd,
         byCategory: openfundByCat.map((c) => ({
           label: c.label,
           amount: c.amount,
           usdValue: c.amount * prices.openfund,
         })),
+        price: prices.openfund,
+        tokenCount: openfundCirculation,
       },
       {
         id: 'focus',
         label: 'Focus',
         amount: focusDesoEquiv,
         unit: 'DESO',
-        usdValue: focusTotal * prices.focus,
+        usdValue: focusCirculationUsd,
         byCategory: focusByCat.map((c) => ({
           label: c.label,
           amount: c.amount,
           usdValue: c.amount * prices.focus,
         })),
+        price: prices.focus,
+        tokenCount: FOCUS_CIRCULATION,
       },
       {
         id: 'deso',
@@ -346,14 +380,18 @@ export function useCirculationTable(): CirculationTableData {
       },
     ];
 
-    const unstakedDesoEquiv = ccv1Deso + openfundDesoEquiv + focusDesoEquiv + desoUnstaked + ccv2Deso;
+    const unstakedDesoEquiv = ccv1Deso + openfundCirculationDesoEquiv + focusDesoEquiv + desoUnstaked + ccv2Deso;
     const unstakedUsd = sections.reduce((s, x) => s + x.usdValue, 0);
 
-    // Compute Non-Foundation holdings excluding staked for Native Tokens
+    // Compute Non-Foundation holdings excluding staked for display (by category)
     const openfundNonFoundation = nonFoundationExcludingStaked('Openfund');
     const focusNonFoundation = nonFoundationExcludingStaked('Focus');
     const openfundNonFoundationDesoEquiv = desoPrice > 0 ? (openfundNonFoundation * prices.openfund) / desoPrice : 0;
     const focusNonFoundationDesoEquiv = desoPrice > 0 ? (focusNonFoundation * prices.focus) / desoPrice : 0;
+
+    const sumTrackedTotalUsd = wallets
+      .filter((w) => ['FOUNDATION', 'AMM', 'FOUNDER', 'DESO_BULL'].includes(w.classification))
+      .reduce((s, w) => s + (w.usdValue ?? 0), 0);
 
     // Compute Non-Foundation holdings excluding staked for Currency Tokens
     const dusdcNonFoundation = nonFoundationExcludingStaked('dUSDC');
@@ -361,81 +399,95 @@ export function useCirculationTable(): CirculationTableData {
     const dethNonFoundation = nonFoundationExcludingStaked('dETH');
     const dsolNonFoundation = nonFoundationExcludingStaked('dSOL');
 
-    // Unstaked DESO breakdown: tracked by category + Others (everything not in 12.2M tracked)
+    // DESO - Unstaked: Others = 12.2M × DESO Price − sum(tracked totalUsd); same logic as Token Holdings
     const sumTrackedDeso = wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0);
     const nativeDesoByCat = byCategoryForToken('DESO');
-    const othersUnstakedDeso = Math.max(0, totalSupply - sumTrackedDeso);
+    const totalSupplyUsd = totalSupply * desoPrice;
+    const othersUnstakedUsd = Math.max(0, totalSupplyUsd - sumTrackedTotalUsd);
+    const othersUnstakedDeso = desoPrice > 0 ? othersUnstakedUsd / desoPrice : 0;
     const nativeDesoByCatWithOthers = [
       ...nativeDesoByCat,
-      ...(othersUnstakedDeso > 0 ? [{ label: 'Others', amount: othersUnstakedDeso, usdValue: othersUnstakedDeso * desoPrice }] : []),
+      ...(othersUnstakedDeso > 0 ? [{ label: 'Others', amount: othersUnstakedDeso, usdValue: othersUnstakedUsd }] : []),
     ];
-    const nativeDesoTotal = nativeDesoByCatWithOthers.reduce((s, c) => s + c.amount, 0); // tracked + Others = totalSupply
+    const nativeDesoTotal = nativeDesoByCatWithOthers.reduce((s, c) => s + c.amount, 0);
     const nativeDesoUsd = nativeDesoByCatWithOthers.reduce((s, c) => s + c.usdValue, 0);
 
     const breakdown: UnstakedBreakdown = {
       nativeTokens: {
         openfund: {
           id: 'openfund-nf',
-          label: 'Openfund (Non-Foundation)',
-          amount: openfundNonFoundationDesoEquiv,
+          label: 'Openfund',
+          amount: openfundCirculationDesoEquiv,
           unit: 'DESO',
-          usdValue: openfundNonFoundation * prices.openfund,
-          byCategory: [],
+          usdValue: openfundCirculationUsd,
+          byCategory: openfundByCat.map((c) => ({ label: c.label, amount: c.amount, usdValue: c.amount * prices.openfund })),
+          price: prices.openfund,
+          tokenCount: openfundCirculation,
         },
         focus: {
           id: 'focus-nf',
-          label: 'Focus (Non-Foundation)',
-          amount: focusNonFoundationDesoEquiv,
+          label: 'Focus',
+          amount: focusDesoEquiv,
           unit: 'DESO',
-          usdValue: focusNonFoundation * prices.focus,
-          byCategory: [],
+          usdValue: focusCirculationUsd,
+          byCategory: focusByCat.map((c) => ({ label: c.label, amount: c.amount, usdValue: c.amount * prices.focus })),
+          price: prices.focus,
+          tokenCount: FOCUS_CIRCULATION,
+        },
+        userTokens: {
+          id: 'ccv2amm',
+          label: 'CCv2 AMMs',
+          amount: ccv2Deso,
+          unit: 'DESO',
+          usdValue: ccv2Usd,
+          byCategory: ccv2ByCategory,
         },
       },
       currencyTokens: {
         dusdc: {
           id: 'dusdc-nf',
-          label: 'dUSDC (Non-Foundation)',
+          label: 'dUSDC',
           amount: dusdcNonFoundation,
           unit: 'token',
           usdValue: dusdcNonFoundation,
-          byCategory: [],
+          byCategory: dUsdcByCat,
+          price: 1,
+          tokenCount: dusdcNonFoundation,
         },
         dbtc: {
           id: 'dbtc-nf',
-          label: 'dBTC (Non-Foundation)',
+          label: 'dBTC',
           amount: dbtcNonFoundation,
           unit: 'token',
           usdValue: dbtcNonFoundation * prices.btc,
-          byCategory: [],
+          byCategory: dBtcByCat,
+          price: prices.btc,
+          tokenCount: dbtcNonFoundation,
         },
         deth: {
           id: 'deth-nf',
-          label: 'dETH (Non-Foundation)',
+          label: 'dETH',
           amount: dethNonFoundation,
           unit: 'token',
           usdValue: dethNonFoundation * prices.eth,
-          byCategory: [],
+          byCategory: dEthByCat,
+          price: prices.eth,
+          tokenCount: dethNonFoundation,
         },
         dsol: {
           id: 'dsol-nf',
-          label: 'dSOL (Non-Foundation)',
+          label: 'dSOL',
           amount: dsolNonFoundation,
           unit: 'token',
           usdValue: dsolNonFoundation * prices.sol,
-          byCategory: [],
+          byCategory: dSolByCat,
+          price: prices.sol,
+          tokenCount: dsolNonFoundation,
         },
-      },
-      userTokens: {
-        id: 'ccv2amm',
-        label: 'DESO User Tokens (CCv2 AMMs)',
-        amount: ccv2Deso,
-        unit: 'DESO',
-        usdValue: ccv2Usd,
-        byCategory: ccv2ByCategory,
       },
       nativeDeso: {
         id: 'unstaked-deso',
-        label: 'Unstaked DESO',
+        label: 'DESO - Unstaked',
         amount: nativeDesoTotal,
         unit: 'DESO',
         usdValue: nativeDesoUsd,
@@ -462,6 +514,7 @@ export function useCirculationTable(): CirculationTableData {
       ccv1CachedAt,
     };
   }, [
+    walletData,
     walletData.wallets,
     walletData.ccv1TotalDeso,
     walletData.isLoading,

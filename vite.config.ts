@@ -22,6 +22,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/deso-api/, "/api/v0"),
       },
+      "/deso-v1": {
+        target: "https://node.deso.org",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/deso-v1/, "/api/v1"),
+      },
       "/deso-hodlers": {
         target: "https://blockproducer.deso.org",
         changeOrigin: true,

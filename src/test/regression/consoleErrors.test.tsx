@@ -92,7 +92,7 @@ describe('Console errors – no console.error during render', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText(/Assets by Section/i)).toBeInTheDocument();
+        expect(screen.getByText(/Assets by User-Group/i)).toBeInTheDocument();
       },
       { timeout: 3000 }
     );

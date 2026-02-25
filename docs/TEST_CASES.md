@@ -106,7 +106,7 @@ Same logical metric should match across components (within rounding).
   - When filtered by bar, only the selected section is expanded
   - When not controlled, section toggles work (expand/collapse)
 - [ ] **Free Float**
-  - Wallet name/public key links open `https://wallet.deso.com/?tab=activity&user=<PublicKey>` in a new tab
+  - Wallet name/public key links open `https://explorer.deso.com/u/<UsernameOrPublicKey>` in a new tab
   - Column headers sort by Unstaked DESO, Staked DESO, Total US$
 
 ---

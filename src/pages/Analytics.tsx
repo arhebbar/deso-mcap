@@ -1,64 +1,56 @@
 /**
- * Analytics Dashboard - Composable analytics dashboard using SupplyContext.
+ * Analytics – Generic DeSo analytics page.
+ * Focuses on network & activity metrics (BeyondSocial-style), while the main
+ * dashboard (Index) stays focused on market cap, circulation & coverage.
  */
 
-import { SupplyProvider } from '@/contexts/SupplyContext';
+import { Link } from 'react-router-dom';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import MarketOverview from '@/components/panels/MarketOverview';
-import FreeFloatPanel from '@/components/panels/FreeFloatPanel';
-import BackingPanel from '@/components/panels/BackingPanel';
-import ConcentrationPanel from '@/components/panels/ConcentrationPanel';
-import WalletFilters from '@/components/panels/WalletFilters';
-import MarketCapChart from '@/components/charts/MarketCapChart';
-import FloatChart from '@/components/charts/FloatChart';
-import BackingRatioChart from '@/components/charts/BackingRatioChart';
-import { useSupply } from '@/contexts/SupplyContext';
+import NetworkActivitySection from '@/components/dashboard/NetworkActivitySection';
+import { useLiveData } from '@/hooks/useLiveData';
+import { BarChart3 } from 'lucide-react';
 
-function AnalyticsContent() {
-  const { isLive, isLoading } = useSupply();
-  const lastUpdated = new Date().toISOString();
-  
+const Analytics = () => {
+  const {
+    isLive,
+    lastUpdated,
+  } = useLiveData();
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="p-6 space-y-6 max-w-[1600px] mx-auto">
-        {/* Wallet Category Filters */}
-        <WalletFilters />
-        
-        {/* Market Overview */}
-        <MarketOverview />
-        
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <MarketCapChart />
-          <FloatChart />
-          <BackingRatioChart />
+      <main className="p-6 space-y-8 max-w-[1600px] mx-auto">
+        {/* Page title */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Analytics</h2>
+            <p className="text-sm text-muted-foreground">
+              Generic DeSo network & activity analytics
+            </p>
+          </div>
+          <Link
+            to="/"
+            className="ml-auto text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Dashboard
+          </Link>
         </div>
-        
-        {/* Panels Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <FreeFloatPanel />
-          <BackingPanel />
-        </div>
-        
-        {/* Concentration Panel */}
-        <ConcentrationPanel />
-        
+
+        {/* 0. Network & activity (Beyond Social–style) */}
+        <NetworkActivitySection />
+
         <footer className="text-center py-4">
           <p className="text-xs text-muted-foreground font-mono">
-            {isLive ? 'Live data · Refreshing every 60s' : 'Using cached data'} · Last updated{' '}
-            {new Date(lastUpdated).toLocaleTimeString()}
+            {isLive ? 'Live prices · Refreshing every 60s' : 'Using cached data'} · Last updated{' '}
+            {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString()}
           </p>
         </footer>
       </main>
     </div>
   );
-}
+};
 
-export default function Analytics() {
-  return (
-    <SupplyProvider>
-      <AnalyticsContent />
-    </SupplyProvider>
-  );
-}
+export default Analytics;

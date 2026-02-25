@@ -79,7 +79,7 @@ describe('4. Interactions – Assets breakdown bar', () => {
       />,
       { wrapper: createWrapper() }
     );
-    expect(screen.getByText(/Assets by Section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Assets by User-Group/i)).toBeInTheDocument();
     expect(screen.getByText(/Click a column/i)).toBeInTheDocument();
   });
 

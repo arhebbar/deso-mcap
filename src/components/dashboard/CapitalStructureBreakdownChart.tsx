@@ -66,15 +66,17 @@ export default function CapitalStructureBreakdownChart() {
 
   if (isLoading) return null;
 
+  // Use USD share for both DESO and Value bars so % is the same between user groups
+  const totalUsd = totals.usd;
   const stackedBars = [
-    { label: 'Users', key: 'users' as const, total: totals.users, format: (v: number) => (v > 0 ? String(v) : '') },
-    { label: 'DESO', key: 'deso' as const, total: totals.deso, format: fmtDeso },
-    { label: 'Value (USD)', key: 'usd' as const, total: totals.usd, format: (v: number) => (v > 0 ? formatUsd(v) : '') },
+    { label: 'Users', key: 'users' as const, total: totals.users, format: (v: number) => (v > 0 ? String(v) : ''), useUsdShare: false },
+    { label: 'DESO', key: 'deso' as const, total: totals.deso, format: fmtDeso, useUsdShare: true },
+    { label: 'Value (USD)', key: 'usd' as const, total: totals.usd, format: (v: number) => (v > 0 ? formatUsd(v) : ''), useUsdShare: true },
   ];
 
   return (
     <div className="chart-container">
-      <h3 className="section-title">Capital Structure by Section</h3>
+      <h3 className="section-title">Capital</h3>
       <p className="text-xs text-muted-foreground mb-3">100% stacked: share of users, DESO, and $ value (hover for values)</p>
       <div className="space-y-4">
         {stackedBars.map((bar) => (
@@ -86,7 +88,10 @@ export default function CapitalStructureBreakdownChart() {
             <div className="h-8 w-full flex rounded overflow-hidden bg-muted/30">
               {SECTIONS.map((sec) => {
                 const value = stats[sec.key][bar.key];
-                const pct = bar.total > 0 ? (value / bar.total) * 100 : 0;
+                const usdValue = stats[sec.key].usd;
+                const pct = bar.useUsdShare && totalUsd > 0
+                  ? (usdValue / totalUsd) * 100
+                  : bar.total > 0 ? (value / bar.total) * 100 : 0;
                 if (pct <= 0) return null;
                 return (
                   <span

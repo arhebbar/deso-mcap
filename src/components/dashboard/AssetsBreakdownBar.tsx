@@ -47,7 +47,7 @@ export default function AssetsBreakdownBar({ selectedSection, onSectionClick }: 
   if (totalUsd <= 0) {
     return (
       <div className="chart-container">
-        <h3 className="section-title">Assets by Section</h3>
+        <h3 className="section-title">Assets by User-Group</h3>
         <p className="text-sm text-muted-foreground">No data yet.</p>
       </div>
     );
@@ -57,7 +57,7 @@ export default function AssetsBreakdownBar({ selectedSection, onSectionClick }: 
 
   return (
     <div className="chart-container">
-      <h3 className="section-title">Assets by Section</h3>
+      <h3 className="section-title">Assets by User-Group</h3>
       <p className="text-xs text-muted-foreground mb-2">Click a column to expand only that section in the table below.</p>
       <div className="flex items-end justify-around gap-2 w-full" style={{ height: barHeightPx + 32 }}>
         {SEGMENTS.map((seg) => {

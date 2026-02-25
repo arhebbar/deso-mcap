@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
@@ -34,18 +34,43 @@ const Index = () => {
   const circulation = useCirculationTable();
   const [highlightedSupplySegment, setHighlightedSupplySegment] = useState<string | null>(null);
   const [tableSectionFilter, setTableSectionFilter] = useState<SectionFilter | undefined>(undefined);
+  const [circulationExpanded, setCirculationExpanded] = useState(false);
+  const circulationMinimized = useMemo(
+    () => highlightedSupplySegment != null,
+    [highlightedSupplySegment]
+  );
 
   const totalSupply = marketData.desoTotalSupply;
-  // Use same staked total as Capital Structure / circulation so both charts match
-  const staked = circulation.isLoading ? marketData.desoStaked : circulation.staked.total;
-  const others = Math.max(0, totalSupply - staked - foundationDeso - ammDeso - founderDeso - desoBullsDeso);
+  const desoPrice = marketData.desoPrice;
+  // Supply Distribution from DESO in Circulation: Staked, CCv1, User/Project Tokens, Currency Tokens, Unstaked DESO
+  const sections = circulation.unstaked?.sections ?? [];
+  const getSection = (id: string) => sections.find((s) => s.id === id);
+  const ccv1Section = getSection('ccv1');
+  const openfundSection = getSection('openfund');
+  const focusSection = getSection('focus');
+  const ccv2Section = getSection('ccv2amm');
+  const desoSection = getSection('deso');
+  const dusdcSection = getSection('dusdc');
+  const dbtcSection = getSection('dbtc');
+  const dethSection = getSection('deth');
+  const dsolSection = getSection('dsol');
+  const stakedDeso = circulation.isLoading ? marketData.desoStaked : circulation.staked.total;
+  const ccv1Locked = ccv1Section?.amount ?? 0;
+  const userProjectTokens =
+    (openfundSection?.amount ?? 0) + (focusSection?.amount ?? 0) + (ccv2Section?.amount ?? 0);
+  const currencyUsd =
+    (dusdcSection?.usdValue ?? 0) +
+    (dbtcSection?.usdValue ?? 0) +
+    (dethSection?.usdValue ?? 0) +
+    (dsolSection?.usdValue ?? 0);
+  const currencyTokensDesoEquiv = desoPrice > 0 ? currencyUsd / desoPrice : 0;
+  const unstakedDeso = desoSection?.amount ?? 0;
   const supplyData = [
-    { name: 'Staked', value: staked },
-    { name: 'Foundation', value: foundationDeso },
-    { name: 'AMM', value: ammDeso },
-    { name: 'Core Team', value: founderDeso },
-    { name: 'DeSo Bulls', value: desoBullsDeso },
-    { name: 'Others', value: others },
+    { name: 'Staked DESO', value: stakedDeso },
+    { name: 'DeSo CCv1 Locked', value: ccv1Locked },
+    { name: 'User/Project Tokens', value: userProjectTokens },
+    { name: 'Currency Tokens', value: currencyTokensDesoEquiv },
+    { name: 'Unstaked DESO', value: unstakedDeso },
   ].filter((d) => d.value > 0);
 
   return (
@@ -73,11 +98,11 @@ const Index = () => {
 
         <div className="glow-line" />
 
-        {/* Charts Row: Doughnut as filter on left, Heatmap on right */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Row: Doughnut as filter on left, Capital Structure on right; when segment selected, maximize this row */}
+        <div className={`grid grid-cols-1 gap-6 transition-all ${circulationMinimized ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
           <SupplyPieChart
             data={supplyData}
-            desoPrice={marketData.desoPrice}
+            desoPrice={desoPrice}
             totalSupply={totalSupply}
             highlightedSegment={highlightedSupplySegment}
             onSegmentClick={(name) => setHighlightedSupplySegment((prev) => (prev === name ? null : name))}
@@ -88,8 +113,24 @@ const Index = () => {
         {/* Trend Charts */}
         <TrendCharts />
 
-        {/* DESO in Circulation – single table with 3-level drilldown */}
-        <DesoInCirculationTable />
+        {/* DESO in Circulation – minimized when a Supply Distribution segment is selected */}
+        <div className="border rounded-lg overflow-hidden bg-card">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+            onClick={() => setCirculationExpanded((e) => !e)}
+          >
+            <h3 className="section-title mb-0">DESO in Circulation</h3>
+            <span className="text-sm text-muted-foreground">
+              {circulationExpanded || !circulationMinimized ? 'Collapse' : 'Expand'} table
+            </span>
+          </button>
+          {(circulationExpanded || !circulationMinimized) && (
+            <div className="border-t">
+              <DesoInCirculationTable />
+            </div>
+          )}
+        </div>
 
         {/* Assets by Section + Capital Structure by Section side-by-side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

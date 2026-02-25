@@ -4,7 +4,7 @@
  */
 
 const CACHE_KEY = 'deso-wallet-cache';
-const CACHE_VERSION = 13; // CCv2 holder attribution; invalidate stale cache
+const CACHE_VERSION = 14; // CCv2 canonical profile list; invalidate stale cache
 
 export interface CachedWalletEntry {
   name: string;

@@ -55,14 +55,13 @@ export default function CapitalStructureTable({ highlightedSegment }: { highligh
     desoBullsUsd: desoBullsDeso * data.desoPrice,
   };
 
-  // Filter based on highlighted segment
+  // Filter based on Supply Distribution segment (Staked DESO, DeSo CCv1 Locked, User/Project Tokens, Currency Tokens, Unstaked DESO)
   const segment = highlightedSegment?.toLowerCase() ?? null;
-  const showStaked = segment === 'staked' || segment === null;
-  const showOpenfund = segment === 'openfund' || segment === null;
-  const showFocus = segment === 'focus' || segment === null;
-  const showAmm = segment === 'amm' || segment === null;
-  const showCoreTeam = segment === 'core team' || segment === null;
-  const showDeSoBulls = segment === 'deso bulls' || segment === null;
+  const showStaked = segment === 'staked deso' || segment === null;
+  const showCcv1 = segment === 'deso ccv1 locked';
+  const showUserProject = segment === 'user/project tokens';
+  const showCurrency = segment === 'currency tokens';
+  const showUnstakedDeso = segment === 'unstaked deso';
 
   if (showStaked) {
     const sortedValidators = [...displayData.validators].sort((a, b) => b.amount - a.amount);
@@ -106,37 +105,168 @@ export default function CapitalStructureTable({ highlightedSegment }: { highligh
     );
   }
 
-  // Show other sections as a simple table
-  const rows: { label: string; deso?: number; usd: number }[] = [];
-  if (showOpenfund && displayData.openfundSection) {
-    rows.push({
-      label: 'OpenFund',
-      deso: displayData.openfundSection.amount,
-      usd: displayData.openfundSection.usdValue,
-    });
-  }
-  if (showFocus && displayData.focusSection) {
-    rows.push({
-      label: 'Focus',
-      deso: displayData.focusSection.amount,
-      usd: displayData.focusSection.usdValue,
-    });
-  }
-  if (showAmm) {
-    rows.push({ label: 'AMMs', usd: displayData.ammUsd });
-  }
-  if (showCoreTeam) {
-    rows.push({ label: 'Core Team', usd: displayData.coreTeamUsd });
-  }
-  if (showDeSoBulls) {
-    rows.push({ label: 'DeSo Bulls', usd: displayData.desoBullsUsd });
-  }
+  // One level of drill-down for non-Staked: show accounts and DESO value from circulation
+  const breakdown = data.unstaked?.breakdown;
+  const openfundSec = data.unstaked?.sections?.find((s) => s.id === 'openfund');
+  const focusSec = data.unstaked?.sections?.find((s) => s.id === 'focus');
+  const ccv2Sec = data.unstaked?.sections?.find((s) => s.id === 'ccv2amm');
+  const dusdcSec = data.unstaked?.sections?.find((s) => s.id === 'dusdc');
+  const dbtcSec = data.unstaked?.sections?.find((s) => s.id === 'dbtc');
+  const dethSec = data.unstaked?.sections?.find((s) => s.id === 'deth');
+  const dsolSec = data.unstaked?.sections?.find((s) => s.id === 'dsol');
 
-  if (rows.length === 0) {
-    return (
+  if (showCcv1) {
+    const sec = data.unstaked?.sections?.find((s) => s.id === 'ccv1');
+    if (!sec) return (
       <div className="chart-container">
         <h3 className="section-title">Capital Structure</h3>
         <p className="text-sm text-muted-foreground">Click a segment in the Supply Distribution chart to filter.</p>
+      </div>
+    );
+    return (
+      <div className="chart-container">
+        <h3 className="section-title">Capital Structure – CCv1 Locked</h3>
+        <p className="text-xs text-muted-foreground mb-3">DESO locked in Creator Coins v1 (network total, no per-account breakdown)</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground text-left">
+                <th className="pb-2 pr-4">Category</th>
+                <th className="pb-2 text-right">DESO</th>
+                <th className="pb-2 text-right">US$</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-border/50">
+                <td className="py-1.5 pr-4">CCv1 Locked</td>
+                <td className="py-1.5 text-right font-mono">{fmtDeso(sec.amount)}</td>
+                <td className="py-1.5 text-right font-mono">{formatUsd(sec.usdValue)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (showUserProject && breakdown) {
+    const rows: { label: string; amount: number; usdValue: number }[] = [];
+    if (openfundSec) rows.push({ label: 'Openfund', amount: openfundSec.amount, usdValue: openfundSec.usdValue });
+    if (focusSec) rows.push({ label: 'Focus', amount: focusSec.amount, usdValue: focusSec.usdValue });
+    if (ccv2Sec) rows.push({ label: 'CCv2 AMMs', amount: ccv2Sec.amount, usdValue: ccv2Sec.usdValue });
+    const byCat = [
+      ...(openfundSec?.byCategory ?? []).map((c) => ({ label: `Openfund: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+      ...(focusSec?.byCategory ?? []).map((c) => ({ label: `Focus: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+      ...(ccv2Sec?.byCategory ?? []).map((c) => ({ label: `CCv2: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+    ].filter((r) => r.amount > 0 || r.usdValue > 0);
+    return (
+      <div className="chart-container">
+        <h3 className="section-title">Capital Structure – User/Project Tokens</h3>
+        <p className="text-xs text-muted-foreground mb-3">DESO equivalent in Openfund, Focus, CCv2 AMMs (by account/category)</p>
+        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground text-left">
+                <th className="pb-2 pr-4">Account / Category</th>
+                <th className="pb-2 text-right">DESO equiv.</th>
+                <th className="pb-2 text-right">US$</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byCat.length > 0 ? byCat.map((r) => (
+                <tr key={r.label} className="border-b border-border/50">
+                  <td className="py-1.5 pr-4">{r.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmtDeso(r.amount)}</td>
+                  <td className="py-1.5 text-right font-mono">{formatUsd(r.usdValue)}</td>
+                </tr>
+              )) : rows.map((r) => (
+                <tr key={r.label} className="border-b border-border/50">
+                  <td className="py-1.5 pr-4">{r.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmtDeso(r.amount)}</td>
+                  <td className="py-1.5 text-right font-mono">{formatUsd(r.usdValue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (showCurrency && (dusdcSec || dbtcSec || dethSec || dsolSec)) {
+    const rows = [
+      dusdcSec && { label: 'dUSDC', amount: dusdcSec.amount, usdValue: dusdcSec.usdValue },
+      dbtcSec && { label: 'dBTC', amount: dbtcSec.amount, usdValue: dbtcSec.usdValue },
+      dethSec && { label: 'dETH', amount: dethSec.amount, usdValue: dethSec.usdValue },
+      dsolSec && { label: 'dSOL', amount: dsolSec.amount, usdValue: dsolSec.usdValue },
+    ].filter(Boolean) as { label: string; amount: number; usdValue: number }[];
+    const byCat = [
+      ...(dusdcSec?.byCategory ?? []).map((c) => ({ label: `dUSDC: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+      ...(dbtcSec?.byCategory ?? []).map((c) => ({ label: `dBTC: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+      ...(dethSec?.byCategory ?? []).map((c) => ({ label: `dETH: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+      ...(dsolSec?.byCategory ?? []).map((c) => ({ label: `dSOL: ${c.label}`, amount: c.amount, usdValue: c.usdValue })),
+    ].filter((r) => r.amount > 0 || r.usdValue > 0);
+    return (
+      <div className="chart-container">
+        <h3 className="section-title">Capital Structure – Currency Tokens</h3>
+        <p className="text-xs text-muted-foreground mb-3">dUSDC, dBTC, dETH, dSOL (by account/category)</p>
+        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground text-left">
+                <th className="pb-2 pr-4">Account / Category</th>
+                <th className="pb-2 text-right">Amount</th>
+                <th className="pb-2 text-right">US$</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byCat.length > 0 ? byCat.map((r) => (
+                <tr key={r.label} className="border-b border-border/50">
+                  <td className="py-1.5 pr-4">{r.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmtDeso(r.amount)}</td>
+                  <td className="py-1.5 text-right font-mono">{formatUsd(r.usdValue)}</td>
+                </tr>
+              )) : rows.map((r) => (
+                <tr key={r.label} className="border-b border-border/50">
+                  <td className="py-1.5 pr-4">{r.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmtDeso(r.amount)}</td>
+                  <td className="py-1.5 text-right font-mono">{formatUsd(r.usdValue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (showUnstakedDeso && breakdown?.nativeDeso) {
+    const nd = breakdown.nativeDeso;
+    const byCat = nd.byCategory ?? [];
+    return (
+      <div className="chart-container">
+        <h3 className="section-title">Capital Structure – Unstaked DESO</h3>
+        <p className="text-xs text-muted-foreground mb-3">Native DESO by category (excl. staked)</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground text-left">
+                <th className="pb-2 pr-4">Category</th>
+                <th className="pb-2 text-right">DESO</th>
+                <th className="pb-2 text-right">US$</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byCat.map((c) => (
+                <tr key={c.label} className="border-b border-border/50">
+                  <td className="py-1.5 pr-4">{c.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmtDeso(c.amount)}</td>
+                  <td className="py-1.5 text-right font-mono">{formatUsd(c.usdValue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
@@ -144,27 +274,7 @@ export default function CapitalStructureTable({ highlightedSegment }: { highligh
   return (
     <div className="chart-container">
       <h3 className="section-title">Capital Structure</h3>
-      <p className="text-xs text-muted-foreground mb-3">Filtered by selected segment (click doughnut to change)</p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-muted-foreground text-left">
-              <th className="pb-2 pr-4">Category</th>
-              {rows.some((r) => r.deso != null) && <th className="pb-2 text-right">DESO</th>}
-              <th className="pb-2 text-right">US$</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.label} className="border-b border-border/50">
-                <td className="py-1.5 pr-4">{r.label}</td>
-                {r.deso != null && <td className="py-1.5 text-right font-mono">{fmtDeso(r.deso)}</td>}
-                <td className="py-1.5 text-right font-mono">{formatUsd(r.usd)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <p className="text-sm text-muted-foreground">Click a segment in the Supply Distribution chart to filter.</p>
     </div>
   );
 }

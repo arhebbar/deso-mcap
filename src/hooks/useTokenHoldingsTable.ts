@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
+import { useFreeFloatTop100 } from './useFreeFloatTop100';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'DeSo Bulls' | 'Others';
 
@@ -47,6 +48,8 @@ export interface TokenHoldingsRow {
   backedByWallet?: string;
   /** Future: highlight for this cell/row (yellow/orange/green) */
   highlight?: TokenHighlight;
+  /** True if account has a display name (tracked or chain username); used for "Named accounts only" filter */
+  isNamed?: boolean;
 }
 
 const CATEGORY_BY_CLASS: Record<string, HoldingsCategory> = {
@@ -63,6 +66,7 @@ export function useTokenHoldingsTable(): {
 } {
   const { wallets, isLoading: walletsLoading } = useWalletData();
   const { marketData } = useLiveData();
+  const { top100: freeFloatTop100 } = useFreeFloatTop100();
 
   const prices = useMemo(
     () => ({
@@ -85,11 +89,18 @@ export function useTokenHoldingsTable(): {
     const desoStakedIssued = marketData.desoStaked;
     const desoUnstakedIssued = Math.max(0, desoIssued - desoStakedIssued);
     const openfundIssued = 95_000_000; // approximate
-    /** Focus total issued 165B; 120B is in Focus account (not alternative investment), excluded from Others */
-    const focusIssued = 165_000_000_000;
+    /** Focus: 165B total; 120B in Focus account; circulation for table = 45B (MC in DESO ~2M) */
     const FOCUS_IN_FOCUS_ACCOUNT = 120_000_000_000;
-    const focusIssuedForOthers = focusIssued - FOCUS_IN_FOCUS_ACCOUNT; // 45B
+    const focusCirculation = 45_000_000_000; // 165B - 120B
     const dusdcIssued = 9_200_000;
+    const totalSupplyUsd =
+      desoIssued * p.deso +
+      openfundIssued * p.openfund +
+      focusCirculation * p.focus +
+      dusdcIssued +
+      22 * p.btc +
+      210 * p.eth +
+      2650 * p.sol;
     out.push({
       id: 'issued',
       type: 'issued',
@@ -98,11 +109,12 @@ export function useTokenHoldingsTable(): {
       DESOStaked: desoStakedIssued,
       DESOUnstaked: desoUnstakedIssued,
       OpenFund: openfundIssued,
-      Focus: focusIssued,
+      Focus: focusCirculation,
       dUSDC: dusdcIssued,
       dBTC: 22,
       dETH: 210,
       dSOL: 2650,
+      totalUsd: totalSupplyUsd,
     });
 
     // Token Price row
@@ -166,10 +178,50 @@ export function useTokenHoldingsTable(): {
         totalUsd,
         backedByWallet: undefined,
         highlight: undefined,
+        isNamed: true,
       });
     }
 
-    // Sum tracked amounts per token (from account rows only)
+    // Top 100 free-float accounts (from Free Float table) as individual rows under Others
+    for (const w of freeFloatTop100) {
+      const deso = w.staked + w.unstaked;
+      out.push({
+        id: `account-freefloat-${w.pk}`,
+        type: 'account',
+        category: 'Others',
+        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        account: w.name,
+        DESO: deso,
+        DESOStaked: w.staked,
+        DESOUnstaked: w.unstaked,
+        OpenFund: 0,
+        Focus: 0,
+        dUSDC: 0,
+        dBTC: 0,
+        dETH: 0,
+        dSOL: 0,
+        CCv1: 0,
+        CCv2: 0,
+        totalUsd: w.totalUsd,
+        isNamed: w.isNamed,
+      });
+    }
+
+    // Tracked-only sums (Foundation, AMM, Core Team, DeSo Bulls — exclude free-float and Others row)
+    const trackedRows = out.filter((r) => r.type === 'account' && r.category !== 'Others');
+    const sumTrackedStaked = trackedRows.reduce((s, x) => s + (x.DESOStaked ?? 0), 0);
+    const sumTrackedTotalUsd = trackedRows.reduce((s, x) => s + (x.totalUsd ?? 0), 0);
+    const sumTrackedDeso = trackedRows.reduce((s, x) => s + (x.DESO ?? 0), 0);
+    const sumTrackedOpenfund = trackedRows.reduce((s, x) => s + (x.OpenFund ?? 0), 0);
+    const sumTrackedFocus = trackedRows.reduce((s, x) => s + (x.Focus ?? 0), 0);
+    const sumTrackedDusdc = trackedRows.reduce((s, x) => s + (x.dUSDC ?? 0), 0);
+    const sumTrackedDbtc = trackedRows.reduce((s, x) => s + (x.dBTC ?? 0), 0);
+    const sumTrackedDeth = trackedRows.reduce((s, x) => s + (x.dETH ?? 0), 0);
+    const sumTrackedDsol = trackedRows.reduce((s, x) => s + (x.dSOL ?? 0), 0);
+    const sumTrackedCcv1 = trackedRows.reduce((s, x) => s + (x.CCv1 ?? 0), 0);
+    const sumTrackedCcv2 = trackedRows.reduce((s, x) => s + (x.CCv2 ?? 0), 0);
+
+    // All account rows (including top100) for remainder token amounts
     const sumDeso = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.DESO ?? 0), 0);
     const sumOpenfund = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.OpenFund ?? 0), 0);
     const sumFocus = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.Focus ?? 0), 0);
@@ -177,21 +229,35 @@ export function useTokenHoldingsTable(): {
     const sumDbtc = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.dBTC ?? 0), 0);
     const sumDeth = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.dETH ?? 0), 0);
     const sumDsol = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.dSOL ?? 0), 0);
-    const sumCcv1 = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.CCv1 ?? 0), 0);
-    const sumCcv2 = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.CCv2 ?? 0), 0);
 
-    // Others row: delta so that (tracked + others) = issued for each token. Focus: use 45B (excl. 120B in Focus account)
-    const othersDeso = Math.max(0, desoIssued - sumDeso);
+    // Others row: Total = 12.2M DESO equivalent minus tracked (Foundation+AMM+Core+DeSo Bulls)
+    const othersTotalUsd = totalSupplyUsd - sumTrackedTotalUsd;
+    const othersDesoStaked = Math.max(0, desoStakedIssued - sumTrackedStaked);
     const othersOpenfund = Math.max(0, openfundIssued - sumOpenfund);
-    const othersFocus = Math.max(0, focusIssuedForOthers - sumFocus);
+    const othersFocus = Math.max(0, focusCirculation - sumFocus);
     const othersDusdc = Math.max(0, dusdcIssued - sumDusdc);
     const othersDbtc = Math.max(0, 22 - sumDbtc);
     const othersDeth = Math.max(0, 210 - sumDeth);
     const othersDsol = Math.max(0, 2650 - sumDsol);
-    const othersCcv1 = 0; // no "issued" for CCv1
+    const othersCcv1 = 0;
     const othersCcv2 = 0;
+    // DESO Unstaked (Others) = Others Total Value minus all other columns' USD contribution
+    const othersOtherColsUsd =
+      othersDesoStaked * p.deso +
+      othersOpenfund * p.openfund +
+      othersFocus * p.focus +
+      othersDusdc +
+      othersDbtc * p.btc +
+      othersDeth * p.eth +
+      othersDsol * p.sol +
+      othersCcv1 * p.deso +
+      othersCcv2 * p.deso;
+    const othersUnstakedUsd = Math.max(0, othersTotalUsd - othersOtherColsUsd);
+    const othersUnstakedDeso = p.deso > 0 ? othersUnstakedUsd / p.deso : 0;
+    const othersDeso = othersDesoStaked + othersUnstakedDeso;
 
     const hasOthers =
+      othersTotalUsd > 0 ||
       othersDeso > 0 ||
       othersOpenfund > 0 ||
       othersFocus > 0 ||
@@ -201,25 +267,15 @@ export function useTokenHoldingsTable(): {
       othersDsol > 0;
 
     if (hasOthers) {
-      const othersTotalUsd =
-        othersDeso * p.deso +
-        othersOpenfund * p.openfund +
-        othersFocus * p.focus +
-        othersDusdc +
-        othersDbtc * p.btc +
-        othersDeth * p.eth +
-        othersDsol * p.sol +
-        othersCcv1 * p.deso +
-        othersCcv2 * p.deso;
       out.push({
         id: 'others',
         type: 'account',
         category: 'Others',
         defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
-        account: 'Free Float',
+        account: 'Others',
         DESO: othersDeso,
-        DESOStaked: undefined,
-        DESOUnstaked: undefined,
+        DESOStaked: othersDesoStaked,
+        DESOUnstaked: othersUnstakedDeso,
         OpenFund: othersOpenfund,
         Focus: othersFocus,
         dUSDC: othersDusdc,
@@ -229,10 +285,56 @@ export function useTokenHoldingsTable(): {
         CCv1: othersCcv1,
         CCv2: othersCcv2,
         totalUsd: othersTotalUsd,
+        isNamed: true,
       });
     }
 
-    // Overall Total row (matches Issued by construction: tracked + Others = Issued)
+    // Unaccounted = Others total minus sum of top 100 free-float rows (named + public key)
+    const sumFfTotalUsd = freeFloatTop100.reduce((s, w) => s + w.totalUsd, 0);
+    const sumFfStaked = freeFloatTop100.reduce((s, w) => s + w.staked, 0);
+    const unaccountedTotalUsd = Math.max(0, (hasOthers ? othersTotalUsd : 0) - sumFfTotalUsd);
+    const unaccountedStaked = Math.max(0, (hasOthers ? othersDesoStaked : 0) - sumFfStaked);
+    // Token columns: Others minus top100 (top100 have 0 for OpenFund, Focus, dUSDC, etc.)
+    const unaccountedOpenfund = hasOthers ? othersOpenfund : 0;
+    const unaccountedFocus = hasOthers ? othersFocus : 0;
+    const unaccountedDusdc = hasOthers ? othersDusdc : 0;
+    const unaccountedDbtc = hasOthers ? othersDbtc : 0;
+    const unaccountedDeth = hasOthers ? othersDeth : 0;
+    const unaccountedDsol = hasOthers ? othersDsol : 0;
+    const unaccountedOtherColsUsd =
+      unaccountedStaked * p.deso +
+      unaccountedOpenfund * p.openfund +
+      unaccountedFocus * p.focus +
+      unaccountedDusdc +
+      unaccountedDbtc * p.btc +
+      unaccountedDeth * p.eth +
+      unaccountedDsol * p.sol;
+    const unaccountedUnstakedUsd = Math.max(0, unaccountedTotalUsd - unaccountedOtherColsUsd);
+    const unaccountedUnstakedDeso = p.deso > 0 ? unaccountedUnstakedUsd / p.deso : 0;
+    if (unaccountedTotalUsd > 0 || unaccountedStaked > 0 || unaccountedUnstakedDeso > 0) {
+      out.push({
+        id: 'unaccounted',
+        type: 'account',
+        category: 'Others',
+        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        account: 'Unaccounted',
+        DESO: unaccountedStaked + unaccountedUnstakedDeso,
+        DESOStaked: unaccountedStaked,
+        DESOUnstaked: unaccountedUnstakedDeso,
+        OpenFund: unaccountedOpenfund,
+        Focus: unaccountedFocus,
+        dUSDC: unaccountedDusdc,
+        dBTC: unaccountedDbtc,
+        dETH: unaccountedDeth,
+        dSOL: unaccountedDsol,
+        CCv1: 0,
+        CCv2: 0,
+        totalUsd: unaccountedTotalUsd,
+        isNamed: true,
+      });
+    }
+
+    // Overall Total row (supply; Focus = 45B circulation)
     out.push({
       id: 'overallTotal',
       type: 'overallTotal',
@@ -241,23 +343,16 @@ export function useTokenHoldingsTable(): {
       DESOStaked: desoStakedIssued,
       DESOUnstaked: desoUnstakedIssued,
       OpenFund: openfundIssued,
-      Focus: focusIssued,
+      Focus: focusCirculation,
       dUSDC: dusdcIssued,
       dBTC: 22,
       dETH: 210,
       dSOL: 2650,
-      totalUsd:
-        desoIssued * p.deso +
-        openfundIssued * p.openfund +
-        focusIssued * p.focus +
-        dusdcIssued +
-        22 * p.btc +
-        210 * p.eth +
-        2650 * p.sol,
+      totalUsd: totalSupplyUsd,
     });
 
     return out;
-  }, [wallets, marketData, prices]);
+  }, [wallets, marketData, prices, freeFloatTop100]);
 
   return { rows, prices, isLoading: walletsLoading };
 }

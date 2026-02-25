@@ -1,8 +1,8 @@
 /**
- * DESO in Circulation – table with 3-level drilldown:
- * Level 1: Staked | DESO Native Tokens | DESO Currency Tokens | Unstaked DESO
- * Level 2a (Staked): Validators → Level 3a: Top N accounts + Others (expandable)
- * Level 2b: Under each category, sub-sections (Openfund/Focus, dUSDC/dBTC/dETH/dSOL, Unstaked DESO + CCv2 with Others)
+ * DESO in Circulation – table with drilldown:
+ * Level 1: DESO - Staked | User/Project Tokens (Openfund, Focus, CCv2 AMMs) | Currency/Liquidity Tokens | DESO - Unstaked
+ * Columns: DESO - Staked, Price, # of Tokens, US$, %, DESO - Unstaked (last).
+ * Others in DESO - Unstaked = 12.2M × DESO Price − sum(tracked); DESO - Unstaked column at end.
  */
 
 import React, { useState } from 'react';
@@ -20,6 +20,12 @@ function fmtDeso(n: number) {
 function fmtToken(amount: number, unit: 'DESO' | 'token') {
   if (unit === 'token' && amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
   return fmtDeso(amount);
+}
+
+function fmtPrice(p: number): string {
+  if (p >= 1) return p.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (p >= 0.0001) return p.toFixed(6);
+  return p.toExponential(2);
 }
 
 export default function DesoInCirculationTable() {
@@ -64,13 +70,16 @@ export default function DesoInCirculationTable() {
             <tr>
               <th className="w-8" />
               <th className="text-left">Category</th>
-              <th className="text-right w-28">DESO / Amount</th>
+              <th className="text-right w-24">DESO - Staked</th>
+              <th className="text-right w-20">Price</th>
+              <th className="text-right w-20"># of Tokens</th>
               <th className="text-right w-28">US$</th>
-              <th className="text-right w-16">%</th>
+              <th className="text-right w-12">%</th>
+              <th className="text-right w-24">DESO - Unstaked</th>
             </tr>
           </thead>
           <tbody>
-            {/* Level 1: Staked */}
+            {/* Level 1: DESO - Staked */}
             <tr
               className="bg-muted/40 font-medium cursor-pointer hover:bg-muted/60"
               onClick={() => setOpenStaked((v) => !v)}
@@ -78,10 +87,13 @@ export default function DesoInCirculationTable() {
               <td className="py-2">
                 {openStaked ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </td>
-              <td>Staked</td>
+              <td>DESO - Staked</td>
               <td className="text-right font-mono text-sm">{fmtDeso(data.staked.total)}</td>
+              <td className="text-right text-muted-foreground text-sm">—</td>
+              <td className="text-right text-muted-foreground text-sm">—</td>
               <td className="text-right font-mono text-sm">{formatUsd(data.staked.usdValue)}</td>
               <td className="text-right text-muted-foreground text-sm">{pct(data.staked.total, data.totalSupply)}%</td>
+              <td className="text-right text-muted-foreground text-sm">—</td>
             </tr>
             {openStaked &&
               data.staked.validators.map((v) => {
@@ -97,8 +109,11 @@ export default function DesoInCirculationTable() {
                       </td>
                       <td className="text-sm text-muted-foreground pl-2">{v.validatorName}</td>
                       <td className="text-right font-mono text-xs">{fmtDeso(v.amount)}</td>
+                      <td className="text-right text-muted-foreground text-xs">—</td>
+                      <td className="text-right text-muted-foreground text-xs">—</td>
                       <td className="text-right font-mono text-xs">{formatUsd(v.usdValue)}</td>
                       <td className="text-right text-muted-foreground text-xs">{pct(v.amount, data.staked.total)}%</td>
+                      <td className="text-right text-muted-foreground text-xs">—</td>
                     </tr>
                     {isValidatorOpen &&
                       v.accounts.map((acc, i) => (
@@ -111,8 +126,11 @@ export default function DesoInCirculationTable() {
                             {acc.name}
                           </td>
                           <td className="text-right font-mono">{fmtDeso(acc.amount)}</td>
+                          <td className="text-right text-muted-foreground">—</td>
+                          <td className="text-right text-muted-foreground">—</td>
                           <td className="text-right font-mono">{formatUsd(acc.usdValue)}</td>
                           <td className="text-right text-muted-foreground">{pct(acc.amount, v.amount)}%</td>
+                          <td className="text-right text-muted-foreground">—</td>
                         </tr>
                       ))}
                     {isValidatorOpen && v.othersCount > 0 && (
@@ -120,19 +138,23 @@ export default function DesoInCirculationTable() {
                         <td className="pl-10" />
                         <td className="pl-4 text-muted-foreground italic">Others ({v.othersCount} accounts)</td>
                         <td className="text-right font-mono">{fmtDeso(v.othersAmount)}</td>
+                        <td className="text-right text-muted-foreground">—</td>
+                        <td className="text-right text-muted-foreground">—</td>
                         <td className="text-right font-mono">{formatUsd(v.othersUsd)}</td>
                         <td className="text-right text-muted-foreground">{pct(v.othersAmount, v.amount)}%</td>
+                        <td className="text-right text-muted-foreground">—</td>
                       </tr>
                     )}
                   </React.Fragment>
                 );
               })}
 
-            {/* Level 1: DESO Native Tokens */}
+            {/* Level 1: User/Project Tokens (Openfund, Focus, CCv2 AMMs) */}
             {(() => {
               const b = data.unstaked.breakdown;
-              const nativeTokensDeso = b.nativeTokens.openfund.amount + b.nativeTokens.focus.amount;
-              const nativeTokensUsd = b.nativeTokens.openfund.usdValue + b.nativeTokens.focus.usdValue;
+              const nt = b.nativeTokens;
+              const nativeTokensDeso = nt.openfund.amount + nt.focus.amount + nt.userTokens.amount;
+              const nativeTokensUsd = nt.openfund.usdValue + nt.focus.usdValue + nt.userTokens.usdValue;
               return (
                 <>
                   <tr
@@ -142,13 +164,16 @@ export default function DesoInCirculationTable() {
                     <td className="py-2">
                       {openNativeTokens ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </td>
-                    <td>DESO Native Tokens</td>
-                    <td className="text-right font-mono text-sm">{fmtDeso(nativeTokensDeso)}</td>
+                    <td>User/Project Tokens</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
                     <td className="text-right font-mono text-sm">{formatUsd(nativeTokensUsd)}</td>
                     <td className="text-right text-muted-foreground text-sm">{pct(nativeTokensDeso, data.totalSupply)}%</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
                   </tr>
                   {openNativeTokens && (() => {
-                    const renderSection = (sec: typeof b.nativeTokens.openfund, indentLevel = 1) => {
+                    const renderSection = (sec: typeof nt.openfund, indentLevel = 1) => {
                       const isOpen = openSections.has(sec.id);
                       const hasByCategory = sec.byCategory.length > 0;
                       const indentClass = indentLevel === 1 ? 'pl-6' : 'pl-8';
@@ -162,37 +187,44 @@ export default function DesoInCirculationTable() {
                               {hasByCategory ? (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <span className="w-4" />}
                             </td>
                             <td className="text-sm text-muted-foreground pl-2">{sec.label}</td>
-                            <td className="text-right font-mono text-xs">{fmtToken(sec.amount, sec.unit)}</td>
+                            <td className="text-right text-muted-foreground text-xs">—</td>
+                            <td className="text-right font-mono text-xs">{sec.price != null ? fmtPrice(sec.price) : '—'}</td>
+                            <td className="text-right font-mono text-xs">{sec.tokenCount != null ? fmtToken(sec.tokenCount, 'token') : '—'}</td>
                             <td className="text-right font-mono text-xs">{formatUsd(sec.usdValue)}</td>
                             <td className="text-right text-muted-foreground text-xs">
                               {sec.unit === 'DESO' ? `${pct(sec.amount, data.totalSupply)}%` : '—'}
                             </td>
+                            <td className="text-right text-muted-foreground text-xs">—</td>
                           </tr>
                           {isOpen && hasByCategory &&
                             sec.byCategory.map((c) => (
                               <tr key={`${sec.id}-${c.label}`} className="text-xs">
                                 <td className="pl-10" />
                                 <td className="pl-4 text-muted-foreground">{c.label}</td>
-                                <td className="text-right font-mono">{fmtToken(c.amount, sec.unit)}</td>
+                                <td className="text-right text-muted-foreground">—</td>
+                                <td className="text-right text-muted-foreground">—</td>
+                                <td className="text-right text-muted-foreground">—</td>
                                 <td className="text-right font-mono">{formatUsd(c.usdValue)}</td>
                                 <td className="text-right text-muted-foreground">
                                   {sec.amount > 0 ? `${pct(c.amount, sec.amount)}%` : '0.0%'}
                                 </td>
+                                <td className="text-right text-muted-foreground">—</td>
                               </tr>
                             ))}
                         </React.Fragment>
                       );
                     };
-                    return <>{renderSection(b.nativeTokens.openfund, 1)} {renderSection(b.nativeTokens.focus, 1)}</>;
+                    return <>{renderSection(nt.openfund, 1)} {renderSection(nt.focus, 1)} {renderSection(nt.userTokens, 1)}</>;
                   })()}
                 </>
               );
             })()}
-            {/* Level 1: DESO Currency Tokens */}
+            {/* Level 1: Currency/Liquidity Tokens */}
             {(() => {
               const b = data.unstaked.breakdown;
-              const currDeso = b.currencyTokens.dusdc.amount + b.currencyTokens.dbtc.amount + b.currencyTokens.deth.amount + b.currencyTokens.dsol.amount;
-              const currUsd = b.currencyTokens.dusdc.usdValue + b.currencyTokens.dbtc.usdValue + b.currencyTokens.deth.usdValue + b.currencyTokens.dsol.usdValue;
+              const ct = b.currencyTokens;
+              const currDeso = ct.dusdc.amount + ct.dbtc.amount + ct.deth.amount + ct.dsol.amount;
+              const currUsd = ct.dusdc.usdValue + ct.dbtc.usdValue + ct.deth.usdValue + ct.dsol.usdValue;
               return (
                 <>
                   <tr
@@ -202,13 +234,16 @@ export default function DesoInCirculationTable() {
                     <td className="py-2">
                       {openCurrencyTokens ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </td>
-                    <td>DESO Currency Tokens</td>
-                    <td className="text-right font-mono text-sm">{fmtToken(currDeso, 'token')}</td>
+                    <td>Currency/Liquidity Tokens</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
                     <td className="text-right font-mono text-sm">{formatUsd(currUsd)}</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
                     <td className="text-right text-muted-foreground text-sm">—</td>
                   </tr>
                   {openCurrencyTokens && (() => {
-                    const renderSection = (sec: typeof b.currencyTokens.dusdc) => {
+                    const renderSection = (sec: typeof ct.dusdc) => {
                       const isOpen = openSections.has(sec.id);
                       const hasByCategory = sec.byCategory.length > 0;
                       return (
@@ -221,8 +256,11 @@ export default function DesoInCirculationTable() {
                               {hasByCategory ? (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <span className="w-4" />}
                             </td>
                             <td className="text-sm text-muted-foreground pl-2">{sec.label}</td>
-                            <td className="text-right font-mono text-xs">{fmtToken(sec.amount, sec.unit)}</td>
+                            <td className="text-right text-muted-foreground text-xs">—</td>
+                            <td className="text-right font-mono text-xs">{sec.price != null ? (sec.id === 'dusdc-nf' ? '$1' : formatUsd(sec.price)) : '—'}</td>
+                            <td className="text-right font-mono text-xs">{sec.tokenCount != null ? fmtToken(sec.tokenCount, 'token') : '—'}</td>
                             <td className="text-right font-mono text-xs">{formatUsd(sec.usdValue)}</td>
+                            <td className="text-right text-muted-foreground text-xs">—</td>
                             <td className="text-right text-muted-foreground text-xs">—</td>
                           </tr>
                           {isOpen && hasByCategory &&
@@ -230,11 +268,14 @@ export default function DesoInCirculationTable() {
                               <tr key={`${sec.id}-${c.label}`} className="text-xs">
                                 <td className="pl-10" />
                                 <td className="pl-4 text-muted-foreground">{c.label}</td>
-                                <td className="text-right font-mono">{fmtToken(c.amount, sec.unit)}</td>
+                                <td className="text-right text-muted-foreground">—</td>
+                                <td className="text-right text-muted-foreground">—</td>
+                                <td className="text-right text-muted-foreground">—</td>
                                 <td className="text-right font-mono">{formatUsd(c.usdValue)}</td>
                                 <td className="text-right text-muted-foreground">
                                   {sec.amount > 0 ? `${pct(c.amount, sec.amount)}%` : '0.0%'}
                                 </td>
+                                <td className="text-right text-muted-foreground">—</td>
                               </tr>
                             ))}
                         </React.Fragment>
@@ -242,21 +283,20 @@ export default function DesoInCirculationTable() {
                     };
                     return (
                       <>
-                        {renderSection(b.currencyTokens.dusdc)}
-                        {renderSection(b.currencyTokens.dbtc)}
-                        {renderSection(b.currencyTokens.deth)}
-                        {renderSection(b.currencyTokens.dsol)}
+                        {renderSection(ct.dusdc)}
+                        {renderSection(ct.dbtc)}
+                        {renderSection(ct.deth)}
+                        {renderSection(ct.dsol)}
                       </>
                     );
                   })()}
                 </>
               );
             })()}
-            {/* Level 1: Unstaked DESO (Native DESO + CCv2 AMMs) */}
+            {/* Level 1: DESO - Unstaked (by category; no redundant sub-header) */}
             {(() => {
               const b = data.unstaked.breakdown;
-              const unstakedDesoTotal = b.nativeDeso.amount + b.userTokens.amount;
-              const unstakedDesoUsd = b.nativeDeso.usdValue + b.userTokens.usdValue;
+              const nd = b.nativeDeso;
               return (
                 <>
                   <tr
@@ -266,53 +306,29 @@ export default function DesoInCirculationTable() {
                     <td className="py-2">
                       {openUnstakedDeso ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </td>
-                    <td>Unstaked DESO</td>
-                    <td className="text-right font-mono text-sm">{fmtDeso(unstakedDesoTotal)}</td>
-                    <td className="text-right font-mono text-sm">{formatUsd(unstakedDesoUsd)}</td>
-                    <td className="text-right text-muted-foreground text-sm">{pct(unstakedDesoTotal, data.totalSupply)}%</td>
+                    <td>DESO - Unstaked</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right text-muted-foreground text-sm">—</td>
+                    <td className="text-right font-mono text-sm">{formatUsd(nd.usdValue)}</td>
+                    <td className="text-right text-muted-foreground text-sm">{pct(nd.amount, data.totalSupply)}%</td>
+                    <td className="text-right font-mono text-sm">{fmtDeso(nd.amount)}</td>
                   </tr>
-                  {openUnstakedDeso && (() => {
-                    const renderSection = (sec: typeof b.nativeDeso) => {
-                      const isOpen = openSections.has(sec.id);
-                      const hasByCategory = sec.byCategory.length > 0;
-                      return (
-                        <React.Fragment key={sec.id}>
-                          <tr
-                            className="cursor-pointer hover:bg-muted/40"
-                            onClick={() => hasByCategory && toggle(setOpenSections, sec.id)}
-                          >
-                            <td className="pl-6 py-1.5">
-                              {hasByCategory ? (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <span className="w-4" />}
-                            </td>
-                            <td className="text-sm text-muted-foreground pl-2">{sec.label}</td>
-                            <td className="text-right font-mono text-xs">{fmtToken(sec.amount, sec.unit)}</td>
-                            <td className="text-right font-mono text-xs">{formatUsd(sec.usdValue)}</td>
-                            <td className="text-right text-muted-foreground text-xs">
-                              {sec.unit === 'DESO' ? `${pct(sec.amount, data.totalSupply)}%` : '—'}
-                            </td>
-                          </tr>
-                          {isOpen && hasByCategory &&
-                            sec.byCategory.map((c) => (
-                              <tr key={`${sec.id}-${c.label}`} className="text-xs">
-                                <td className="pl-10" />
-                                <td className="pl-4 text-muted-foreground whitespace-nowrap" title={c.label}>{c.label}</td>
-                                <td className="text-right font-mono">{fmtToken(c.amount, sec.unit)}</td>
-                                <td className="text-right font-mono">{formatUsd(c.usdValue)}</td>
-                                <td className="text-right text-muted-foreground">
-                                  {sec.amount > 0 ? `${pct(c.amount, sec.amount)}%` : '0.0%'}
-                                </td>
-                              </tr>
-                            ))}
-                        </React.Fragment>
-                      );
-                    };
-                    return (
-                      <>
-                        {renderSection(b.nativeDeso)}
-                        {renderSection(b.userTokens)}
-                      </>
-                    );
-                  })()}
+                  {openUnstakedDeso &&
+                    nd.byCategory.map((c) => (
+                      <tr key={`${nd.id}-${c.label}`} className="text-xs">
+                        <td className="pl-10" />
+                        <td className="pl-4 text-muted-foreground whitespace-nowrap min-w-[7rem]" title={c.label}>{c.label}</td>
+                        <td className="text-right text-muted-foreground">—</td>
+                        <td className="text-right text-muted-foreground">—</td>
+                        <td className="text-right text-muted-foreground">—</td>
+                        <td className="text-right font-mono">{formatUsd(c.usdValue)}</td>
+                        <td className="text-right text-muted-foreground">
+                          {nd.amount > 0 ? `${pct(c.amount, nd.amount)}%` : '0.0%'}
+                        </td>
+                        <td className="text-right font-mono">{fmtDeso(c.amount)}</td>
+                      </tr>
+                    ))}
                 </>
               );
             })()}
@@ -320,9 +336,12 @@ export default function DesoInCirculationTable() {
             <tr className="border-t-2 border-border font-medium">
               <td />
               <td>Total</td>
-              <td className="text-right font-mono">{fmtDeso(totalDeso)}</td>
+              <td className="text-right font-mono">{fmtDeso(data.staked.total)}</td>
+              <td className="text-right text-muted-foreground">—</td>
+              <td className="text-right text-muted-foreground">—</td>
               <td className="text-right font-mono">{formatUsd(totalUsd)}</td>
               <td className="text-right">100%</td>
+              <td className="text-right font-mono">{fmtDeso(data.unstaked.breakdown.nativeDeso.amount)}</td>
             </tr>
           </tbody>
         </table>
