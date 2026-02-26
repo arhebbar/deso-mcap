@@ -1,1 +1,13 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","rewrites":[{"source":"/api/deso/:path*","destination":"https://node.deso.org/api/v0/:path*"},{"source":"/api/deso-v1/:path*","destination":"https://node.deso.org/api/v1/:path*"},{"source":"/api/deso-hodlers/:path*","destination":"https://blockproducer.deso.org/api/v0/:path*"},{"source":"/api/cryptocompare/:path*","destination":"https://min-api.cryptocompare.com/:path*"},{"source":"/api/mempool/:path*","destination":"https://mempool.space/api/:path*"},{"source":"/api/eth-rpc","destination":"https://cloudflare-eth.com"},{"source":"/api/sol-rpc","destination":"https://solana-rpc.publicnode.com"},{"source":"/api/deso-graphql","destination":"https://graphql-prod.deso.com/graphql"}]}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/deso/:match*", "destination": "https://node.deso.org/api/v0/:match*" },
+    { "source": "/api/deso-v1/:match*", "destination": "https://node.deso.org/api/v1/:match*" },
+    { "source": "/api/deso-hodlers/:match*", "destination": "https://blockproducer.deso.org/api/v0/:match*" },
+    { "source": "/api/cryptocompare/:match*", "destination": "https://min-api.cryptocompare.com/:match*" },
+    { "source": "/api/mempool/:match*", "destination": "https://mempool.space/api/:match*" },
+    { "source": "/api/eth-rpc", "destination": "https://eth.llamarpc.com" },
+    { "source": "/api/sol-rpc", "destination": "https://solana-rpc.publicnode.com" },
+    { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" }
+  ]
+}
