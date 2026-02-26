@@ -37,6 +37,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/deso-graphql/, "/graphql"),
       },
+      "/coingecko": {
+        target: "https://api.coingecko.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/coingecko/, "/api/v3"),
+      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

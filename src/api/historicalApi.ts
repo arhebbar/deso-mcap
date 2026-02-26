@@ -10,7 +10,7 @@ import { fetchLivePrices } from '@/api/priceApi';
 import { fetchWalletBalances } from '@/api/walletApi';
 import { fetchTreasuryBalances, fetchBtcHistoricalHoldings } from '@/api/treasuryApi';
 
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
+const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : '/api/coingecko';
 const DESO_COIN_ID = 'decentralized-social';
 
 export interface HistoricalDataPoint {
@@ -43,11 +43,12 @@ function groupByDay(points: [number, number][]): Map<string, number> {
   return byDay;
 }
 
-/** Fetch market chart from CoinGecko */
+/** Fetch market chart from CoinGecko (via proxy in prod to avoid CORS/429). Returns empty on 404/429. */
 async function fetchMarketChart(coinId: string, days: number): Promise<MarketChartResponse> {
   const url = `${COINGECKO_BASE}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) {
+    if (res.status === 404 || res.status === 429) return {};
     throw new Error(`Failed to fetch historical data for ${coinId}`);
   }
   const data = (await res.json()) as MarketChartResponse;

@@ -7,7 +7,8 @@
     { "source": "/api/cryptocompare/:match*", "destination": "https://min-api.cryptocompare.com/:match*" },
     { "source": "/api/mempool/:match*", "destination": "https://mempool.space/api/:match*" },
     { "source": "/api/eth-rpc", "destination": "https://eth.llamarpc.com" },
-    { "source": "/api/sol-rpc", "destination": "https://solana-rpc.publicnode.com" },
+    { "source": "/api/sol-rpc", "destination": "https://api.mainnet-beta.solana.com" },
+    { "source": "/api/coingecko/:match*", "destination": "https://api.coingecko.com/api/v3/:match*" },
     { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" }
   ]
 }

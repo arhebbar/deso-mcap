@@ -15,10 +15,12 @@ export interface LivePrices {
   solPrice: number;
 }
 
+const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : '/api/coingecko';
+
 export async function fetchLivePrices(): Promise<LivePrices> {
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd',
+      `${COINGECKO_BASE}/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd`,
       { headers: { Accept: 'application/json' } }
     );
 

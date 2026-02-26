@@ -81,10 +81,12 @@ async function fetchNextBlockTxnCount(): Promise<number | null> {
 
 /**
  * Fetch network stats (block height, node health, next-block txn count).
+ * Skips node-info in production: public node (node.deso.org) does not expose /api/v1.
  */
 export async function fetchNetworkStats(): Promise<NetworkStats> {
+  const useNodeInfo = import.meta.env.DEV;
   const [blockFromNodeInfo, blockFromAppState, health, nextBlockCount] = await Promise.all([
-    fetchBlockHeightFromNodeInfo(),
+    useNodeInfo ? fetchBlockHeightFromNodeInfo() : Promise.resolve(null),
     fetchBlockHeightFromAppState(),
     fetchNodeHealth(),
     fetchNextBlockTxnCount(),
