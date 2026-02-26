@@ -1,13 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
+    { "source": "/api/deso/get-exchange-rate", "destination": "https://node.deso.org/api/v0/get-exchange-rate" },
+    { "source": "/api/deso/health-check", "destination": "https://node.deso.org/api/v0/health-check" },
+    { "source": "/api/deso/get-hodlers-for-public-key", "destination": "https://node.deso.org/api/v0/get-hodlers-for-public-key" },
     { "source": "/api/deso/:match*", "destination": "https://node.deso.org/api/v0/:match*" },
     { "source": "/api/deso-v1/:match*", "destination": "https://node.deso.org/api/v1/:match*" },
     { "source": "/api/deso-hodlers/:match*", "destination": "https://blockproducer.deso.org/api/v0/:match*" },
     { "source": "/api/cryptocompare/:match*", "destination": "https://min-api.cryptocompare.com/:match*" },
     { "source": "/api/mempool/:match*", "destination": "https://mempool.space/api/:match*" },
     { "source": "/api/eth-rpc", "destination": "https://eth.llamarpc.com" },
-    { "source": "/api/sol-rpc", "destination": "https://api.mainnet-beta.solana.com" },
+    { "source": "/api/sol-rpc", "destination": "https://rpc.ankr.com/solana" },
     { "source": "/api/coingecko/:match*", "destination": "https://api.coingecko.com/api/v3/:match*" },
     { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" }
   ]

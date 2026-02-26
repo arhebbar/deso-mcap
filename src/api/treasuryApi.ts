@@ -6,7 +6,7 @@
 /** Use direct URLs in dev; Vercel rewrites in prod to avoid CORS */
 const MEMPOOL_BASE = import.meta.env.DEV ? 'https://mempool.space/api' : '/api/mempool';
 const ETH_RPC = import.meta.env.DEV ? 'https://eth.llamarpc.com' : '/api/eth-rpc';
-const SOL_RPC = import.meta.env.DEV ? 'https://api.mainnet-beta.solana.com' : '/api/sol-rpc';
+const SOL_RPC = import.meta.env.DEV ? 'https://rpc.ankr.com/solana' : '/api/sol-rpc';
 const SATOSHI_PER_BTC = 1e8;
 const WEI_PER_ETH = 1e18;
 const LAMPORTS_PER_SOL = 1e9;

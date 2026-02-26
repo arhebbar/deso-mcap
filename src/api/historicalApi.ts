@@ -48,7 +48,7 @@ async function fetchMarketChart(coinId: string, days: number): Promise<MarketCha
   const url = `${COINGECKO_BASE}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) {
-    if (res.status === 404 || res.status === 429) return {};
+    if (res.status === 404 || res.status === 429 || res.status === 403) return {};
     throw new Error(`Failed to fetch historical data for ${coinId}`);
   }
   const data = (await res.json()) as MarketChartResponse;

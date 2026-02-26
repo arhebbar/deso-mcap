@@ -328,15 +328,17 @@ export function getCCv2ProfileNames(): string[] {
 
 /**
  * Extract CCv2 user-token AMMs from wallet list.
- * Second segment of AMM username = profile name (e.g. AMM_WhaleDShark_76_SWfzF → WhaleDShark).
- * Display name "X (AMM)" also maps to profile X. Native AMMs (DESO, focus, openfund) are excluded.
+ * Prefer displayName (excluding " (AMM)") as profile name for API calls; else second segment of AMM username.
+ * Native AMMs (DESO, focus, openfund) are excluded.
  */
-export function getCCv2UserTokenAmms(wallets: { name: string; classification: string; balances: Record<string, number>; usdValue?: number }[]): { profileName: string; deso: number; usdValue: number }[] {
+export function getCCv2UserTokenAmms(wallets: { name: string; displayName?: string; classification: string; balances: Record<string, number>; usdValue?: number }[]): { profileName: string; deso: number; usdValue: number }[] {
   const out: { profileName: string; deso: number; usdValue: number }[] = [];
   for (const w of wallets) {
     if (w.classification !== 'AMM') continue;
     let profileName: string | null = null;
-    if (w.name.endsWith(' (AMM)')) {
+    if (w.displayName?.endsWith(' (AMM)')) {
+      profileName = w.displayName.slice(0, -7);
+    } else if (w.name.endsWith(' (AMM)')) {
       profileName = w.name.slice(0, -7);
     } else if (w.name.startsWith('AMM_')) {
       const part = w.name.split('_')[1];

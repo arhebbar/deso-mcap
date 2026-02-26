@@ -51,6 +51,8 @@ export interface StakedByValidator {
 
 export interface WalletData {
   name: string;
+  /** When set, used as canonical label (e.g. "Beyside (AMM)"); strip " (AMM)" for API username where needed */
+  displayName?: string;
   classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
   balances: Record<string, number>;
   usdValue: number;
@@ -821,6 +823,7 @@ export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
 /**
  * Fetch creator coin (CCv2) holders via get-hodlers-for-public-key with IsDAOCoin: false.
  * Returns map of holder publicKey -> balance in nanos (for share ratio; totalSupply = sum of values).
+ * creatorUsername should be the display name portion excluding " (AMM)" (from getCCv2UserTokenAmms).
  */
 async function fetchCreatorCoinHolders(creatorUsername: string): Promise<Map<string, number>> {
   const out = new Map<string, number>();
@@ -1147,6 +1150,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
 
     results.push({
       name: meta.displayName,
+      displayName: meta.displayName,
       classification: meta.classification,
       balances,
       usdValue: 0,

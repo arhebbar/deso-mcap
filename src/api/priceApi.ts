@@ -18,27 +18,30 @@ export interface LivePrices {
 const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : '/api/coingecko';
 
 export async function fetchLivePrices(): Promise<LivePrices> {
-  try {
-    const res = await fetch(
-      `${COINGECKO_BASE}/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd`,
-      { headers: { Accept: 'application/json' } }
-    );
-
-    if (res.ok) {
-      const raw = await res.json();
-      const data = CoinGeckoPricesSchema.parse(raw);
-      return {
-        desoPrice: data['decentralized-social']?.usd ?? data.decentralized_social?.usd ?? 0,
-        btcPrice: data.bitcoin.usd,
-        ethPrice: data.ethereum.usd,
-        solPrice: data.solana.usd,
-      };
+  // In production, skip CoinGecko (proxy often returns 403). Use CryptoCompare + DeSo first.
+  const useCoinGeckoFirst = import.meta.env.DEV;
+  if (useCoinGeckoFirst) {
+    try {
+      const res = await fetch(
+        `${COINGECKO_BASE}/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (res.ok) {
+        const raw = await res.json();
+        const data = CoinGeckoPricesSchema.parse(raw);
+        return {
+          desoPrice: data['decentralized-social']?.usd ?? data.decentralized_social?.usd ?? 0,
+          btcPrice: data.bitcoin.usd,
+          ethPrice: data.ethereum.usd,
+          solPrice: data.solana.usd,
+        };
+      }
+    } catch {
+      // Fall through to CryptoCompare
     }
-  } catch {
-    // Fall through to CryptoCompare
   }
 
-  // Fallback: fetch all prices in parallel (CryptoCompare + DeSo node)
+  // Primary (prod) or fallback: CryptoCompare + DeSo node
   const ccBase = import.meta.env.DEV ? '/cryptocompare' : '/api/cryptocompare';
   const desoUrl = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 
