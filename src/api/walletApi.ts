@@ -12,6 +12,23 @@ import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES, getCCv2UserTok
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
 const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql';
+
+/** POST get-hodlers-for-public-key; on 404 try DESO_NODE (blockproducer may be unavailable). */
+async function fetchHodlers(body: Record<string, unknown>): Promise<Response> {
+  let res = await fetch(`${HODLERS_API}/get-hodlers-for-public-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 404) {
+    res = await fetch(`${DESO_NODE}/get-hodlers-for-public-key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+  return res;
+}
 const NANOS_PER_DESO = 1e9;
 /** DAO coins (Openfund, Focus, dUSDC, etc.) use 1e18 decimals like ERC-20 */
 const NANOS_PER_DAO_COIN = 1e18;
@@ -810,16 +827,12 @@ async function fetchCreatorCoinHolders(creatorUsername: string): Promise<Map<str
   try {
     let lastKey = '';
     for (;;) {
-      const res = await fetch(`${HODLERS_API}/get-hodlers-for-public-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Username: creatorUsername,
-          LastPublicKeyBase58Check: lastKey,
-          NumToFetch: 200,
-          FetchAll: false,
-          IsDAOCoin: false,
-        }),
+      const res = await fetchHodlers({
+        Username: creatorUsername,
+        LastPublicKeyBase58Check: lastKey,
+        NumToFetch: 200,
+        FetchAll: false,
+        IsDAOCoin: false,
       });
       if (!res.ok) break;
       const data = (await res.json()) as {
@@ -893,16 +906,12 @@ async function fetchTokenHolders(
   try {
     let lastKey = '';
     for (;;) {
-      const res = await fetch(`${HODLERS_API}/get-hodlers-for-public-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Username: tokenUsername,
-          LastPublicKeyBase58Check: lastKey,
-          NumToFetch: HODLERS_PAGE_SIZE,
-          FetchAll: false,
-          IsDAOCoin: true,
-        }),
+      const res = await fetchHodlers({
+        Username: tokenUsername,
+        LastPublicKeyBase58Check: lastKey,
+        NumToFetch: HODLERS_PAGE_SIZE,
+        FetchAll: false,
+        IsDAOCoin: true,
       });
       if (!res.ok) break;
       const data = (await res.json()) as {

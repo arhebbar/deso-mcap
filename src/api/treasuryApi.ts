@@ -95,6 +95,7 @@ async function fetchBtcBalance(): Promise<number> {
   for (const addr of BTC_ADDRESSES) {
     try {
       const res = await fetch(`${MEMPOOL_BASE}/address/${addr}`);
+      if (res.status === 429) return Object.values(BTC_FALLBACK).reduce((a, b) => a + b, 0) * SATOSHI_PER_BTC;
       if (!res.ok) continue;
       const data = (await res.json()) as {
         chain_stats?: { funded_txo_sum?: number; spent_txo_sum?: number };
@@ -180,6 +181,7 @@ export async function fetchTreasuryBalances(): Promise<TreasuryBalances> {
 async function fetchBtcBalanceForAddress(addr: string): Promise<number> {
   try {
     const res = await fetch(`${MEMPOOL_BASE}/address/${addr}`);
+    if (res.status === 429) return (BTC_FALLBACK[addr] ?? 0) * SATOSHI_PER_BTC;
     if (!res.ok) return 0;
     const data = (await res.json()) as {
       chain_stats?: { funded_txo_sum?: number; spent_txo_sum?: number };
@@ -356,6 +358,7 @@ export async function fetchBtcHistoricalHoldings(
         ? `${MEMPOOL_BASE}/address/${addr}/txs/chain?last_txid=${lastTxid}`
         : `${MEMPOOL_BASE}/address/${addr}/txs/chain`;
       const res = await fetch(url);
+      if (res.status === 429) break;
       if (!res.ok) break;
       const txs = (await res.json()) as MempoolTx[];
       if (txs.length === 0) break;

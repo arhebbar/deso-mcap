@@ -1,12 +1,11 @@
 /**
  * Network stats for Analytics (block height, node health, mempool).
  * - Node health: GET /api/v0/health-check
- * - Block height: try /api/v1/node-info (exchange API) then get-app-state
+ * - Block height: get-app-state (public node does not expose /api/v1/node-info)
  * - Mempool: get-block-template next-block txn count when available
  */
 
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
-const DESO_NODE_V1 = import.meta.env.DEV ? '/deso-v1' : '/api/deso-v1';
 
 export interface NetworkStats {
   blockHeight: number | null;
@@ -29,19 +28,7 @@ export async function fetchNodeHealth(): Promise<{ synced: boolean; reachable: b
   }
 }
 
-/** Exchange API: GET /api/v1/node-info returns LatestBlockHeight when node exposes v1. */
-async function fetchBlockHeightFromNodeInfo(): Promise<number | null> {
-  try {
-    const res = await fetch(`${DESO_NODE_V1}/node-info`, { method: 'GET' });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { LatestBlockHeight?: number };
-    return data.LatestBlockHeight ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** Fallback: get-app-state in case a node extends response with BlockHeight. */
+/** get-app-state (some nodes may include BlockHeight in response). */
 async function fetchBlockHeightFromAppState(): Promise<number | null> {
   try {
     const res = await fetch(`${DESO_NODE}/get-app-state`, {
@@ -81,19 +68,15 @@ async function fetchNextBlockTxnCount(): Promise<number | null> {
 
 /**
  * Fetch network stats (block height, node health, next-block txn count).
- * Skips node-info in production: public node (node.deso.org) does not expose /api/v1.
  */
 export async function fetchNetworkStats(): Promise<NetworkStats> {
-  const useNodeInfo = import.meta.env.DEV;
-  const [blockFromNodeInfo, blockFromAppState, health, nextBlockCount] = await Promise.all([
-    useNodeInfo ? fetchBlockHeightFromNodeInfo() : Promise.resolve(null),
+  const [blockHeight, health, nextBlockCount] = await Promise.all([
     fetchBlockHeightFromAppState(),
     fetchNodeHealth(),
     fetchNextBlockTxnCount(),
   ]);
-  const blockHeight = blockFromNodeInfo ?? blockFromAppState ?? null;
   return {
-    blockHeight,
+    blockHeight: blockHeight ?? null,
     nodeSynced: health.reachable ? health.synced : null,
     nodeReachable: health.reachable,
     mempoolOrNextBlockTxnCount: nextBlockCount,
