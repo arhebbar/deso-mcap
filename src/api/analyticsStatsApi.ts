@@ -18,7 +18,7 @@ const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql'
 const ANALYTICS_CACHE_KEY = 'analytics-stats-cache-v1';
 const TREND_CACHE_KEY = 'analytics-trend-cache-v1';
 // Bump version whenever we change the shape or queries of the filtered counts payload.
-const FILTERED_COUNTS_CACHE_VERSION = 'v6';
+const FILTERED_COUNTS_CACHE_VERSION = 'v7';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Time windows for filtered counts (same query set, different date range). */
@@ -161,12 +161,10 @@ const ACCOUNTS_TOTAL_QUERY = `
   }
 `;
 
-const fmt = (d: Date) => {
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  const yyyy = d.getUTCFullYear();
-  return `${mm}/${dd}/${yyyy}`;
-};
+/** ISO 8601 datetime for GraphQL Datetime filters (e.g. 2025-01-15T00:00:00.000Z). */
+function fmtISO(d: Date): string {
+  return d.toISOString();
+}
 
 function daysForWindow(window: TimeWindow): number {
   return window === '7d' ? 7 : window === '30d' ? 30 : window === '90d' ? 90 : 365;
@@ -182,13 +180,14 @@ export function getRangeForWindow(window: TimeWindow): { since: string; until: s
  * offsetPeriods=0 => current window (e.g. last 7 days)
  * offsetPeriods=1 => previous window (e.g. previous 7 days)
  */
+/** Date range for a time window. Returns ISO 8601 strings for GraphQL Datetime filters. */
 export function getRangeForWindowOffset(window: TimeWindow, offsetPeriods: number): { since: string; until: string } {
   const days = daysForWindow(window);
   const until = new Date();
   const since = new Date();
   until.setDate(until.getDate() - days * offsetPeriods);
   since.setDate(since.getDate() - days * (offsetPeriods + 1));
-  return { since: fmt(since), until: fmt(until) };
+  return { since: fmtISO(since), until: fmtISO(until) };
 }
 
 /** Date range for last 30 days (convenience). */

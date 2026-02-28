@@ -521,14 +521,9 @@ export default function NetworkActivitySection() {
           : timeRange === '365d'
             ? fetching365d
             : false;
-  // 30D uses dashboard (analytics stats already merge 30d filtered counts in fetchAnalyticsStats).
-  // 7d/90d/365d use windowed filtered counts; all-time uses dashboard.
   const dashboardForRange =
-    timeRange === 'all' || timeRange === '30d'
-      ? dashboard
-      : dashboardFromCounts(windowCounts);
-  const dashboardPrevForRange =
-    timeRange === 'all' ? null : timeRange === '30d' ? dashboardFromCounts(prev30d) : dashboardFromCounts(prevWindowCounts);
+    timeRange === 'all' ? dashboard : dashboardFromCounts(windowCounts);
+  const dashboardPrevForRange = timeRange === 'all' ? null : dashboardFromCounts(prevWindowCounts);
 
   // Helpers for derived metrics (per‑day, per‑post, mix percentages).
   const num = (v: string | null | undefined): number | null => {
@@ -550,9 +545,11 @@ export default function NetworkActivitySection() {
     numVal != null && denom && denom > 0 ? (numVal / denom) * 100 : null;
 
   const derivedLoading =
-    timeRange === 'all' || timeRange === '30d'
+    timeRange === 'all'
       ? analyticsLoading
-      : windowLoading || analyticsLoading;
+      : isWindowed
+        ? windowLoading || (windowFetching && !windowCounts) || analyticsLoading
+        : analyticsLoading;
 
   const pctChange = (cur: number | null, prev: number | null): number | null => {
     if (cur == null || prev == null) return null;
@@ -709,10 +706,9 @@ export default function NetworkActivitySection() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="section-title">Network & activity</h3>
         <div className="flex items-center gap-2">
-          {(timeRange === 'all' || timeRange === '30d' ? analyticsLoading || analyticsFetching : windowLoading || windowFetching) ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/80 px-2 py-1 text-xs font-medium text-muted-foreground">
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" aria-hidden />
-              {windowLoading || analyticsLoading ? 'Loading…' : 'Refreshing…'}
+          {(analyticsFetching && !analyticsLoading) || (isWindowed && windowFetching) ? (
+            <span className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
+              {isWindowed && (windowLoading || (windowFetching && !windowCounts)) ? 'Loading…' : 'Refreshing…'}
             </span>
           ) : null}
           <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1 text-xs">
@@ -825,11 +821,9 @@ export default function NetworkActivitySection() {
                     ? getAllTime(dashboard, totalUsers)
                     : get30d(dashboardForRange ?? null, totalUsers);
                   prevRaw = isAll ? null : get30d(dashboardPrevForRange ?? null, totalUsers);
-                  const loading = isAll || timeRange === '30d' ? analyticsLoading : windowLoading;
-                  const fetching = isAll || timeRange === '30d' ? analyticsFetching : windowFetching;
+                  const loading = isAll ? analyticsLoading : (windowLoading || (isWindowed && windowFetching && !windowCounts));
                   if (!supported) displayValue = 'TBC';
                   else if (loading) displayValue = '…';
-                  else if (fetching && (raw == null || raw === '')) displayValue = '…';
                   else {
                     const format = typeof formatStat === 'function' ? formatStat : (v: string | null | undefined) => { const n = v != null && v !== '' ? Number(v) : NaN; return Number.isFinite(n) ? n.toLocaleString() : '—'; };
                     displayValue = format(raw ?? undefined);
