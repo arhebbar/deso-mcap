@@ -12,6 +12,7 @@
     { "source": "/api/eth-rpc", "destination": "https://eth.llamarpc.com" },
     { "source": "/api/sol-rpc", "destination": "https://rpc.ankr.com/solana" },
     { "source": "/api/coingecko/:path*", "destination": "https://api.coingecko.com/api/v3/:path*" },
-    { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" }
+    { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

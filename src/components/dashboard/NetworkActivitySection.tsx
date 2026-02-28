@@ -306,7 +306,7 @@ function sumFields(d: DashboardStatsNode | null, ...keys: (keyof DashboardStatsN
 const COLOR_TXN = 'border-sky-400/30 bg-sky-500/10';
 /** Social = blue (aggregate = Messages + Posts + Reposts + Comments + Follows + Diamonds + Likes/Reactions). */
 const COLOR_SOCIAL = 'border-blue-500/30 bg-blue-500/5';
-/** Money = green (aggregate = Coin + DEX + DAO + NFT). */
+/** Money = green (aggregate = Coin + DAO + NFT). */
 const COLOR_MONEY = 'border-emerald-500/30 bg-emerald-500/5';
 const COLOR_WALLET = 'border-amber-500/30 bg-amber-500/5';
 
@@ -352,9 +352,8 @@ const KPI_METRICS: {
     getAllTime: (d) => {
       if (!d) return null;
       const a = Number(d.txnCountCreatorCoin) || 0,
-        b = Number(d.txnCountDex) || 0,
         c = Number(d.txnCountNft) || 0;
-      return a + b + c ? String(a + b + c) : null;
+      return a + c ? String(a + c) : null;
     },
     debug30dQuery: DEBUG_GQL_TXN_TYPE_30D,
     debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS,
@@ -364,7 +363,6 @@ const KPI_METRICS: {
   { label: 'Reposts', icon: MessageCircle, colorClass: COLOR_SOCIAL, get30d: (d) => d?.uniqueRepostsCount30D ?? null, getAllTime: (d) => d?.repostCount ?? null, debug30dQuery: DEBUG_GQL_REPOSTS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Comments', icon: MessageCircle, colorClass: COLOR_SOCIAL, get30d: (d) => d?.commentCount30D ?? null, getAllTime: (d) => d?.commentCount ?? null, debug30dQuery: DEBUG_GQL_COMMENTS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Coin transactions', icon: TrendingUp, colorClass: COLOR_MONEY, get30d: (d) => d?.coinTxnCount30D ?? null, getAllTime: (d) => d?.txnCountCreatorCoin ?? null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
-  { label: 'DEX transactions', icon: TrendingUp, colorClass: COLOR_MONEY, get30d: () => null, getAllTime: (d) => d?.txnCountDex ?? null, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS, has30dQuery: false },
   { label: 'Miscellaneous transactions', icon: Hourglass, colorClass: COLOR_TXN, get30d: (d) => d?.miscTxnCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Follows', icon: Users, colorClass: COLOR_SOCIAL, get30d: (d) => d?.followsCount30D ?? null, getAllTime: (d) => d?.followCount ?? null, debug30dQuery: DEBUG_GQL_FOLLOW_TXN_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Diamonds', icon: Zap, colorClass: COLOR_SOCIAL, get30d: (d) => d?.diamondsCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_DIAMONDS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
@@ -376,8 +374,8 @@ const KPI_METRICS: {
 /** Primary grid layout: 3 rows × 6 columns. Row 1 col 4 empty; order matches image. */
 const PRIMARY_LAYOUT: (string | null)[][] = [
   ['Transactions', 'Social transactions', 'Messages', null, 'Money transactions', null],
-  ['Block reward transactions', 'Posts', 'Reposts', 'Comments', 'Coin transactions', 'DEX transactions'],
-  ['Miscellaneous transactions', 'Follows', 'Diamonds', 'Likes/Reactions', 'DAO transactions', 'NFT transactions'],
+  ['Block reward transactions', 'Posts', 'Reposts', 'Comments', 'Coin transactions', 'NFT transactions'],
+  ['Miscellaneous transactions', 'Follows', 'Diamonds', 'Likes/Reactions', 'DAO transactions', null],
 ];
 
 /** Future KPIs: all-time/30d not yet available; shown in a separate section with — for now. */
@@ -781,7 +779,7 @@ export default function NetworkActivitySection() {
         </div>
       </div>
 
-      {/* Primary KPIs in 3-row layout: Row 1 = Transactions, Social, Messages, (empty), Money; Row 2 = Block Reward, Posts, Reposts, Comments, Coin, DEX; Row 3 = Misc, Follows, Diamonds, Likes, DAO, NFT. */}
+      {/* Primary KPIs in 3-row layout: Row 1 = Transactions, Social, Messages, (empty), Money; Row 2 = Block Reward, Posts, Reposts, Comments, Coin, NFT; Row 3 = Misc, Follows, Diamonds, Likes, DAO. */}
       <div>
         <h4 className="text-sm font-medium text-muted-foreground mb-3">
           {timeRange === 'all'
