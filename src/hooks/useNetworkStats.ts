@@ -3,15 +3,19 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchNetworkStats } from '@/api/networkStatsApi';
+import { fetchNetworkStats, NetworkStats } from '@/api/networkStatsApi';
+import { getCachedValue } from '@/utils/localCache';
 
 const STALE_MS = 60 * 1000;
 
 export function useNetworkStats() {
+  const initialData = getCachedValue<NetworkStats>('network-stats-cache-v1') ?? undefined;
+
   const q = useQuery({
     queryKey: ['network-stats'],
     queryFn: fetchNetworkStats,
     staleTime: STALE_MS,
+    initialData,
   });
   return {
     blockHeight: q.data?.blockHeight ?? null,

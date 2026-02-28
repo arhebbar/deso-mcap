@@ -3,9 +3,15 @@
  * - Node health: GET /api/v0/health-check
  * - Block height: get-app-state (public node does not expose /api/v1/node-info)
  * - Mempool: get-block-template next-block txn count when available
+ *
+ * Values are lightly cached so the dashboard can show the last known
+ * network state even while the node is still responding.
  */
 
+import { getCachedValue, setCachedValue } from '@/utils/localCache';
+
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
+const NETWORK_CACHE_KEY = 'network-stats-cache-v1';
 
 export interface NetworkStats {
   blockHeight: number | null;
@@ -70,15 +76,35 @@ async function fetchNextBlockTxnCount(): Promise<number | null> {
  * Fetch network stats (block height, node health, next-block txn count).
  */
 export async function fetchNetworkStats(): Promise<NetworkStats> {
-  const [blockHeight, health, nextBlockCount] = await Promise.all([
-    fetchBlockHeightFromAppState(),
-    fetchNodeHealth(),
-    fetchNextBlockTxnCount(),
-  ]);
-  return {
-    blockHeight: blockHeight ?? null,
-    nodeSynced: health.reachable ? health.synced : null,
-    nodeReachable: health.reachable,
-    mempoolOrNextBlockTxnCount: nextBlockCount,
-  };
+  try {
+    const [blockHeight, health, nextBlockCount] = await Promise.all([
+      fetchBlockHeightFromAppState(),
+      fetchNodeHealth(),
+      fetchNextBlockTxnCount(),
+    ]);
+
+    const result: NetworkStats = {
+      blockHeight: blockHeight ?? null,
+      nodeSynced: health.reachable ? health.synced : null,
+      nodeReachable: health.reachable,
+      mempoolOrNextBlockTxnCount: nextBlockCount,
+    };
+
+    // Cache successful network snapshot.
+    if (health.reachable || blockHeight != null || nextBlockCount != null) {
+      setCachedValue<NetworkStats>(NETWORK_CACHE_KEY, result);
+    }
+
+    return result;
+  } catch {
+    // On error, fall back to last cached value so the dashboard does not look empty.
+    const cached = getCachedValue<NetworkStats>(NETWORK_CACHE_KEY);
+    if (cached) return cached;
+    return {
+      blockHeight: null,
+      nodeSynced: null,
+      nodeReachable: false,
+      mempoolOrNextBlockTxnCount: null,
+    };
+  }
 }

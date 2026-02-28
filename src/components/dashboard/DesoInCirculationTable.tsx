@@ -79,7 +79,6 @@ export default function DesoInCirculationTable() {
             </tr>
           </thead>
           <tbody>
-            {/* Level 1: DESO - Staked */}
             <tr
               className="bg-muted/40 font-medium cursor-pointer hover:bg-muted/60"
               onClick={() => setOpenStaked((v) => !v)}
@@ -94,8 +93,7 @@ export default function DesoInCirculationTable() {
               <td className="text-right font-mono text-sm">{formatUsd(data.staked.usdValue)}</td>
               <td className="text-right text-muted-foreground text-sm">{pct(data.staked.total, data.totalSupply)}%</td>
               <td className="text-right text-muted-foreground text-sm">—</td>
-            </tr>
-            {openStaked &&
+            </tr>{openStaked &&
               data.staked.validators.map((v) => {
                 const isValidatorOpen = openValidators.has(v.id);
                 return (
@@ -147,10 +145,7 @@ export default function DesoInCirculationTable() {
                     )}
                   </React.Fragment>
                 );
-              })}
-
-            {/* Level 1: User/Project Tokens (Openfund, Focus, CCv2 AMMs) */}
-            {(() => {
+              })}{(() => {
               const b = data.unstaked.breakdown;
               const nt = b.nativeTokens;
               const nativeTokensDeso = nt.openfund.amount + nt.focus.amount + nt.userTokens.amount;
@@ -218,9 +213,7 @@ export default function DesoInCirculationTable() {
                   })()}
                 </>
               );
-            })()}
-            {/* Level 1: Currency/Liquidity Tokens */}
-            {(() => {
+            })()}{(() => {
               const b = data.unstaked.breakdown;
               const ct = b.currencyTokens;
               const currDeso = ct.dusdc.amount + ct.dbtc.amount + ct.deth.amount + ct.dsol.amount;
@@ -292,9 +285,7 @@ export default function DesoInCirculationTable() {
                   })()}
                 </>
               );
-            })()}
-            {/* Level 1: DESO - Unstaked (by category; no redundant sub-header) */}
-            {(() => {
+            })()}{(() => {
               const b = data.unstaked.breakdown;
               const nd = b.nativeDeso;
               return (
@@ -331,9 +322,7 @@ export default function DesoInCirculationTable() {
                     ))}
                 </>
               );
-            })()}
-
-            <tr className="border-t-2 border-border font-medium">
+            })()}<tr className="border-t-2 border-border font-medium">
               <td />
               <td>Total</td>
               <td className="text-right font-mono">{fmtDeso(data.staked.total)}</td>

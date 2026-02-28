@@ -408,6 +408,8 @@ function StatCard({
     }
   };
 
+  const IconEl = typeof Icon === 'function' ? Icon : Zap;
+
   return (
     <div
       className={`rounded-xl border border-border bg-card p-4 ${colorClass}`}
@@ -424,7 +426,7 @@ function StatCard({
               GQL
             </button>
           ) : null}
-          <Icon className="h-5 w-5 text-muted-foreground" />
+          <IconEl className="h-5 w-5 text-muted-foreground" />
         </div>
       </div>
       <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
@@ -703,22 +705,40 @@ export default function NetworkActivitySection() {
                 }
                 const metric = KPI_METRICS.find((m) => m.label === label);
                 if (!metric) return null;
-                const isAll = timeRange === 'all';
-                const isWindowed = timeRange === '7d' || timeRange === '90d' || timeRange === '365d';
-                const supported = isAll ? metric.hasAllTimeQuery !== false : metric.has30dQuery !== false;
-                const raw = isAll
-                  ? metric.getAllTime(dashboard, totalUsers)
-                  : metric.get30d(dashboardForRange ?? null, totalUsers);
-                const debugQuery = isAll ? metric.debugAllQuery : metric.debug30dQuery;
-                const loading = isAll ? analyticsLoading : isWindowed ? windowLoading : analyticsLoading;
-                const displayValue = !supported ? 'TBC' : loading ? '…' : formatStat(raw ?? undefined);
+
+                let raw: string | null = null;
+                let displayValue = '—';
+                try {
+                  const get30d = metric.get30d;
+                  const getAllTime = metric.getAllTime;
+                  if (typeof get30d !== 'function' || typeof getAllTime !== 'function') return null;
+
+                  const isAll = timeRange === 'all';
+                  const isWindowed = timeRange === '7d' || timeRange === '90d' || timeRange === '365d';
+                  const supported = isAll ? metric.hasAllTimeQuery !== false : metric.has30dQuery !== false;
+                  raw = isAll
+                    ? getAllTime(dashboard, totalUsers)
+                    : get30d(dashboardForRange ?? null, totalUsers);
+                  const loading = isAll ? analyticsLoading : isWindowed ? windowLoading : analyticsLoading;
+                  if (!supported) displayValue = 'TBC';
+                  else if (loading) displayValue = '…';
+                  else {
+                    const format = typeof formatStat === 'function' ? formatStat : (v: string | null | undefined) => { const n = v != null && v !== '' ? Number(v) : NaN; return Number.isFinite(n) ? n.toLocaleString() : '—'; };
+                    displayValue = format(raw ?? undefined);
+                  }
+                } catch {
+                  displayValue = '—';
+                }
+
+                const debugQuery = timeRange === 'all' ? metric.debugAllQuery : metric.debug30dQuery;
+                const IconComponent = metric.icon != null && typeof metric.icon === 'function' ? metric.icon : Zap;
                 return (
                   <StatCard
                     key={label}
                     label={label}
                     value={displayValue}
-                    icon={metric.icon}
-                    colorClass={metric.colorClass}
+                    icon={IconComponent}
+                    colorClass={metric.colorClass ?? ''}
                     debugQuery={debugQuery}
                   />
                 );

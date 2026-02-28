@@ -42,6 +42,10 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/coingecko/, "/api/v3"),
       },
+      "/api/sol-rpc": {
+        target: "https://rpc.ankr.com/solana",
+        changeOrigin: true,
+      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

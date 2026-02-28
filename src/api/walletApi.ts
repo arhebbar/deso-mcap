@@ -13,8 +13,15 @@ const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
 const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql';
 
-/** POST get-hodlers-for-public-key; on 404 try DESO_NODE (blockproducer may be unavailable). */
+/**
+ * POST get-hodlers-for-public-key; on 404 try DESO_NODE (blockproducer may be unavailable).
+ * Never calls the API when Username is missing or blank (prevents "Username incomplete" errors).
+ */
 async function fetchHodlers(body: Record<string, unknown>): Promise<Response> {
+  const username = body.Username;
+  if (username == null || (typeof username === 'string' && !username.trim())) {
+    return new Response(JSON.stringify({}), { status: 400, statusText: 'Username required' });
+  }
   let res = await fetch(`${HODLERS_API}/get-hodlers-for-public-key`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -827,6 +834,7 @@ export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
  */
 async function fetchCreatorCoinHolders(creatorUsername: string): Promise<Map<string, number>> {
   const out = new Map<string, number>();
+  if (!creatorUsername?.trim()) return out;
   try {
     let lastKey = '';
     for (;;) {
@@ -905,6 +913,7 @@ async function fetchTokenHolders(
   tokenName: string
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
+  if (!tokenUsername?.trim()) return out;
   const priceUsd = TOKEN_PRICE_USD[tokenName] ?? 0;
   try {
     let lastKey = '';
