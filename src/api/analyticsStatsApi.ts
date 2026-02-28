@@ -28,6 +28,10 @@ export function getFilteredCountsCacheKey(window: TimeWindow): string {
   return `analytics-filtered-${window}-${FILTERED_COUNTS_CACHE_VERSION}`;
 }
 
+export function getFilteredCountsPrevCacheKey(window: TimeWindow): string {
+  return `analytics-filtered-${window}-prev-${FILTERED_COUNTS_CACHE_VERSION}`;
+}
+
 /** Raw dashboard node from GraphQL (BigInt/BigFloat are returned as strings). */
 export interface DashboardStatsNode {
   txnCountAll: string | null;
@@ -164,12 +168,26 @@ const fmt = (d: Date) => {
   return `${mm}/${dd}/${yyyy}`;
 };
 
+function daysForWindow(window: TimeWindow): number {
+  return window === '7d' ? 7 : window === '30d' ? 30 : window === '90d' ? 90 : 365;
+}
+
 /** Date range for a time window in API format (MM/DD/YYYY). */
 export function getRangeForWindow(window: TimeWindow): { since: string; until: string } {
+  return getRangeForWindowOffset(window, 0);
+}
+
+/**
+ * Date range for a time window with an offset.
+ * offsetPeriods=0 => current window (e.g. last 7 days)
+ * offsetPeriods=1 => previous window (e.g. previous 7 days)
+ */
+export function getRangeForWindowOffset(window: TimeWindow, offsetPeriods: number): { since: string; until: string } {
+  const days = daysForWindow(window);
   const until = new Date();
   const since = new Date();
-  const days = window === '7d' ? 7 : window === '30d' ? 30 : window === '90d' ? 90 : 365;
-  since.setDate(since.getDate() - days);
+  until.setDate(until.getDate() - days * offsetPeriods);
+  since.setDate(since.getDate() - days * (offsetPeriods + 1));
   return { since: fmt(since), until: fmt(until) };
 }
 
@@ -456,11 +474,15 @@ async function runTransactionsCountQuery(query: string): Promise<number | null> 
  * Uses 24h cache per window.
  */
 export async function fetchFilteredCountsForWindow(window: TimeWindow): Promise<FilteredCounts30D> {
-  const cacheKey = getFilteredCountsCacheKey(window);
+  return fetchFilteredCountsForWindowOffset(window, 0);
+}
+
+async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeriods: number): Promise<FilteredCounts30D> {
+  const cacheKey = offsetPeriods === 0 ? getFilteredCountsCacheKey(window) : getFilteredCountsPrevCacheKey(window);
   const cached = getCachedValue<FilteredCounts30D>(cacheKey, ONE_DAY_MS);
   if (cached) return cached;
 
-  const { since, until } = getRangeForWindow(window);
+  const { since, until } = getRangeForWindowOffset(window, offsetPeriods);
 
   const [
     allTxnCount,
@@ -572,6 +594,20 @@ export async function fetchFilteredCountsForWindow(window: TimeWindow): Promise<
 /** Fetch 30d filtered counts (delegates to fetchFilteredCountsForWindow). */
 export async function fetchFilteredCounts30D(): Promise<FilteredCounts30D> {
   return fetchFilteredCountsForWindow('30d');
+}
+
+export interface FilteredCountsWithPrevious {
+  current: FilteredCounts30D;
+  previous: FilteredCounts30D;
+}
+
+/** Fetch current + previous window counts (both cached for 24h). */
+export async function fetchFilteredCountsWithPrevious(window: TimeWindow): Promise<FilteredCountsWithPrevious> {
+  const [current, previous] = await Promise.all([
+    fetchFilteredCountsForWindowOffset(window, 0),
+    fetchFilteredCountsForWindowOffset(window, 1),
+  ]);
+  return { current, previous };
 }
 
 /**

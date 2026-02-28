@@ -27,11 +27,14 @@ import {
   Image,
   TrendingUp,
   Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from 'lucide-react';
 
 import { useNetworkStats } from '@/hooks/useNetworkStats';
 import { useAnalyticsStats } from '@/hooks/useAnalyticsStats';
-import { useFilteredCounts } from '@/hooks/useFilteredCounts';
+import { useFilteredCountsWithPrevious } from '@/hooks/useFilteredCounts';
 import { use30DayTrend } from '@/hooks/use30DayTrend';
 import { dashboardBlockHeight } from '@/api/analyticsStatsApi';
 import type { DashboardStatsNode, FilteredCounts30D } from '@/api/analyticsStatsApi';
@@ -389,12 +392,14 @@ const FUTURE_KPI_METRICS: { label: string; icon: React.ElementType; colorClass: 
 function StatCard({
   label,
   value,
+  deltaPct,
   icon: Icon,
   colorClass,
   debugQuery,
 }: {
   label: string;
   value: string;
+  deltaPct?: number | null;
   icon: React.ElementType;
   colorClass: string;
   debugQuery?: string;
@@ -409,6 +414,17 @@ function StatCard({
   };
 
   const IconEl = typeof Icon === 'function' ? Icon : Zap;
+  const showDelta = deltaPct != null && Number.isFinite(deltaPct);
+  const deltaDir = !showDelta ? null : deltaPct! > 0 ? 'up' : deltaPct! < 0 ? 'down' : 'flat';
+  const DeltaIcon = deltaDir === 'up' ? ArrowUpRight : deltaDir === 'down' ? ArrowDownRight : Minus;
+  const deltaText =
+    !showDelta ? '' : `${deltaPct! > 0 ? '+' : deltaPct! < 0 ? '−' : ''}${Math.abs(deltaPct!).toFixed(1)}%`;
+  const deltaClass =
+    deltaDir === 'up'
+      ? 'text-emerald-600'
+      : deltaDir === 'down'
+        ? 'text-rose-600'
+        : 'text-muted-foreground';
 
   return (
     <div
@@ -429,7 +445,15 @@ function StatCard({
           <IconEl className="h-5 w-5 text-muted-foreground" />
         </div>
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <p className="text-2xl font-semibold tabular-nums">{value}</p>
+        {showDelta ? (
+          <span className={`inline-flex items-center gap-1 text-xs font-medium tabular-nums ${deltaClass}`}>
+            <DeltaIcon className="h-3.5 w-3.5" />
+            {deltaText}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -450,22 +474,58 @@ function dashboardFromCounts(counts: FilteredCounts30D | null): DashboardStatsNo
 export default function NetworkActivitySection() {
   const { blockHeight, nodeSynced, nodeReachable, mempoolOrNextBlockTxnCount, isLoading: statsLoading } = useNetworkStats();
   const { totalUsers, dashboard, formatStat, isLoading: analyticsLoading, isFetching: analyticsFetching } = useAnalyticsStats();
-  const { data: counts7d, isLoading: loading7d, isFetching: fetching7d } = useFilteredCounts('7d');
-  const { data: counts90d, isLoading: loading90d, isFetching: fetching90d } = useFilteredCounts('90d');
-  const { data: counts365d, isLoading: loading365d, isFetching: fetching365d } = useFilteredCounts('365d');
+  const { current: counts7d, previous: prev7d, isLoading: loading7d, isFetching: fetching7d } = useFilteredCountsWithPrevious('7d');
+  const { current: counts30d, previous: prev30d, isLoading: loading30d, isFetching: fetching30d } = useFilteredCountsWithPrevious('30d');
+  const { current: counts90d, previous: prev90d, isLoading: loading90d, isFetching: fetching90d } = useFilteredCountsWithPrevious('90d');
+  const { current: counts365d, previous: prev365d, isLoading: loading365d, isFetching: fetching365d } = useFilteredCountsWithPrevious('365d');
   const { data: trendData } = use30DayTrend();
   const blockHeightDisplay = blockHeight ?? dashboardBlockHeight(dashboard);
   const [timeRange, setTimeRange] = useState<TimeRangeTab>('30d');
 
-  const isWindowed = timeRange === '7d' || timeRange === '90d' || timeRange === '365d';
+  const isWindowed = timeRange !== 'all';
   const windowCounts =
-    timeRange === '7d' ? counts7d : timeRange === '90d' ? counts90d : timeRange === '365d' ? counts365d : null;
+    timeRange === '7d'
+      ? counts7d
+      : timeRange === '30d'
+        ? counts30d
+        : timeRange === '90d'
+          ? counts90d
+          : timeRange === '365d'
+            ? counts365d
+            : null;
+  const prevWindowCounts =
+    timeRange === '7d'
+      ? prev7d
+      : timeRange === '30d'
+        ? prev30d
+        : timeRange === '90d'
+          ? prev90d
+          : timeRange === '365d'
+            ? prev365d
+            : null;
   const windowLoading =
-    timeRange === '7d' ? loading7d : timeRange === '90d' ? loading90d : timeRange === '365d' ? loading365d : false;
+    timeRange === '7d'
+      ? loading7d
+      : timeRange === '30d'
+        ? loading30d
+        : timeRange === '90d'
+          ? loading90d
+          : timeRange === '365d'
+            ? loading365d
+            : false;
   const windowFetching =
-    timeRange === '7d' ? fetching7d : timeRange === '90d' ? fetching90d : timeRange === '365d' ? fetching365d : false;
+    timeRange === '7d'
+      ? fetching7d
+      : timeRange === '30d'
+        ? fetching30d
+        : timeRange === '90d'
+          ? fetching90d
+          : timeRange === '365d'
+            ? fetching365d
+            : false;
   const dashboardForRange =
-    timeRange === 'all' ? dashboard : isWindowed ? dashboardFromCounts(windowCounts) : dashboard;
+    timeRange === 'all' ? dashboard : dashboardFromCounts(windowCounts);
+  const dashboardPrevForRange = timeRange === 'all' ? null : dashboardFromCounts(prevWindowCounts);
 
   // Helpers for derived metrics (per‑day, per‑post, mix percentages).
   const num = (v: string | null | undefined): number | null => {
@@ -493,47 +553,88 @@ export default function NetworkActivitySection() {
         ? windowLoading || analyticsLoading
         : analyticsLoading;
 
-  const makeDerivedDisplay = (calc: () => number | null, opts?: { percent?: boolean }): string => {
-    if (!windowDays || !dashboardForRange) return '—';
+  const pctChange = (cur: number | null, prev: number | null): number | null => {
+    if (cur == null || prev == null) return null;
+    if (prev === 0) return cur === 0 ? 0 : null;
+    return ((cur - prev) / prev) * 100;
+  };
+
+  const makeDerivedDisplay = (
+    src: DashboardStatsNode | null,
+    calc: (d: DashboardStatsNode) => number | null,
+    opts?: { percent?: boolean }
+  ): string => {
+    if (!windowDays || !src) return '—';
     if (derivedLoading) return '…';
-    const v = calc();
+    const v = calc(src);
     if (v == null || !Number.isFinite(v)) return '—';
     return opts?.percent ? `${v.toFixed(1)}%` : v.toFixed(2);
   };
 
-  const followsPerDayDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perDay(num(src.followsCount30D), windowDays);
-  });
+  const calcFollowsPerDay = (src: DashboardStatsNode) => perDay(num(src.followsCount30D), windowDays);
+  const followsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcFollowsPerDay);
+  const followsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcFollowsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcFollowsPerDay(dashboardPrevForRange) : null
+        );
 
-  const postsPerDayDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perDay(num(src.postCount30D), windowDays);
-  });
+  const calcPostsPerDay = (src: DashboardStatsNode) => perDay(num(src.postCount30D), windowDays);
+  const postsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcPostsPerDay);
+  const postsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcPostsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcPostsPerDay(dashboardPrevForRange) : null
+        );
 
-  const diamondsPerPostDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perPost(num(src.diamondsCount30D), num(src.postCount30D));
-  });
+  const calcDiamondsPerPost = (src: DashboardStatsNode) => perPost(num(src.diamondsCount30D), num(src.postCount30D));
+  const diamondsPerPostDisplay = makeDerivedDisplay(dashboardForRange, calcDiamondsPerPost);
+  const diamondsPerPostDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcDiamondsPerPost(dashboardForRange) : null,
+          dashboardPrevForRange ? calcDiamondsPerPost(dashboardPrevForRange) : null
+        );
 
-  const likesPerPostDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perPost(num(src.likesReactionsCount30D), num(src.postCount30D));
-  });
+  const calcLikesPerPost = (src: DashboardStatsNode) =>
+    perPost(num(src.likesReactionsCount30D), num(src.postCount30D));
+  const likesPerPostDisplay = makeDerivedDisplay(dashboardForRange, calcLikesPerPost);
+  const likesPerPostDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcLikesPerPost(dashboardForRange) : null,
+          dashboardPrevForRange ? calcLikesPerPost(dashboardPrevForRange) : null
+        );
 
-  const commentsPerPostDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perPost(num(src.commentCount30D), num(src.postCount30D));
-  });
+  const calcCommentsPerPost = (src: DashboardStatsNode) => perPost(num(src.commentCount30D), num(src.postCount30D));
+  const commentsPerPostDisplay = makeDerivedDisplay(dashboardForRange, calcCommentsPerPost);
+  const commentsPerPostDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcCommentsPerPost(dashboardForRange) : null,
+          dashboardPrevForRange ? calcCommentsPerPost(dashboardPrevForRange) : null
+        );
 
-  const repostsPerPostDisplay = makeDerivedDisplay(() => {
-    const src = dashboardForRange!;
-    return perPost(num(src.uniqueRepostsCount30D), num(src.postCount30D));
-  });
+  const calcRepostsPerPost = (src: DashboardStatsNode) => perPost(num(src.uniqueRepostsCount30D), num(src.postCount30D));
+  const repostsPerPostDisplay = makeDerivedDisplay(dashboardForRange, calcRepostsPerPost);
+  const repostsPerPostDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcRepostsPerPost(dashboardForRange) : null,
+          dashboardPrevForRange ? calcRepostsPerPost(dashboardPrevForRange) : null
+        );
 
   const socialTxMixDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const social = num(
         sumFields(
           src,
@@ -553,8 +654,8 @@ export default function NetworkActivitySection() {
   );
 
   const blockRewardMixDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const blockReward = num(src.blockRewardTxnCount30D);
       const total = num(src.txnCount30D);
       return pctOf(blockReward, total);
@@ -563,8 +664,8 @@ export default function NetworkActivitySection() {
   );
 
   const moneyTxMixDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const money = num(sumFields(src, 'coinTxnCount30D', 'daoTxnCount30D', 'nftTxnCount30D'));
       const total = num(src.txnCount30D);
       return pctOf(money, total);
@@ -573,8 +674,8 @@ export default function NetworkActivitySection() {
   );
 
   const ccShareOfMoneyDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const cc = num(src.coinTxnCount30D);
       const money = num(sumFields(src, 'coinTxnCount30D', 'daoTxnCount30D', 'nftTxnCount30D'));
       return pctOf(cc, money);
@@ -583,8 +684,8 @@ export default function NetworkActivitySection() {
   );
 
   const daoShareOfMoneyDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const dao = num(src.daoTxnCount30D);
       const money = num(sumFields(src, 'coinTxnCount30D', 'daoTxnCount30D', 'nftTxnCount30D'));
       return pctOf(dao, money);
@@ -593,8 +694,8 @@ export default function NetworkActivitySection() {
   );
 
   const nftShareOfMoneyDisplay = makeDerivedDisplay(
-    () => {
-      const src = dashboardForRange!;
+    dashboardForRange,
+    (src) => {
       const nft = num(src.nftTxnCount30D);
       const money = num(sumFields(src, 'coinTxnCount30D', 'daoTxnCount30D', 'nftTxnCount30D'));
       return pctOf(nft, money);
@@ -707,24 +808,36 @@ export default function NetworkActivitySection() {
                 if (!metric) return null;
 
                 let raw: string | null = null;
+                let prevRaw: string | null = null;
                 let displayValue = '—';
+                let deltaPct: number | null = null;
                 try {
                   const get30d = metric.get30d;
                   const getAllTime = metric.getAllTime;
                   if (typeof get30d !== 'function' || typeof getAllTime !== 'function') return null;
 
                   const isAll = timeRange === 'all';
-                  const isWindowed = timeRange === '7d' || timeRange === '90d' || timeRange === '365d';
+                  const isWindowed = timeRange !== 'all';
                   const supported = isAll ? metric.hasAllTimeQuery !== false : metric.has30dQuery !== false;
                   raw = isAll
                     ? getAllTime(dashboard, totalUsers)
                     : get30d(dashboardForRange ?? null, totalUsers);
-                  const loading = isAll ? analyticsLoading : isWindowed ? windowLoading : analyticsLoading;
+                  prevRaw = isAll ? null : get30d(dashboardPrevForRange ?? null, totalUsers);
+                  const loading = isAll ? analyticsLoading : windowLoading;
                   if (!supported) displayValue = 'TBC';
                   else if (loading) displayValue = '…';
                   else {
                     const format = typeof formatStat === 'function' ? formatStat : (v: string | null | undefined) => { const n = v != null && v !== '' ? Number(v) : NaN; return Number.isFinite(n) ? n.toLocaleString() : '—'; };
                     displayValue = format(raw ?? undefined);
+                  }
+
+                  if (!isAll && supported && !loading) {
+                    const curN = num(raw);
+                    const prevN = num(prevRaw);
+                    if (curN != null && prevN != null) {
+                      if (prevN === 0) deltaPct = curN === 0 ? 0 : null;
+                      else deltaPct = ((curN - prevN) / prevN) * 100;
+                    }
                   }
                 } catch {
                   displayValue = '—';
@@ -737,6 +850,7 @@ export default function NetworkActivitySection() {
                     key={label}
                     label={label}
                     value={displayValue}
+                    deltaPct={timeRange === 'all' ? null : deltaPct}
                     icon={IconComponent}
                     colorClass={metric.colorClass ?? ''}
                     debugQuery={debugQuery}
@@ -759,36 +873,42 @@ export default function NetworkActivitySection() {
             value={followsPerDayDisplay}
             icon={Users}
             colorClass={COLOR_SOCIAL}
+            deltaPct={followsPerDayDeltaPct}
           />
           <StatCard
             label="Posts/Day"
             value={postsPerDayDisplay}
             icon={MessageCircle}
             colorClass={COLOR_SOCIAL}
+            deltaPct={postsPerDayDeltaPct}
           />
           <StatCard
             label="Diamonds/Post"
             value={diamondsPerPostDisplay}
             icon={Zap}
             colorClass={COLOR_SOCIAL}
+            deltaPct={diamondsPerPostDeltaPct}
           />
           <StatCard
             label="Likes/Reactions/Post"
             value={likesPerPostDisplay}
             icon={Heart}
             colorClass={COLOR_SOCIAL}
+            deltaPct={likesPerPostDeltaPct}
           />
           <StatCard
             label="Comments/Post"
             value={commentsPerPostDisplay}
             icon={MessageCircle}
             colorClass={COLOR_SOCIAL}
+            deltaPct={commentsPerPostDeltaPct}
           />
           <StatCard
             label="Reposts/Post"
             value={repostsPerPostDisplay}
             icon={MessageCircle}
             colorClass={COLOR_SOCIAL}
+            deltaPct={repostsPerPostDeltaPct}
           />
         </div>
       </div>
