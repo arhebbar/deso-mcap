@@ -4,14 +4,14 @@
     { "source": "/api/deso/get-exchange-rate", "destination": "https://node.deso.org/api/v0/get-exchange-rate" },
     { "source": "/api/deso/health-check", "destination": "https://node.deso.org/api/v0/health-check" },
     { "source": "/api/deso/get-hodlers-for-public-key", "destination": "https://node.deso.org/api/v0/get-hodlers-for-public-key" },
-    { "source": "/api/deso/:match*", "destination": "https://node.deso.org/api/v0/:match*" },
-    { "source": "/api/deso-v1/:match*", "destination": "https://node.deso.org/api/v1/:match*" },
-    { "source": "/api/deso-hodlers/:match*", "destination": "https://blockproducer.deso.org/api/v0/:match*" },
-    { "source": "/api/cryptocompare/:match*", "destination": "https://min-api.cryptocompare.com/:match*" },
-    { "source": "/api/mempool/:match*", "destination": "https://mempool.space/api/:match*" },
+    { "source": "/api/deso/:path*", "destination": "https://node.deso.org/api/v0/:path*" },
+    { "source": "/api/deso-v1/:path*", "destination": "https://node.deso.org/api/v1/:path*" },
+    { "source": "/api/deso-hodlers/:path*", "destination": "https://blockproducer.deso.org/api/v0/:path*" },
+    { "source": "/api/cryptocompare/:path*", "destination": "https://min-api.cryptocompare.com/:path*" },
+    { "source": "/api/mempool/:path*", "destination": "https://mempool.space/api/:path*" },
     { "source": "/api/eth-rpc", "destination": "https://eth.llamarpc.com" },
     { "source": "/api/sol-rpc", "destination": "https://rpc.ankr.com/solana" },
-    { "source": "/api/coingecko/:match*", "destination": "https://api.coingecko.com/api/v3/:match*" },
+    { "source": "/api/coingecko/:path*", "destination": "https://api.coingecko.com/api/v3/:path*" },
     { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" }
   ]
 }

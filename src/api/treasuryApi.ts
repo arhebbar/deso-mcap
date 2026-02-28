@@ -7,6 +7,24 @@
 const MEMPOOL_BASE = import.meta.env.DEV ? 'https://mempool.space/api' : '/api/mempool';
 const ETH_RPC = import.meta.env.DEV ? 'https://eth.llamarpc.com' : '/api/eth-rpc';
 const SOL_RPC = '/api/sol-rpc';
+/** Fallback when proxy returns 403 (e.g. Ankr blocking server IPs). Set VITE_SOL_RPC_URL to override. */
+const SOL_RPC_FALLBACK = (import.meta.env.VITE_SOL_RPC_URL as string) || 'https://api.mainnet-beta.solana.com';
+
+async function solRpcPost(body: string): Promise<Response> {
+  const res = await fetch(SOL_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  if (res.status === 403 || res.status === 502) {
+    return fetch(SOL_RPC_FALLBACK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+  }
+  return res;
+}
 const SATOSHI_PER_BTC = 1e8;
 const WEI_PER_ETH = 1e18;
 const LAMPORTS_PER_SOL = 1e9;
@@ -141,16 +159,14 @@ async function fetchSolBalance(): Promise<{ lamports: number; amount: number }> 
   let totalLamports = 0;
   for (const addr of solAddrs) {
     try {
-      const res = await fetch(SOL_RPC, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await solRpcPost(
+        JSON.stringify({
           jsonrpc: '2.0',
           method: 'getBalance',
           params: [addr],
           id: 1,
-        }),
-      });
+        })
+      );
       if (!res.ok) continue;
       const data = (await res.json()) as { result?: { value?: number } };
       totalLamports += data.result?.value ?? 0;
@@ -241,10 +257,8 @@ async function fetchErc20Balance(addr: string, tokenAddr: string, decimals: numb
 
 async function fetchSolUsdcBalance(addr: string): Promise<number> {
   try {
-    const res = await fetch(SOL_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const res = await solRpcPost(
+      JSON.stringify({
         jsonrpc: '2.0',
         method: 'getTokenAccountsByOwner',
         params: [
@@ -253,8 +267,8 @@ async function fetchSolUsdcBalance(addr: string): Promise<number> {
           { encoding: 'jsonParsed' },
         ],
         id: 1,
-      }),
-    });
+      })
+    );
     if (!res.ok) return 0;
     const data = (await res.json()) as { result?: { value?: Array<{ account?: { data?: { parsed?: { info?: { tokenAmount?: { uiAmount?: number } } } } } }> } };
     const accounts = data.result?.value ?? [];
@@ -297,16 +311,14 @@ export async function fetchTreasuryBalancesPerAddress(): Promise<TreasuryAddress
       usdValue = 0;
     } else if (config.chain === 'SOL') {
       const [solRes, usdc] = await Promise.all([
-        fetch(SOL_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        solRpcPost(
+          JSON.stringify({
             jsonrpc: '2.0',
             method: 'getBalance',
             params: [config.address],
             id: 1,
-          }),
-        }).then((r) => r.json() as Promise<{ result?: { value?: number } }>),
+          })
+        ).then((r) => r.json() as Promise<{ result?: { value?: number } }>),
         fetchSolUsdcBalance(config.address),
       ]);
       const sol = (solRes.result?.value ?? 0) / LAMPORTS_PER_SOL;
