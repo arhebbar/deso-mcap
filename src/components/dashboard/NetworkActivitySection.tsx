@@ -378,6 +378,18 @@ const PRIMARY_LAYOUT: (string | null)[][] = [
   ['Miscellaneous transactions', 'Follows', 'Diamonds', 'Likes/Reactions', 'DAO transactions', null],
 ];
 
+/** Mobile: 8 rows, Social and Money KPIs paired (2 cols). */
+const MOBILE_PRIMARY_LAYOUT: string[][] = [
+  ['Transactions'],
+  ['Block reward transactions', 'Miscellaneous transactions'],
+  ['Social transactions', 'Money transactions'],
+  ['Posts', 'Coin transactions'],
+  ['Follows', 'DAO transactions'],
+  ['Likes/Reactions', 'NFT transactions'],
+  ['Diamonds', 'Messages'],
+  ['Reposts', 'Comments'],
+];
+
 /** Future KPIs: all-time/30d not yet available; shown in a separate section with — for now. */
 const FUTURE_KPI_METRICS: { label: string; icon: React.ElementType; colorClass: string }[] = [
   { label: 'Total supply', icon: TrendingUp, colorClass: COLOR_MONEY },
@@ -701,36 +713,57 @@ export default function NetworkActivitySection() {
     { percent: true }
   );
 
-  return (
-    <section className="space-y-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="section-title">Network & activity</h3>
-        <div className="flex items-center gap-2">
-          {(analyticsFetching && !analyticsLoading) || (isWindowed && windowFetching) ? (
-            <span className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
-              {isWindowed && (windowLoading || (windowFetching && !windowCounts)) ? 'Loading…' : 'Refreshing…'}
-            </span>
-          ) : null}
-          <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1 text-xs">
-            {(['7d', '30d', '90d', '365d', 'all'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setTimeRange(tab)}
-                className={`px-3 py-1 rounded-full transition-colors ${
-                  timeRange === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/60'
-                }`}
-              >
-                {tab === 'all' ? 'All time' : tab === '365d' ? '1Y' : tab === '30d' ? '30D' : tab === '7d' ? '7D' : '90D'}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-      <p className="text-sm text-muted-foreground -mt-4">
-        DeSo network metrics from GraphQL (dashboardStats) and the node. Block height uses the node when available, with GraphQL fallback. Use the tabs to switch between 7D, 30D, 90D, 1Y, and all‑time views.
-      </p>
+  const renderPrimaryKpiCard = (label: string, key: string) => {
+    const metric = KPI_METRICS.find((m) => m.label === label);
+    if (!metric) return null;
+    let raw: string | null = null;
+    let prevRaw: string | null = null;
+    let displayValue = '—';
+    let deltaPct: number | null = null;
+    try {
+      const get30d = metric.get30d;
+      const getAllTime = metric.getAllTime;
+      if (typeof get30d !== 'function' || typeof getAllTime !== 'function') return null;
+      const isAll = timeRange === 'all';
+      const isWindowed = timeRange !== 'all';
+      const supported = isAll ? metric.hasAllTimeQuery !== false : metric.has30dQuery !== false;
+      raw = isAll ? getAllTime(dashboard, totalUsers) : get30d(dashboardForRange ?? null, totalUsers);
+      prevRaw = isAll ? null : get30d(dashboardPrevForRange ?? null, totalUsers);
+      const loading = isAll ? analyticsLoading : (windowLoading || (isWindowed && windowFetching && !windowCounts));
+      if (!supported) displayValue = 'TBC';
+      else if (loading) displayValue = '…';
+      else {
+        const format = typeof formatStat === 'function' ? formatStat : (v: string | null | undefined) => { const n = v != null && v !== '' ? Number(v) : NaN; return Number.isFinite(n) ? n.toLocaleString() : '—'; };
+        displayValue = format(raw ?? undefined);
+      }
+      if (!isAll && supported && !loading) {
+        const curN = num(raw);
+        const prevN = num(prevRaw);
+        if (curN != null && prevN != null) {
+          if (prevN === 0) deltaPct = curN === 0 ? 0 : null;
+          else deltaPct = ((curN - prevN) / prevN) * 100;
+        }
+      }
+    } catch {
+      displayValue = '—';
+    }
+    const debugQuery = timeRange === 'all' ? metric.debugAllQuery : metric.debug30dQuery;
+    const IconComponent = metric.icon != null && typeof metric.icon === 'function' ? metric.icon : Zap;
+    return (
+      <StatCard
+        key={key}
+        label={label}
+        value={displayValue}
+        deltaPct={timeRange === 'all' ? null : deltaPct}
+        icon={IconComponent}
+        colorClass={metric.colorClass ?? ''}
+        debugQuery={debugQuery}
+      />
+    );
+  };
 
+  return (
+    <section className="space-y-4">
       {/* Current Status */}
       <div>
         <div className="flex items-center gap-3 mb-3">
@@ -779,7 +812,30 @@ export default function NetworkActivitySection() {
         </div>
       </div>
 
-      {/* Primary KPIs in 3-row layout: Row 1 = Transactions, Social, Messages, (empty), Money; Row 2 = Block Reward, Posts, Reposts, Comments, Coin, NFT; Row 3 = Misc, Follows, Diamonds, Likes, DAO. */}
+      {/* Time period tabs – below Current Status */}
+      <div className="flex flex-wrap items-center gap-2">
+        {(analyticsFetching && !analyticsLoading) || (isWindowed && windowFetching) ? (
+          <span className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
+            {isWindowed && (windowLoading || (windowFetching && !windowCounts)) ? 'Loading…' : 'Refreshing…'}
+          </span>
+        ) : null}
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1 text-xs">
+          {(['7d', '30d', '90d', '365d', 'all'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setTimeRange(tab)}
+              className={`px-3 py-1 rounded-full transition-colors ${
+                timeRange === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/60'
+              }`}
+            >
+              {tab === 'all' ? 'All time' : tab === '365d' ? '1Y' : tab === '30d' ? '30D' : tab === '7d' ? '7D' : '90D'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Primary KPIs: desktop 3-row grid; mobile 8-row Social/Money paired */}
       <div>
         <h4 className="text-sm font-medium text-muted-foreground mb-3">
           {timeRange === 'all'
@@ -792,75 +848,30 @@ export default function NetworkActivitySection() {
                   ? 'Last 90 days'
                   : 'Last 1 year'}
         </h4>
-        <div className="space-y-4">
+        {/* Desktop: 3-row grid */}
+        <div className="hidden md:block space-y-4">
           {PRIMARY_LAYOUT.map((row, rowIdx) => (
             <div
               key={rowIdx}
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4"
             >
-              {row.map((label, colIdx) => {
-                if (label === null) {
-                  return <div key={`empty-${rowIdx}-${colIdx}`} />;
-                }
-                const metric = KPI_METRICS.find((m) => m.label === label);
-                if (!metric) return null;
-
-                let raw: string | null = null;
-                let prevRaw: string | null = null;
-                let displayValue = '—';
-                let deltaPct: number | null = null;
-                try {
-                  const get30d = metric.get30d;
-                  const getAllTime = metric.getAllTime;
-                  if (typeof get30d !== 'function' || typeof getAllTime !== 'function') return null;
-
-                  const isAll = timeRange === 'all';
-                  const isWindowed = timeRange !== 'all';
-                  const supported = isAll ? metric.hasAllTimeQuery !== false : metric.has30dQuery !== false;
-                  raw = isAll
-                    ? getAllTime(dashboard, totalUsers)
-                    : get30d(dashboardForRange ?? null, totalUsers);
-                  prevRaw = isAll ? null : get30d(dashboardPrevForRange ?? null, totalUsers);
-                  const loading = isAll ? analyticsLoading : (windowLoading || (isWindowed && windowFetching && !windowCounts));
-                  if (!supported) displayValue = 'TBC';
-                  else if (loading) displayValue = '…';
-                  else {
-                    const format = typeof formatStat === 'function' ? formatStat : (v: string | null | undefined) => { const n = v != null && v !== '' ? Number(v) : NaN; return Number.isFinite(n) ? n.toLocaleString() : '—'; };
-                    displayValue = format(raw ?? undefined);
-                  }
-
-                  if (!isAll && supported && !loading) {
-                    const curN = num(raw);
-                    const prevN = num(prevRaw);
-                    if (curN != null && prevN != null) {
-                      if (prevN === 0) deltaPct = curN === 0 ? 0 : null;
-                      else deltaPct = ((curN - prevN) / prevN) * 100;
-                    }
-                  }
-                } catch {
-                  displayValue = '—';
-                }
-
-                const debugQuery = timeRange === 'all' ? metric.debugAllQuery : metric.debug30dQuery;
-                const IconComponent = metric.icon != null && typeof metric.icon === 'function' ? metric.icon : Zap;
-                return (
-                  <StatCard
-                    key={label}
-                    label={label}
-                    value={displayValue}
-                    deltaPct={timeRange === 'all' ? null : deltaPct}
-                    icon={IconComponent}
-                    colorClass={metric.colorClass ?? ''}
-                    debugQuery={debugQuery}
-                  />
-                );
-              })}
+              {row.map((label, colIdx) =>
+                label === null ? <div key={`empty-${rowIdx}-${colIdx}`} /> : renderPrimaryKpiCard(label, `d-${rowIdx}-${colIdx}`)
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Mobile: 8 rows, Social/Money paired (2 cols) */}
+        <div className="md:hidden space-y-4">
+          {MOBILE_PRIMARY_LAYOUT.map((row, rowIdx) => (
+            <div key={rowIdx} className="grid grid-cols-2 gap-4">
+              {row.map((label) => renderPrimaryKpiCard(label, `m-${rowIdx}-${label}`))}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="h-6" />
+      <div className="h-2" />
 
       {/* Derived metrics: per-day and per-post, only meaningful for windowed ranges. */}
       <div>
@@ -911,7 +922,7 @@ export default function NetworkActivitySection() {
         </div>
       </div>
 
-      <div className="h-6" />
+      <div className="h-2" />
 
       {/* Derived metrics: transaction mix (labels + values, then formula row). */}
       <div>

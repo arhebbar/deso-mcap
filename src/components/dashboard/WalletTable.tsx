@@ -271,17 +271,17 @@ export default function WalletTable({ expandedSectionOnly }: WalletTableProps = 
       {wallets.length === 0 && isLoading ? (
         <Skeleton className="h-48 w-full rounded" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Wallet</th>
-                <th>Class</th>
-                <th>Key Holdings</th>
-                <th className="text-right">USD Value</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Wallet</th>
+              <th>Class</th>
+              <th>Key Holdings</th>
+              <th className="text-right">USD Value</th>
+            </tr>
+          </thead>
+          <tbody>
               <SectionTable sectionKey="FOUNDATION" />
               <SectionTable sectionKey="AMM" />
               <SectionTable sectionKey="FOUNDER" />
@@ -290,7 +290,7 @@ export default function WalletTable({ expandedSectionOnly }: WalletTableProps = 
                 <tr className="border-b border-border bg-muted/20">
                   <td className="py-2 pl-6 font-medium text-sm">Others</td>
                   <td className="text-xs text-muted-foreground">—</td>
-                  <td className="text-xs text-muted-foreground">
+                <td className="text-xs text-muted-foreground">
                     {othersDeso >= 1_000_000 ? `${(othersDeso / 1_000_000).toFixed(2)}M` : othersDeso >= 1_000 ? `${(othersDeso / 1_000).toFixed(1)}K` : othersDeso.toFixed(2)} DESO
                   </td>
                   <td className="text-right font-mono text-sm">{formatUsd(othersUsd)}</td>
@@ -300,9 +300,9 @@ export default function WalletTable({ expandedSectionOnly }: WalletTableProps = 
                 <td colSpan={3} className="text-xs pt-2">Total (tracked + others = {totalSupply >= 1_000_000 ? `${(totalSupply / 1_000_000).toFixed(1)}M` : totalSupply} DESO)</td>
                 <td className="text-right font-mono text-sm pt-2">{formatUsd(totalUsd + othersUsd)}</td>
               </tr>
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
+      </div>
       )}
     </div>
   );

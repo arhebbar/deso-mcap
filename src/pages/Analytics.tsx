@@ -19,7 +19,7 @@ const Analytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="p-6 space-y-8 max-w-[1600px] mx-auto">
+      <main className="p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
         {/* Page title */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -28,7 +28,7 @@ const Analytics = () => {
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Analytics</h2>
             <p className="text-sm text-muted-foreground">
-              Generic DeSo network & activity analytics
+              DeSo Protocol - Network and Activity Metrics and Trends
             </p>
           </div>
           <Link
@@ -39,7 +39,6 @@ const Analytics = () => {
           </Link>
         </div>
 
-        {/* 0. Network & activity (Beyond Social–style) */}
         <NetworkActivitySection />
 
         <footer className="text-center py-4">
