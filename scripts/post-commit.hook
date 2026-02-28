@@ -1,0 +1,3 @@
+#!/bin/sh
+# Auto-push to origin main after every commit. Install with: npm run setup:auto-push
+exec git push origin main

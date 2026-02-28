@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "push:main": "node scripts/push-to-main.mjs",
+    "setup:auto-push": "node scripts/setup-auto-push.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
