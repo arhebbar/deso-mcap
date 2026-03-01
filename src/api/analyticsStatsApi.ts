@@ -18,7 +18,7 @@ const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql'
 const ANALYTICS_CACHE_KEY = 'analytics-stats-cache-v1';
 const TREND_CACHE_KEY = 'analytics-trend-cache-v1';
 // Bump version whenever we change the shape or queries of the filtered counts payload.
-const FILTERED_COUNTS_CACHE_VERSION = 'v7';
+const FILTERED_COUNTS_CACHE_VERSION = 'v8';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Time windows for filtered counts (same query set, different date range). */
@@ -75,9 +75,9 @@ export interface DashboardStatsNode {
   diamondsCount30D?: string | null;
   /** Creator coin txns in last 30d: txnType 11 (buy/sell) + 14 (transfer). */
   coinTxnCount30D?: string | null;
-  /** Message txns in last 30d: txnType 4. */
+  /** Message txns in last 30d: txnTypes 31, 32, 33 (Access Group + DMs/group chat). */
   messageTxnCount30D?: string | null;
-  /** DAO coin txns in last 30d: txnType 25 (transfer) + 26 (place/cancel limit order). */
+  /** DAO/DESO Token txns in last 30d: txnType 24 (Create DESO Token) + 25 (transfer) + 26 (place/cancel limit order). */
   daoTxnCount30D?: string | null;
   /** NFT txns in last 30d: txnTypes 15,16,17,19,20 aggregated. */
   nftTxnCount30D?: string | null;
@@ -85,6 +85,10 @@ export interface DashboardStatsNode {
   blockRewardTxnCount30D?: string | null;
   /** Misc txns in last 30d: 6 (Update Profile), 22 (Authorize Derived Key), 27/28 (User Associations). */
   miscTxnCount30D?: string | null;
+  /** DESO Transfers: Basic Transfer (txnType 2) excluding diamonds. */
+  desoTransferCount30D?: string | null;
+  /** Validator / other txns not in Social, Money, Block, Misc, or DESO Transfers. */
+  validatorTxnCount30D?: string | null;
 }
 
 /** One day of activity for the 30-day trend chart. */
@@ -124,6 +128,10 @@ export interface FilteredCounts30D {
   nftTxnCount30D: string | null;
   blockRewardTxnCount30D: string | null;
   miscTxnCount30D: string | null;
+  /** Basic Transfer / Send DESO (txnType 2) excluding diamonds. */
+  desoTransferCount30D: string | null;
+  /** All other txns not in Social/Money/Block/Misc/DESO Transfers (placeholder until exact types). */
+  validatorTxnCount30D: string | null;
 }
 
 const DASHBOARD_METRICS_QUERY = `
@@ -497,6 +505,9 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
     coin11,
     coin14,
     msg33,
+    msg31,
+    msg32,
+    dao24,
     dao25,
     dao26,
     nft15,
@@ -513,6 +524,7 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
     derivedKey22,
     userAssoc27,
     userAssoc28,
+    basicTransfer2,
   ] = await Promise.all([
     runTransactionsCountQuery(allTransactionsInRangeQuery(since, until)),
     runPostsCountQuery(postsCount30DQuery(since)),
@@ -527,6 +539,9 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
     runTransactionsCountQuery(simpleTxnType30DQuery(11, since, until)),
     runTransactionsCountQuery(simpleTxnType30DQuery(14, since, until)),
     runTransactionsCountQuery(simpleTxnType30DQuery(33, since, until)),
+    runTransactionsCountQuery(simpleTxnType30DQuery(31, since, until)), // Create/Update Access Group
+    runTransactionsCountQuery(simpleTxnType30DQuery(32, since, until)), // Add/Remove Access Group Members
+    runTransactionsCountQuery(simpleTxnType30DQuery(24, since, until)), // Create DESO Token
     runTransactionsCountQuery(simpleTxnType30DQuery(25, since, until)),
     runTransactionsCountQuery(simpleTxnType30DQuery(26, since, until)),
     runTransactionsCountQuery(simpleTxnType30DQuery(15, since, until)),
@@ -543,6 +558,7 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
     runTransactionsCountQuery(simpleTxnType30DQuery(22, since, until)), // Authorize Derived Key
     runTransactionsCountQuery(simpleTxnType30DQuery(27, since, until)), // Create User Associations
     runTransactionsCountQuery(simpleTxnType30DQuery(28, since, until)), // Delete User Associations
+    runTransactionsCountQuery(simpleTxnType30DQuery(2, since, until)), // Basic Transfer (all txnType 2)
   ]);
 
   const sum = (...values: Array<number | null>): number | null => {
@@ -573,8 +589,8 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
     })(),
     diamondsCount30D: diamonds != null ? String(diamonds) : null,
     coinTxnCount30D: sum(coin11, coin14) != null ? String(sum(coin11, coin14)!) : null,
-    messageTxnCount30D: msg33 != null ? String(msg33) : null,
-    daoTxnCount30D: sum(dao25, dao26) != null ? String(sum(dao25, dao26)!) : null,
+    messageTxnCount30D: sum(msg33, msg31, msg32) != null ? String(sum(msg33, msg31, msg32)!) : null,
+    daoTxnCount30D: sum(dao24, dao25, dao26) != null ? String(sum(dao24, dao25, dao26)!) : null,
     nftTxnCount30D:
       sum(nft15, nft16, nft17, nft18, nft19, nft20, nft21) != null
         ? String(sum(nft15, nft16, nft17, nft18, nft19, nft20, nft21)!)
@@ -584,6 +600,28 @@ async function fetchFilteredCountsForWindowOffset(window: TimeWindow, offsetPeri
       sum(updateProfile6, derivedKey22, userAssoc27, userAssoc28) != null
         ? String(sum(updateProfile6, derivedKey22, userAssoc27, userAssoc28)!)
         : null,
+    desoTransferCount30D: (() => {
+      const all2 = basicTransfer2 ?? 0;
+      const diamond = diamonds ?? 0;
+      const nonDiamond = Math.max(0, all2 - diamond);
+      return nonDiamond > 0 ? String(nonDiamond) : null;
+    })(),
+    validatorTxnCount30D: (() => {
+      const total = allTxnCount ?? 0;
+      const block = blockReward1 ?? 0;
+      const misc = sum(updateProfile6, derivedKey22, userAssoc27, userAssoc28) ?? 0;
+      const coin = sum(coin11, coin14) ?? 0;
+      const dao = sum(dao24, dao25, dao26) ?? 0;
+      const nft = sum(nft15, nft16, nft17, nft18, nft19, nft20, nft21) ?? 0;
+      const messages = sum(msg33, msg31, msg32) ?? 0;
+      const follow = followTxn ?? 0;
+      const diamond = diamonds ?? 0;
+      const likesRx = (likes ?? 0) + (txn29 ?? 0) - (txn30 ?? 0);
+      const desoTransfers = Math.max(0, (basicTransfer2 ?? 0) - (diamonds ?? 0));
+      const covered = block + misc + coin + dao + nft + messages + follow + diamond + likesRx + desoTransfers;
+      const other = Math.max(0, total - covered);
+      return other > 0 ? String(other) : null;
+    })(),
   };
 
   setCachedValue<FilteredCounts30D>(cacheKey, result);

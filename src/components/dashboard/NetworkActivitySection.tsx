@@ -362,7 +362,9 @@ const KPI_METRICS: {
   { label: 'Posts', icon: MessageCircle, colorClass: COLOR_SOCIAL, get30d: (d) => d?.postCount30D ?? null, getAllTime: (d) => d?.postCount ?? null, debug30dQuery: DEBUG_GQL_POSTS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Reposts', icon: MessageCircle, colorClass: COLOR_SOCIAL, get30d: (d) => d?.uniqueRepostsCount30D ?? null, getAllTime: (d) => d?.repostCount ?? null, debug30dQuery: DEBUG_GQL_REPOSTS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Comments', icon: MessageCircle, colorClass: COLOR_SOCIAL, get30d: (d) => d?.commentCount30D ?? null, getAllTime: (d) => d?.commentCount ?? null, debug30dQuery: DEBUG_GQL_COMMENTS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
-  { label: 'Coin transactions', icon: TrendingUp, colorClass: COLOR_MONEY, get30d: (d) => d?.coinTxnCount30D ?? null, getAllTime: (d) => d?.txnCountCreatorCoin ?? null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
+  { label: 'CC Transactions', icon: TrendingUp, colorClass: COLOR_MONEY, get30d: (d) => d?.coinTxnCount30D ?? null, getAllTime: (d) => d?.txnCountCreatorCoin ?? null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
+  { label: 'DESO Transfers', icon: Zap, colorClass: COLOR_MONEY, get30d: (d) => d?.desoTransferCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
+  { label: 'Validator Transactions', icon: Link2, colorClass: COLOR_TXN, get30d: (d) => d?.validatorTxnCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Miscellaneous transactions', icon: Hourglass, colorClass: COLOR_TXN, get30d: (d) => d?.miscTxnCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Follows', icon: Users, colorClass: COLOR_SOCIAL, get30d: (d) => d?.followsCount30D ?? null, getAllTime: (d) => d?.followCount ?? null, debug30dQuery: DEBUG_GQL_FOLLOW_TXN_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
   { label: 'Diamonds', icon: Zap, colorClass: COLOR_SOCIAL, get30d: (d) => d?.diamondsCount30D ?? null, getAllTime: () => null, debug30dQuery: DEBUG_GQL_DIAMONDS_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
@@ -371,32 +373,24 @@ const KPI_METRICS: {
   { label: 'NFT transactions', icon: Image, colorClass: COLOR_MONEY, get30d: (d) => d?.nftTxnCount30D ?? null, getAllTime: (d) => d?.txnCountNft ?? null, debug30dQuery: DEBUG_GQL_TXN_TYPE_30D, debugAllQuery: DEBUG_GQL_DASHBOARD_METRICS },
 ];
 
-/** Primary grid layout: 3 rows × 6 columns. Row 1 col 4 empty; order matches image. */
+/** Primary grid layout: 3 rows × 6 columns. */
 const PRIMARY_LAYOUT: (string | null)[][] = [
-  ['Transactions', 'Social transactions', 'Messages', null, 'Money transactions', null],
-  ['Block reward transactions', 'Posts', 'Reposts', 'Comments', 'Coin transactions', 'NFT transactions'],
+  ['Transactions', 'Social transactions', 'Messages', 'Money transactions', 'DESO Transfers', 'Validator Transactions'],
+  ['Block reward transactions', 'Posts', 'Reposts', 'Comments', 'CC Transactions', 'NFT transactions'],
   ['Miscellaneous transactions', 'Follows', 'Diamonds', 'Likes/Reactions', 'DAO transactions', null],
 ];
 
 /** Mobile: 8 rows, Social and Money KPIs paired (2 cols). */
 const MOBILE_PRIMARY_LAYOUT: string[][] = [
   ['Transactions'],
-  ['Block reward transactions', 'Miscellaneous transactions'],
+  ['Block reward transactions', 'Validator Transactions'],
   ['Social transactions', 'Money transactions'],
-  ['Posts', 'Coin transactions'],
+  ['DESO Transfers', 'Miscellaneous transactions'],
+  ['Posts', 'CC Transactions'],
   ['Follows', 'DAO transactions'],
   ['Likes/Reactions', 'NFT transactions'],
   ['Diamonds', 'Messages'],
   ['Reposts', 'Comments'],
-];
-
-/** Future KPIs: all-time/30d not yet available; shown in a separate section with — for now. */
-const FUTURE_KPI_METRICS: { label: string; icon: React.ElementType; colorClass: string }[] = [
-  { label: 'Total supply', icon: TrendingUp, colorClass: COLOR_MONEY },
-  { label: 'Users', icon: Users, colorClass: COLOR_SOCIAL },
-  { label: 'Wallets (all time)', icon: Wallet, colorClass: COLOR_MONEY },
-  { label: 'New wallets', icon: UserPlus, colorClass: COLOR_WALLET },
-  { label: 'Active wallets', icon: Wallet, colorClass: COLOR_WALLET },
 ];
 
 function StatCard({
@@ -642,6 +636,68 @@ export default function NetworkActivitySection() {
           dashboardPrevForRange ? calcRepostsPerPost(dashboardPrevForRange) : null
         );
 
+  const calcSocialTxnsPerDay = (src: DashboardStatsNode) =>
+    perDay(num(sumFields(src, 'messageTxnCount30D', 'postCount30D', 'uniqueRepostsCount30D', 'commentCount30D', 'followsCount30D', 'diamondsCount30D', 'likesReactionsCount30D')), windowDays);
+  const socialTxnsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcSocialTxnsPerDay);
+  const socialTxnsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcSocialTxnsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcSocialTxnsPerDay(dashboardPrevForRange) : null
+        );
+
+  const calcMessagesPerDay = (src: DashboardStatsNode) => perDay(num(src.messageTxnCount30D), windowDays);
+  const messagesPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcMessagesPerDay);
+  const messagesPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcMessagesPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcMessagesPerDay(dashboardPrevForRange) : null
+        );
+
+  const calcCcTxnsPerDay = (src: DashboardStatsNode) => perDay(num(src.coinTxnCount30D), windowDays);
+  const ccTxnsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcCcTxnsPerDay);
+  const ccTxnsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcCcTxnsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcCcTxnsPerDay(dashboardPrevForRange) : null
+        );
+
+  const calcDaoTxnsPerDay = (src: DashboardStatsNode) => perDay(num(src.daoTxnCount30D), windowDays);
+  const daoTxnsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcDaoTxnsPerDay);
+  const daoTxnsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcDaoTxnsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcDaoTxnsPerDay(dashboardPrevForRange) : null
+        );
+
+  const calcNftTxnsPerDay = (src: DashboardStatsNode) => perDay(num(src.nftTxnCount30D), windowDays);
+  const nftTxnsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcNftTxnsPerDay);
+  const nftTxnsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcNftTxnsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcNftTxnsPerDay(dashboardPrevForRange) : null
+        );
+
+  const calcMoneyTxnsPerDay = (src: DashboardStatsNode) =>
+    perDay(num(sumFields(src, 'coinTxnCount30D', 'daoTxnCount30D', 'nftTxnCount30D')), windowDays);
+  const moneyTxnsPerDayDisplay = makeDerivedDisplay(dashboardForRange, calcMoneyTxnsPerDay);
+  const moneyTxnsPerDayDeltaPct =
+    derivedLoading || timeRange === 'all'
+      ? null
+      : pctChange(
+          dashboardForRange ? calcMoneyTxnsPerDay(dashboardForRange) : null,
+          dashboardPrevForRange ? calcMoneyTxnsPerDay(dashboardPrevForRange) : null
+        );
+
   const socialTxMixDisplay = makeDerivedDisplay(
     dashboardForRange,
     (src) => {
@@ -762,58 +818,15 @@ export default function NetworkActivitySection() {
     );
   };
 
+  const totalWalletsRaw = dashboard?.walletCountAll ?? (totalUsers != null ? String(totalUsers) : null);
+  const totalWalletsDisplay = analyticsLoading ? '…' : totalWalletsRaw != null && totalWalletsRaw !== '' ? (formatStat ? formatStat(totalWalletsRaw) : Number(totalWalletsRaw).toLocaleString()) : '—';
+  const activeWallets30Display = analyticsLoading ? '…' : dashboard?.activeWalletCount30D != null && dashboard.activeWalletCount30D !== '' ? (formatStat ? formatStat(dashboard.activeWalletCount30D) : Number(dashboard.activeWalletCount30D).toLocaleString()) : '—';
+  const newWallets30Display = analyticsLoading ? '…' : dashboard?.newWalletCount30D != null && dashboard.newWalletCount30D !== '' ? (formatStat ? formatStat(dashboard.newWalletCount30D) : Number(dashboard.newWalletCount30D).toLocaleString()) : '—';
+
   return (
     <section className="space-y-4">
-      {/* Current Status */}
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Current status</h4>
-          <span className="text-xs font-mono text-muted-foreground">
-            {statsLoading ? 'Node: Checking…' : nodeReachable ? (nodeSynced ? 'Node: Synced' : 'Node: Not synced') : 'Node: Unreachable'}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            label="Online users"
-            value="—"
-            icon={Users}
-            colorClass="border-emerald-500/30 bg-emerald-500/5"
-          />
-          <StatCard
-            label="Blockheight"
-            value={
-              statsLoading && !dashboard
-                ? '…'
-                : blockHeightDisplay != null
-                  ? blockHeightDisplay.toLocaleString()
-                  : '—'
-            }
-            icon={Link2}
-            colorClass="border-blue-500/30 bg-blue-500/5"
-          />
-          <StatCard
-            label="Mempool"
-            value={
-              statsLoading
-                ? '…'
-                : mempoolOrNextBlockTxnCount != null
-                  ? String(mempoolOrNextBlockTxnCount)
-                  : '0'
-            }
-            icon={Hourglass}
-            colorClass="border-amber-500/30 bg-amber-500/5"
-          />
-          <StatCard
-            label="Gas fee"
-            value={'>$.01'}
-            icon={Flame}
-            colorClass="border-rose-500/30 bg-rose-500/5"
-          />
-        </div>
-      </div>
-
-      {/* Time period tabs – below Current Status */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Time period tabs – top right (as before) */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         {(analyticsFetching && !analyticsLoading) || (isWindowed && windowFetching) ? (
           <span className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
             {isWindowed && (windowLoading || (windowFetching && !windowCounts)) ? 'Loading…' : 'Refreshing…'}
@@ -832,6 +845,29 @@ export default function NetworkActivitySection() {
               {tab === 'all' ? 'All time' : tab === '365d' ? '1Y' : tab === '30d' ? '30D' : tab === '7d' ? '7D' : '90D'}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Overall metrics – top row */}
+      <div>
+        <h4 className="text-sm font-medium text-muted-foreground mb-3">Overall metrics</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          <StatCard label="Total Wallets" value={totalWalletsDisplay} icon={Wallet} colorClass={COLOR_WALLET} />
+          <StatCard label="Active Wallets (Last 30 D)" value={activeWallets30Display} icon={Wallet} colorClass={COLOR_WALLET} />
+          <StatCard label="New Wallets (Last 30 D)" value={newWallets30Display} icon={UserPlus} colorClass={COLOR_WALLET} />
+          <StatCard
+            label="Pending Txns in Mempool"
+            value={statsLoading ? '…' : mempoolOrNextBlockTxnCount != null ? String(mempoolOrNextBlockTxnCount) : '—'}
+            icon={Hourglass}
+            colorClass="border-amber-500/30 bg-amber-500/5"
+          />
+          <StatCard
+            label="Current Block Height"
+            value={statsLoading && !dashboard ? '…' : blockHeightDisplay != null ? blockHeightDisplay.toLocaleString() : '—'}
+            icon={Link2}
+            colorClass="border-blue-500/30 bg-blue-500/5"
+          />
+          <StatCard label="Gas Fee" value={'>$.01'} icon={Flame} colorClass="border-rose-500/30 bg-rose-500/5" />
         </div>
       </div>
 
@@ -873,52 +909,26 @@ export default function NetworkActivitySection() {
 
       <div className="h-2" />
 
-      {/* Derived metrics: per-day and per-post, only meaningful for windowed ranges. */}
+      {/* Derived metrics: Row 1 = Follows, Posts, Diamonds/Post, Likes/Post, CC Txns/Day, DAO Txns/Day; Row 2 = Social Txns/Day, Messages/Day, Comments/Post, Reposts/Post, NFT Txns/Day, Money Txns/Day. Social = blue, Money = green. */}
       <div>
         <h4 className="text-sm font-medium text-muted-foreground mb-3">Derived activity metrics</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          <StatCard
-            label="Follows/Day"
-            value={followsPerDayDisplay}
-            icon={Users}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={followsPerDayDeltaPct}
-          />
-          <StatCard
-            label="Posts/Day"
-            value={postsPerDayDisplay}
-            icon={MessageCircle}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={postsPerDayDeltaPct}
-          />
-          <StatCard
-            label="Diamonds/Post"
-            value={diamondsPerPostDisplay}
-            icon={Zap}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={diamondsPerPostDeltaPct}
-          />
-          <StatCard
-            label="Likes/Reactions/Post"
-            value={likesPerPostDisplay}
-            icon={Heart}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={likesPerPostDeltaPct}
-          />
-          <StatCard
-            label="Comments/Post"
-            value={commentsPerPostDisplay}
-            icon={MessageCircle}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={commentsPerPostDeltaPct}
-          />
-          <StatCard
-            label="Reposts/Post"
-            value={repostsPerPostDisplay}
-            icon={MessageCircle}
-            colorClass={COLOR_SOCIAL}
-            deltaPct={repostsPerPostDeltaPct}
-          />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+            <StatCard label="Follows/Day" value={followsPerDayDisplay} icon={Users} colorClass={COLOR_SOCIAL} deltaPct={followsPerDayDeltaPct} />
+            <StatCard label="Posts/Day" value={postsPerDayDisplay} icon={MessageCircle} colorClass={COLOR_SOCIAL} deltaPct={postsPerDayDeltaPct} />
+            <StatCard label="Diamonds/Post" value={diamondsPerPostDisplay} icon={Zap} colorClass={COLOR_SOCIAL} deltaPct={diamondsPerPostDeltaPct} />
+            <StatCard label="Likes/Reactions/Post" value={likesPerPostDisplay} icon={Heart} colorClass={COLOR_SOCIAL} deltaPct={likesPerPostDeltaPct} />
+            <StatCard label="CC Transactions/Day" value={ccTxnsPerDayDisplay} icon={TrendingUp} colorClass={COLOR_MONEY} deltaPct={ccTxnsPerDayDeltaPct} />
+            <StatCard label="DAO Transactions/Day" value={daoTxnsPerDayDisplay} icon={TrendingUp} colorClass={COLOR_MONEY} deltaPct={daoTxnsPerDayDeltaPct} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+            <StatCard label="Social Transactions/Day" value={socialTxnsPerDayDisplay} icon={Heart} colorClass={COLOR_SOCIAL} deltaPct={socialTxnsPerDayDeltaPct} />
+            <StatCard label="Messages/Day" value={messagesPerDayDisplay} icon={MessageCircle} colorClass={COLOR_SOCIAL} deltaPct={messagesPerDayDeltaPct} />
+            <StatCard label="Comments/Post" value={commentsPerPostDisplay} icon={MessageCircle} colorClass={COLOR_SOCIAL} deltaPct={commentsPerPostDeltaPct} />
+            <StatCard label="Reposts/Post" value={repostsPerPostDisplay} icon={MessageCircle} colorClass={COLOR_SOCIAL} deltaPct={repostsPerPostDeltaPct} />
+            <StatCard label="NFT Transactions/Day" value={nftTxnsPerDayDisplay} icon={Image} colorClass={COLOR_MONEY} deltaPct={nftTxnsPerDayDeltaPct} />
+            <StatCard label="Money Transactions/Day" value={moneyTxnsPerDayDisplay} icon={TrendingUp} colorClass={COLOR_MONEY} deltaPct={moneyTxnsPerDayDeltaPct} />
+          </div>
         </div>
       </div>
 
@@ -972,25 +982,6 @@ export default function NetworkActivitySection() {
           <p className="text-xs text-muted-foreground">CC Transactions / Money Transactions</p>
           <p className="text-xs text-muted-foreground">DAO Transactions / Money Transactions</p>
           <p className="text-xs text-muted-foreground">NFT Transactions / Money Transactions</p>
-        </div>
-      </div>
-
-      {/* Future KPIs: Total supply, Users, Wallets, New/Active wallets, DEX – placeholders until API supports. */}
-      <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Future KPIs</h4>
-        <p className="text-xs text-muted-foreground mb-3">
-          These metrics will be added when all-time or windowed data is available (may require different queries or indexing).
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {FUTURE_KPI_METRICS.map(({ label, icon: Icon, colorClass }) => (
-            <StatCard
-              key={label}
-              label={label}
-              value="—"
-              icon={Icon}
-              colorClass={colorClass}
-            />
-          ))}
         </div>
       </div>
 
