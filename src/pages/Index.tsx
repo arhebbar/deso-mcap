@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
-import CapitalStructureTable from '@/components/dashboard/CapitalStructureTable';
 import TrendCharts from '@/components/dashboard/TrendCharts';
 import DesoInCirculationTable from '@/components/dashboard/DesoInCirculationTable';
 import AssetsBreakdownBar from '@/components/dashboard/AssetsBreakdownBar';
@@ -10,7 +9,6 @@ import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
 import CapitalStructureBreakdownChart from '@/components/dashboard/CapitalStructureBreakdownChart';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
 import TokenHoldingsTable from '@/components/dashboard/TokenHoldingsTable';
-import FreeFloatSection from '@/components/dashboard/FreeFloatSection';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useCirculationTable } from '@/hooks/useCirculationTable';
@@ -35,10 +33,6 @@ const Index = () => {
   const [highlightedSupplySegment, setHighlightedSupplySegment] = useState<string | null>(null);
   const [tableSectionFilter, setTableSectionFilter] = useState<SectionFilter | undefined>(undefined);
   const [circulationExpanded, setCirculationExpanded] = useState(false);
-  const circulationMinimized = useMemo(
-    () => highlightedSupplySegment != null,
-    [highlightedSupplySegment]
-  );
 
   const totalSupply = marketData.desoTotalSupply;
   const desoPrice = marketData.desoPrice;
@@ -76,9 +70,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="p-6 space-y-6 max-w-[1600px] mx-auto">
+      <main className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-[1600px] mx-auto">
         {/* KPI Row - show cached/static values first, then refresh with live data */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           <KpiCard label="DESO Market Cap" value={formatUsd(marketCap)} subtitle={isLoading ? 'Updating…' : `$${marketData.desoPrice.toFixed(2)}/DESO`} />
           <KpiCard label="Float-Adjusted MCap" value={formatUsd(floatAdjustedMcap)} subtitle={isLoading ? 'Updating…' : `${formatPercent(freeFloat / marketData.desoTotalSupply)} float`} />
           <KpiCard label="BTC Treasury" value={formatUsd(btcTreasuryValue)} subtitle={isLoading ? 'Updating…' : `$${marketData.btcPrice.toLocaleString()}/BTC`} />
@@ -98,8 +92,8 @@ const Index = () => {
 
         <div className="glow-line" />
 
-        {/* Charts Row: Doughnut as filter on left, Capital Structure on right; when segment selected, maximize this row */}
-        <div className={`grid grid-cols-1 gap-6 transition-all ${circulationMinimized ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
+        {/* Charts Row: Supply Distribution | Assets by User Group | Capital Charts (1/3 each) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <SupplyPieChart
             data={supplyData}
             desoPrice={desoPrice}
@@ -107,13 +101,22 @@ const Index = () => {
             highlightedSegment={highlightedSupplySegment}
             onSegmentClick={(name) => setHighlightedSupplySegment((prev) => (prev === name ? null : name))}
           />
-          <CapitalStructureTable highlightedSegment={highlightedSupplySegment} />
+          <AssetsBreakdownBar
+            selectedSection={tableSectionFilter}
+            onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
+          />
+          <CapitalStructureBreakdownChart />
         </div>
 
-        {/* Trend Charts */}
+        {/* Token Holdings: bar click expands/filters by section */}
+        <TokenHoldingsTable
+          expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter}
+        />
+
+        {/* Historical Trends */}
         <TrendCharts />
 
-        {/* DESO in Circulation – minimized when a Supply Distribution segment is selected */}
+        {/* DESO in Circulation – minimized by default; expand to drill down */}
         <div className="border rounded-lg overflow-hidden bg-card">
           <button
             type="button"
@@ -122,32 +125,15 @@ const Index = () => {
           >
             <h3 className="section-title mb-0">DESO in Circulation</h3>
             <span className="text-sm text-muted-foreground">
-              {circulationExpanded || !circulationMinimized ? 'Collapse' : 'Expand'} table
+              {circulationExpanded ? 'Collapse' : 'Expand'} table
             </span>
           </button>
-          {(circulationExpanded || !circulationMinimized) && (
+          {circulationExpanded && (
             <div className="border-t">
               <DesoInCirculationTable />
             </div>
           )}
         </div>
-
-        {/* Assets by Section + Capital Structure by Section side-by-side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AssetsBreakdownBar
-            selectedSection={tableSectionFilter}
-            onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
-          />
-          <CapitalStructureBreakdownChart />
-        </div>
-
-        {/* Token Holdings: Category + Accounts + token columns; bar click expands/filters by section */}
-        <TokenHoldingsTable
-          expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter}
-        />
-
-        {/* Free Float: unaccounted total + anonymous wallets sorted high to low */}
-        <FreeFloatSection />
 
         {/* Foundation Treasury + AMM Funds */}
         <TreasuryAddressTable />
