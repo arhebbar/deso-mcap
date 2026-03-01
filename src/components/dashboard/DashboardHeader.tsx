@@ -23,15 +23,6 @@ export default function DashboardHeader({ isLive = false, lastUpdated }: Dashboa
           </div>
         </div>
         <nav className="flex items-center gap-1">
-          {isAnalytics && (
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          )}
           <Link
             to="/"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -66,6 +57,15 @@ export default function DashboardHeader({ isLive = false, lastUpdated }: Dashboa
             </>
           )}
         </div>
+        {isAnalytics && (
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        )}
         <span className="font-mono text-xs text-muted-foreground">
           {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
