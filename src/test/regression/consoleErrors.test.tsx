@@ -46,7 +46,7 @@ describe('Console errors – no console.error during render', () => {
       await waitFor(
         () => {
           expect(document.querySelector('main')).toBeInTheDocument();
-          expect(screen.getByRole('heading', { name: /DeSo Capital Intelligence/i })).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: /DESO Analytics/i })).toBeInTheDocument();
         },
         { timeout: 10000 }
       );

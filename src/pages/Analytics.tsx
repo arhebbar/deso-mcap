@@ -4,11 +4,9 @@
  * dashboard (Index) stays focused on market cap, circulation & coverage.
  */
 
-import { Link } from 'react-router-dom';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NetworkActivitySection from '@/components/dashboard/NetworkActivitySection';
 import { useLiveData } from '@/hooks/useLiveData';
-import { BarChart3 } from 'lucide-react';
 
 const Analytics = () => {
   const {
@@ -19,26 +17,7 @@ const Analytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
-        {/* Page title */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <BarChart3 className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Analytics</h2>
-            <p className="text-sm text-muted-foreground">
-              DeSo Protocol - Network and Activity Metrics and Trends
-            </p>
-          </div>
-          <Link
-            to="/"
-            className="ml-auto text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Dashboard
-          </Link>
-        </div>
-
+      <main className="px-4 md:px-6 pt-2 md:pt-3 pb-6 space-y-3 max-w-[1600px] mx-auto">
         <NetworkActivitySection />
 
         <footer className="text-center py-4">

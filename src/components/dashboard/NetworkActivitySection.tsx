@@ -824,9 +824,9 @@ export default function NetworkActivitySection() {
   const newWallets30Display = analyticsLoading ? '…' : dashboard?.newWalletCount30D != null && dashboard.newWalletCount30D !== '' ? (formatStat ? formatStat(dashboard.newWalletCount30D) : Number(dashboard.newWalletCount30D).toLocaleString()) : '—';
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       {/* Time period tabs – top right (as before) */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-end">
         {(analyticsFetching && !analyticsLoading) || (isWindowed && windowFetching) ? (
           <span className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
             {isWindowed && (windowLoading || (windowFetching && !windowCounts)) ? 'Loading…' : 'Refreshing…'}
@@ -850,7 +850,7 @@ export default function NetworkActivitySection() {
 
       {/* Overall metrics – top row */}
       <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Overall metrics</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">Overall metrics</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
           <StatCard label="Total Wallets" value={totalWalletsDisplay} icon={Wallet} colorClass={COLOR_WALLET} />
           <StatCard label="Active Wallets (Last 30 D)" value={activeWallets30Display} icon={Wallet} colorClass={COLOR_WALLET} />
@@ -873,7 +873,7 @@ export default function NetworkActivitySection() {
 
       {/* Primary KPIs: desktop 3-row grid; mobile 8-row Social/Money paired */}
       <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">
           {timeRange === 'all'
             ? 'All time'
             : timeRange === '7d'
@@ -885,7 +885,7 @@ export default function NetworkActivitySection() {
                   : 'Last 1 year'}
         </h4>
         {/* Desktop: 3-row grid */}
-        <div className="hidden md:block space-y-4">
+        <div className="hidden md:block space-y-3">
           {PRIMARY_LAYOUT.map((row, rowIdx) => (
             <div
               key={rowIdx}
@@ -898,7 +898,7 @@ export default function NetworkActivitySection() {
           ))}
         </div>
         {/* Mobile: 8 rows, Social/Money paired (2 cols) */}
-        <div className="md:hidden space-y-4">
+        <div className="md:hidden space-y-3">
           {MOBILE_PRIMARY_LAYOUT.map((row, rowIdx) => (
             <div key={rowIdx} className="grid grid-cols-2 gap-4">
               {row.map((label) => renderPrimaryKpiCard(label, `m-${rowIdx}-${label}`))}
@@ -907,11 +907,9 @@ export default function NetworkActivitySection() {
         </div>
       </div>
 
-      <div className="h-2" />
-
       {/* Derived metrics: Row 1 = Follows, Posts, Diamonds/Post, Likes/Post, CC Txns/Day, DAO Txns/Day; Row 2 = Social Txns/Day, Messages/Day, Comments/Post, Reposts/Post, NFT Txns/Day, Money Txns/Day. Social = blue, Money = green. */}
       <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Derived activity metrics</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">Derived activity metrics</h4>
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             <StatCard label="Follows/Day" value={followsPerDayDisplay} icon={Users} colorClass={COLOR_SOCIAL} deltaPct={followsPerDayDeltaPct} />

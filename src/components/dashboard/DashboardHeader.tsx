@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Shield, WifiOff, BarChart3, LayoutDashboard } from 'lucide-react';
+import { Activity, Shield, WifiOff, BarChart3, LayoutDashboard, ArrowLeft } from 'lucide-react';
 
 interface DashboardHeaderProps {
   isLive?: boolean;
@@ -18,11 +18,20 @@ export default function DashboardHeader({ isLive = false, lastUpdated }: Dashboa
             <Shield className="h-5 w-5 text-primary" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">DeSo Capital Intelligence</h1>
+            <h1 className="text-lg font-semibold tracking-tight">DESO Analytics</h1>
             <p className="text-xs text-muted-foreground">Treasury & Structure Analytics</p>
           </div>
         </div>
         <nav className="flex items-center gap-1">
+          {isAnalytics && (
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          )}
           <Link
             to="/"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
