@@ -9,6 +9,7 @@ import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
 import CapitalStructureBreakdownChart from '@/components/dashboard/CapitalStructureBreakdownChart';
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
 import TokenHoldingsTable from '@/components/dashboard/TokenHoldingsTable';
+import CCv1HoldingsTable from '@/components/dashboard/CCv1HoldingsTable';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useCirculationTable } from '@/hooks/useCirculationTable';
@@ -137,6 +138,9 @@ const Index = () => {
 
         {/* Foundation Treasury + AMM Funds */}
         <TreasuryAddressTable />
+
+        {/* DESO locked in CCv1 */}
+        <CCv1HoldingsTable />
 
         <footer className="text-center py-4">
           <p className="text-xs text-muted-foreground font-mono">

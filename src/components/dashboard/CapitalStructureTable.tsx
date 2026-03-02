@@ -55,55 +55,12 @@ export default function CapitalStructureTable({ highlightedSegment }: { highligh
     desoBullsUsd: desoBullsDeso * data.desoPrice,
   };
 
-  // Filter based on Supply Distribution segment (Staked DESO, DeSo CCv1 Locked, User/Project Tokens, Currency Tokens, Unstaked DESO)
+  // Filter based on Supply Distribution segment (Staked DESO, DeSo CCv1 Locked, User/Project Tokens, Currency Tokens, Unstaked DESO). Validators table removed.
   const segment = highlightedSegment?.toLowerCase() ?? null;
-  const showStaked = segment === 'staked deso' || segment === null;
   const showCcv1 = segment === 'deso ccv1 locked';
   const showUserProject = segment === 'user/project tokens';
   const showCurrency = segment === 'currency tokens';
   const showUnstakedDeso = segment === 'unstaked deso';
-
-  if (showStaked) {
-    const sortedValidators = [...displayData.validators].sort((a, b) => b.amount - a.amount);
-    const topValidators = sortedValidators.slice(0, TOP_N_VALIDATORS);
-    const others = sortedValidators.slice(TOP_N_VALIDATORS);
-    const othersTotal = others.reduce((s, v) => s + v.amount, 0);
-    const othersUsd = othersTotal * displayData.desoPrice;
-
-    return (
-      <div className="chart-container">
-        <h3 className="section-title">Capital Structure - Validators</h3>
-        <p className="text-xs text-muted-foreground mb-3">Top {TOP_N_VALIDATORS} validators by staked DESO (click "Staked" in doughnut to filter)</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground text-left">
-                <th className="pb-2 pr-4">Validator Name</th>
-                <th className="pb-2 text-right">DESO</th>
-                <th className="pb-2 text-right">US$</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topValidators.map((v) => (
-                <tr key={v.id} className="border-b border-border/50">
-                  <td className="py-1.5 pr-4">{v.validatorName}</td>
-                  <td className="py-1.5 text-right font-mono">{fmtDeso(v.amount)}</td>
-                  <td className="py-1.5 text-right font-mono">{formatUsd(v.usdValue)}</td>
-                </tr>
-              ))}
-              {others.length > 0 && (
-                <tr className="border-t font-medium bg-muted/20">
-                  <td className="py-1.5 pr-4 italic">Others ({others.length} validators)</td>
-                  <td className="py-1.5 text-right font-mono">{fmtDeso(othersTotal)}</td>
-                  <td className="py-1.5 text-right font-mono">{formatUsd(othersUsd)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
 
   // One level of drill-down for non-Staked: show accounts and DESO value from circulation
   const breakdown = data.unstaked?.breakdown;

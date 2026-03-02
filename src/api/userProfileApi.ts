@@ -3,9 +3,10 @@
  * Used by /u/:username page.
  */
 
+import { getGraphqlUrl } from '@/api/graphqlEndpoint';
+
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
-const DESO_GRAPHQL = import.meta.env.DEV ? 'https://graphql-prod.deso.com/graphql' : '/api/deso-graphql';
 const NANOS_PER_DESO = 1e9;
 
 const STAKED_DESO_QUERY = `
@@ -125,7 +126,7 @@ export async function fetchUserProfile(username: string): Promise<UserProfileDat
   );
 
   const stakeGraphqlBody = { query: STAKED_DESO_QUERY, variables: { pk } };
-  const stakeGraphqlRes = await fetch(DESO_GRAPHQL, {
+  const stakeGraphqlRes = await fetch(getGraphqlUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(stakeGraphqlBody),
@@ -141,7 +142,7 @@ export async function fetchUserProfile(username: string): Promise<UserProfileDat
   stakeGraphqlRes.headers.forEach((v, k) => { responseHeaders[k] = v; });
   apiCalls.push({
     name: 'graphql-stake-entries',
-    url: DESO_GRAPHQL,
+    url: getGraphqlUrl(),
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     requestBody: stakeGraphqlBody,

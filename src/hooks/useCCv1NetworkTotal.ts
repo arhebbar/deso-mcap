@@ -15,7 +15,8 @@ export function useCCv1NetworkTotal() {
   const query = useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const deso = await fetchCCv1NetworkTotalDeso(10_000);
+      // Fetch full CCv1 locked DESO (no early limit) for most accurate network total.
+      const deso = await fetchCCv1NetworkTotalDeso();
       setCCv1NetworkCache(deso);
       return deso;
     },

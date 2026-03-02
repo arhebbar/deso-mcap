@@ -49,7 +49,7 @@ export default function TreasuryAddressTable() {
   return (
     <div className="chart-container overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="section-title mb-0">Foundation Treasury + AMM Funds</h3>
+        <h3 className="section-title mb-0">Foundation Treasury + AMM+Holding Accounts</h3>
         {(isLoading || isFetching) ? (
           <span className="text-[10px] text-primary font-medium uppercase tracking-wider" title="Queries still running; data may change">
             Updating…

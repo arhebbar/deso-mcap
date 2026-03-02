@@ -37,6 +37,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/deso-graphql/, "/graphql"),
       },
+      "/safetynet-graphql": {
+        target: "https://graphql.safetynet.social",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/safetynet-graphql/, "/graphql"),
+      },
       "/coingecko": {
         target: "https://api.coingecko.com",
         changeOrigin: true,

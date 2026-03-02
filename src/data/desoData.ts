@@ -48,15 +48,6 @@ export const FOUNDATION_WALLETS: WalletData[] = [
     usdValue: 8_450_000,
   },
   {
-    name: 'FOCUS_COLD_000',
-    classification: 'FOUNDATION',
-    balances: { DESO: 1_000_000 },
-    usdValue: 5_780_000,
-    desoStaked: 800_000,
-    desoUnstaked: 200_000,
-  },
-  { name: 'FOCUS_COLD_001', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
-  {
     name: 'focus',
     classification: 'FOUNDATION',
     // Focus balance excluded: minted by account, not bought on DeSo – no real significance
@@ -76,12 +67,14 @@ export const FOUNDATION_WALLETS: WalletData[] = [
     usdValue: 750_000,
   },
   { name: 'deso10Mdaubet', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
-  { name: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'DaoDaoDistributions', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'merlin', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
 
 export const AMM_WALLETS: WalletData[] = [
+  { name: 'FOCUS_COLD_000', classification: 'AMM', balances: { DESO: 1_000_000 }, usdValue: 5_780_000, desoStaked: 800_000, desoUnstaked: 200_000 },
+  { name: 'FOCUS_COLD_001', classification: 'AMM', balances: {}, usdValue: 0 },
+  { name: 'Focus_Floor_Bid', classification: 'AMM', balances: {}, usdValue: 0 },
   { name: 'AMM_DESO_24_PlAEU', classification: 'AMM', balances: { dUSDC: 1_410_000, DESO: 96_500 }, usdValue: 1_950_000 },
   { name: 'AMM_DESO_23_GrYpe', classification: 'AMM', balances: { DESO: 1_440_000, dUSDC: 3_000 }, usdValue: 8_330_000 },
   { name: 'AMM_focus_12_nzWku', classification: 'AMM', balances: { Focus: 1_770_000_000 }, usdValue: 601_800 },
@@ -159,7 +152,7 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Gabrielist (incl. gabrielvault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'RobertGraham', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'RobertGraham (incl. ButtSniffer, VaultForMe)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Krassenstein (incl. Kra_Wallet, HKrassenstein)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Chadix', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -195,6 +188,12 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Silto_Nascao', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'carry2web', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Kaanha', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'jgalmeida', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DCNY', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'NathanHeffelman', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'loveneeshmalik', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'DeSo Bulls', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'arturopops', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Stevonagy', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'dennishlewis (incl. desonocode)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'SafetyNet (incl. SafetyNetStaking, SafetyNetFunding, SafetyNetValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },

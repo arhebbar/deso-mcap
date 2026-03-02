@@ -30,10 +30,10 @@ function fmtPrice(p: number): string {
 
 export default function DesoInCirculationTable() {
   const data = useCirculationTable();
-  const [openStaked, setOpenStaked] = useState(true);
-  const [openNativeTokens, setOpenNativeTokens] = useState(true);
-  const [openCurrencyTokens, setOpenCurrencyTokens] = useState(true);
-  const [openUnstakedDeso, setOpenUnstakedDeso] = useState(true);
+  const [openStaked, setOpenStaked] = useState(false);
+  const [openNativeTokens, setOpenNativeTokens] = useState(false);
+  const [openCurrencyTokens, setOpenCurrencyTokens] = useState(false);
+  const [openUnstakedDeso, setOpenUnstakedDeso] = useState(false);
   const [openValidators, setOpenValidators] = useState<Set<string>>(new Set());
   const [openValidatorAccounts, setOpenValidatorAccounts] = useState<Set<string>>(new Set());
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
@@ -51,7 +51,6 @@ export default function DesoInCirculationTable() {
   if (data.isLoading && data.staked.validators.length === 0) {
     return (
       <div className="chart-container">
-        <h3 className="section-title mb-4">DESO in Circulation</h3>
         <Skeleton className="h-64 w-full rounded" />
       </div>
     );
@@ -63,7 +62,6 @@ export default function DesoInCirculationTable() {
 
   return (
     <div className="chart-container overflow-hidden">
-      <h3 className="section-title mb-4">DESO in Circulation</h3>
       <div className="overflow-x-auto">
         <table className="data-table w-full">
           <thead>

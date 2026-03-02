@@ -17,7 +17,7 @@ const Analytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="px-4 md:px-6 pt-2 md:pt-3 pb-6 space-y-3 max-w-[1600px] mx-auto">
+      <main className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-[1600px] mx-auto">
         <NetworkActivitySection />
 
         <footer className="text-center py-4">

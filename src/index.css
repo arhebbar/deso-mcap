@@ -91,7 +91,7 @@
 
 @layer components {
   .kpi-card {
-    @apply rounded-lg border p-5 transition-all duration-300;
+    @apply rounded-lg border p-5 transition-all duration-300 min-h-[7rem];
     background: hsl(var(--kpi-bg));
     border-color: hsl(var(--kpi-border));
   }

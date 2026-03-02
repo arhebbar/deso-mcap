@@ -432,7 +432,7 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-xl border border-border bg-card p-4 ${colorClass}`}
+      className={`rounded-xl border border-border bg-card p-4 min-h-[7rem] ${colorClass}`}
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>

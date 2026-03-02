@@ -12,7 +12,7 @@ const DESO_BULL_OTHERS_THRESHOLD = 10; // DeSo Bulls with < $10 grouped as "Othe
 
 const BADGE_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
-  AMM: 'AMM',
+  AMM: 'AMM+Holding Accounts',
   FOUNDER: 'Team',
   DESO_BULL: 'DeSo Bull',
 };
@@ -30,7 +30,7 @@ type SectionKey = 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   FOUNDATION: 'Foundation',
-  AMM: 'AMM Funds',
+  AMM: 'AMM+Holding Accounts',
   FOUNDER: 'Team',
   DESO_BULL: 'DeSo Bulls',
 };

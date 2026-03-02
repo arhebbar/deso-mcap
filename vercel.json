@@ -13,6 +13,7 @@
     { "source": "/api/sol-rpc", "destination": "https://rpc.ankr.com/solana" },
     { "source": "/api/coingecko/:path*", "destination": "https://api.coingecko.com/api/v3/:path*" },
     { "source": "/api/deso-graphql", "destination": "https://graphql-prod.deso.com/graphql" },
+    { "source": "/api/safetynet-graphql", "destination": "https://graphql.safetynet.social/graphql" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -89,7 +89,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   }, [categoryFromFilter]);
 
   const { headerRows, dataRows, footerRows } = useMemo(() => {
-    const header = rows.filter((r) => r.type === 'issued' || r.type === 'price');
+    const header = rows.filter((r) => r.type === 'issued' || r.type === 'heldByIssuer' || r.type === 'price');
     let data = rows.filter((r) => r.type === 'account');
     if (namedOnly) data = data.filter((r) => r.isNamed === true);
     const footer = rows.filter((r) => r.type === 'overallTotal');
@@ -206,7 +206,13 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       return formatNumberShort((v ?? 0) as number);
     }
 
-    // Token Price row: show in $ or in DESO (price_usd / desoPrice)
+    // Held by own account row: show # of tokens (same as Issued)
+    if (row.type === 'heldByIssuer') {
+      if (v == null || (v as number) === 0) return '–';
+      return formatNumberShort((v as number));
+    }
+
+    // Token Price ($) row: show in $ or in DESO. Focus uses more decimals (e.g. $0.0002357).
     if (row.type === 'price') {
       if (col === 'DESOStaked' || col === 'DESOUnstaked') return '–';
       if (v == null) return '–';
@@ -215,7 +221,11 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       if (valueMode === 'deso')
         return prices.deso > 0 ? formatNumberShort(priceUsd / prices.deso) : '–';
       if (col === 'OpenFund') return formatUsd((v as number) * prices.deso);
-      if (col === 'Focus') return formatUsd((v as number) * prices.deso);
+      if (col === 'Focus') {
+        const focusPriceUsd = (v as number) * prices.deso;
+        if (focusPriceUsd < 0.01) return `$${focusPriceUsd.toFixed(7)}`;
+        return formatUsd(focusPriceUsd);
+      }
       if (col === 'dUSDC') return '$1.00';
       if (col === 'dBTC') return formatUsd(v as number);
       if (col === 'dETH') return formatUsd(v as number);
@@ -379,7 +389,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   </td>
                 ))}
                 <td className="text-right py-1.5 px-3">
-                  {row.type === 'issued' && row.totalUsd != null ? formatTotal(row.totalUsd) : '–'}
+                  {(row.type === 'issued' || row.type === 'heldByIssuer') && row.totalUsd != null ? formatTotal(row.totalUsd) : '–'}
                 </td>
               </tr>
             ))}
@@ -389,12 +399,6 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   const accountRows = rowsByCategory.get(cat) ?? [];
                   const sub = categorySubtotals[cat];
                   const subTotalUsd = sub?.totalUsd ?? 0;
-                  const slNoStart =
-                    headerRows.length +
-                    CATEGORY_ORDER.slice(0, CATEGORY_ORDER.indexOf(cat)).reduce(
-                      (s, c) => s + (rowsByCategory.get(c)?.length ?? 0),
-                      0
-                    );
                   return (
                     <Fragment key={cat}>
                       <tr
@@ -427,7 +431,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                             data-backed-by={row.backedByWallet ?? undefined}
                             data-highlight={row.highlight ?? undefined}
                           >
-                            <td className="py-1.5 px-3 text-muted-foreground">{slNoStart + idx + 1}</td>
+                            <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
                             <td className="py-1.5 px-3 text-muted-foreground pl-6">{row.category ?? '–'}</td>
                             <td className="py-1.5 px-3 font-medium">{row.account ?? '–'}</td>
                             {TOKEN_COLS.map((col) => (
@@ -466,7 +470,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     data-backed-by={row.backedByWallet ?? undefined}
                     data-highlight={row.highlight ?? undefined}
                   >
-                    <td className="py-1.5 px-3 text-muted-foreground">{headerRows.length + idx + 1}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
                     <td className="py-1.5 px-3 text-muted-foreground">{row.category ?? '–'}</td>
                     <td className="py-1.5 px-3 font-medium">{row.account ?? '–'}</td>
                     {TOKEN_COLS.map((col) => (

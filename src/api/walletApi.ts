@@ -8,10 +8,11 @@
 
 import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES, getCCv2UserTokenAmms } from '@/data/desoData';
 
+import { getGraphqlUrl } from '@/api/graphqlEndpoint';
+
 /** Use Vite proxy in dev, Vercel rewrites in prod to avoid CORS */
 const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
 const HODLERS_API = import.meta.env.DEV ? '/deso-hodlers' : '/api/deso-hodlers';
-const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql';
 
 /**
  * POST get-hodlers-for-public-key; on 404 try DESO_NODE (blockproducer may be unavailable).
@@ -76,16 +77,16 @@ export interface WalletData {
 const WALLET_CONFIG: WalletConfig[] = [
   // Foundation
   { username: 'Gringotts_Wizarding_Bank', classification: 'FOUNDATION' },
-  { username: 'FOCUS_COLD_000', classification: 'FOUNDATION' },
-  { username: 'FOCUS_COLD_001', classification: 'FOUNDATION' },
   { username: 'focus', classification: 'FOUNDATION' },
   { username: 'openfund', classification: 'FOUNDATION' },
   { username: 'Deso', classification: 'FOUNDATION' },
   { username: 'deso10Mdaubet', classification: 'FOUNDATION' },
-  { username: 'FOCUS_FLOOR_BID', classification: 'FOUNDATION' },
   { username: 'DaoDaoDistributions', classification: 'FOUNDATION' },
   { username: 'merlin', classification: 'FOUNDATION' },
-  // AMM
+  // AMM + Holding Accounts (includes FOCUS cold and floor bid)
+  { username: 'FOCUS_COLD_000', classification: 'AMM' },
+  { username: 'FOCUS_COLD_001', classification: 'AMM' },
+  { username: 'Focus_Floor_Bid', classification: 'AMM' },
   { username: 'AMM_DESO_24_PlAEU', classification: 'AMM' },
   { username: 'AMM_DESO_23_GrYpe', classification: 'AMM' },
   { username: 'AMM_focus_12_nzWku', classification: 'AMM' },
@@ -166,7 +167,9 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Edokoevoet', displayName: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', mergeKey: 'DesocialWorld' },
   { username: 'Gabrielist', displayName: 'Gabrielist (incl. gabrielvault)', classification: 'DESO_BULL', mergeKey: 'Gabrielist' },
   { username: 'gabrielvault', displayName: 'Gabrielist (incl. gabrielvault)', classification: 'DESO_BULL', mergeKey: 'Gabrielist' },
-  { username: 'RobertGraham', classification: 'DESO_BULL' },
+  { username: 'RobertGraham', displayName: 'RobertGraham (incl. ButtSniffer, VaultForMe)', classification: 'DESO_BULL', mergeKey: 'RobertGraham' },
+  { username: 'ButtSniffer', displayName: 'RobertGraham (incl. ButtSniffer, VaultForMe)', classification: 'DESO_BULL', mergeKey: 'RobertGraham' },
+  { username: 'VaultForMe', displayName: 'RobertGraham (incl. ButtSniffer, VaultForMe)', classification: 'DESO_BULL', mergeKey: 'RobertGraham' },
   { username: 'Richwolfru007', classification: 'DESO_BULL' },
   { username: '0xAustin', displayName: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', mergeKey: '0xAustin' },
   { username: '0xVault', displayName: '0xAustin (incl. 0xVault)', classification: 'DESO_BULL', mergeKey: '0xAustin' },
@@ -243,6 +246,12 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Silto_Nascao', classification: 'DESO_BULL' },
   { username: 'carry2web', classification: 'DESO_BULL' },
   { username: 'Kaanha', classification: 'DESO_BULL' },
+  { username: 'jgalmeida', classification: 'DESO_BULL' },
+  { username: 'DCNY', classification: 'DESO_BULL' },
+  { username: 'NathanHeffelman', classification: 'DESO_BULL' },
+  { username: 'loveneeshmalik', classification: 'DESO_BULL' },
+  { username: 'DeSo Bulls', classification: 'DESO_BULL' },
+  { username: 'arturopops', classification: 'DESO_BULL' },
   { username: 'Stevonagy', classification: 'DESO_BULL' },
   { username: 'dennishlewis', displayName: 'dennishlewis (incl. desonocode)', classification: 'DESO_BULL', mergeKey: 'dennishlewis' },
   { username: 'desonocode', displayName: 'dennishlewis (incl. desonocode)', classification: 'DESO_BULL', mergeKey: 'dennishlewis' },
@@ -385,7 +394,7 @@ async function fetchCcV1ValueByPublicKey(
         let total = 0;
         let after: string | null = null;
         do {
-          const res = await fetch(DESO_GRAPHQL, {
+          const res = await fetch(getGraphqlUrl(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -431,6 +440,32 @@ const CCV1_ACCOUNTS_QUERY = `
   }
 `;
 
+/** CCv1 Holdings table: creators with DESO locked, price, coins in circulation */
+const CCV1_HOLDINGS_QUERY = `
+  query CCv1Holdings($first: Int!, $after: Cursor) {
+    accounts(first: $first, after: $after, filter: { desoLockedNanos: { greaterThan: "0" } }, orderBy: DESO_LOCKED_NANOS_DESC) {
+      nodes {
+        username
+        desoLockedNanos
+        coinPriceDesoNanos
+        ccCoinsInCirculationNanos
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+/** Top DESO balance holders (unstaked DESO). Filter by min balance to cover a big chunk of Unstaked DESO. */
+const DESO_BALANCES_QUERY = `
+  query DesoBalances($first: Int!, $after: Cursor, $filter: DesoBalanceFilter) {
+    desoBalances(first: $first, after: $after, orderBy: BALANCE_NANOS_DESC, filter: $filter) {
+      nodes { balanceNanos publicKey }
+      pageInfo { hasNextPage endCursor }
+      totalCount
+    }
+  }
+`;
+
 /** Fetch total NET CCv1 (DESO locked in Creator Coins v1) via GraphQL.
  * Ordered by desoLockedNanos DESC so top creators come first (~99% in first 10K).
  * @param limit - Optional. Stop after N creators for fast ~99% approx (e.g. 10000). */
@@ -445,7 +480,7 @@ export async function fetchCCv1NetworkTotalDeso(limit?: number): Promise<number>
     let lastError: Error | null = null;
     for (let attempt = 0; attempt < RETRIES; attempt++) {
       try {
-        const res = await fetch(DESO_GRAPHQL, {
+        const res = await fetch(getGraphqlUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -484,6 +519,141 @@ export async function fetchCCv1NetworkTotalDeso(limit?: number): Promise<number>
   return Number(totalNanos) / NANOS_PER_DESO;
 }
 
+export interface CCv1HoldingRow {
+  username: string | null;
+  desoLockedNanos: string;
+  desoLocked: number;
+  coinPriceDesoNanos: string | null;
+  coinPriceDeso: number | null;
+  ccCoinsInCirculationNanos: string | null;
+  ccCoinsInCirculation: number | null;
+  /** True when creator coin has zero coins in circulation – effectively fully reserved. */
+  isReserved: boolean;
+}
+
+type CCv1HoldingsNode = {
+  username?: string | null;
+  desoLockedNanos?: string;
+  coinPriceDesoNanos?: string | null;
+  ccCoinsInCirculationNanos?: string | null;
+};
+
+function parseCCv1HoldingsNodes(nodes: CCv1HoldingsNode[]): CCv1HoldingRow[] {
+  return nodes.map((n) => {
+    const desoLockedNanos = n.desoLockedNanos ?? '0';
+    const desoLocked = Number(desoLockedNanos) / NANOS_PER_DESO;
+    const coinPriceDesoNanos = n.coinPriceDesoNanos ?? null;
+    const coinPriceDeso = coinPriceDesoNanos != null ? Number(coinPriceDesoNanos) / NANOS_PER_DESO : null;
+    const ccCoinsInCirculationNanos = n.ccCoinsInCirculationNanos ?? null;
+    const ccCoinsInCirculation =
+      ccCoinsInCirculationNanos != null ? Number(ccCoinsInCirculationNanos) / 1e9 : null;
+    const isReserved = ccCoinsInCirculation === 0;
+    return {
+      username: n.username ?? null,
+      desoLockedNanos,
+      desoLocked,
+      coinPriceDesoNanos,
+      coinPriceDeso,
+      ccCoinsInCirculationNanos,
+      ccCoinsInCirculation,
+      isReserved,
+    };
+  });
+}
+
+/** Fetch a single page of CCv1 holdings (for cache background job). */
+export async function fetchCCv1HoldingsPage(
+  first: number,
+  after: string | null
+): Promise<{ rows: CCv1HoldingRow[]; hasNextPage: boolean; endCursor: string | null }> {
+  const res = await fetch(getGraphqlUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: CCV1_HOLDINGS_QUERY,
+      variables: { first, after },
+    }),
+  });
+  if (!res.ok) return { rows: [], hasNextPage: false, endCursor: null };
+  const data = (await res.json()) as {
+    data?: {
+      accounts?: {
+        nodes?: CCv1HoldingsNode[];
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+      };
+    };
+    errors?: Array<{ message?: string }>;
+  };
+  if (data?.errors?.length) return { rows: [], hasNextPage: false, endCursor: null };
+  const nodes: CCv1HoldingsNode[] = data?.data?.accounts?.nodes ?? [];
+  const pageInfo = data?.data?.accounts?.pageInfo;
+  return {
+    rows: parseCCv1HoldingsNodes(nodes),
+    hasNextPage: pageInfo?.hasNextPage ?? false,
+    endCursor: pageInfo?.hasNextPage ? (pageInfo?.endCursor ?? null) : null,
+  };
+}
+
+/** Fetch top creator coins by DESO locked (paginates until limit). */
+export async function fetchCCv1Holdings(limit: number = 200): Promise<CCv1HoldingRow[]> {
+  const PAGE_SIZE = 100;
+  const rows: CCv1HoldingRow[] = [];
+  let after: string | null = null;
+
+  do {
+    const { rows: pageRows, hasNextPage, endCursor } = await fetchCCv1HoldingsPage(PAGE_SIZE, after);
+    rows.push(...pageRows);
+    if (rows.length >= limit) break;
+    after = hasNextPage ? endCursor : null;
+    if (after) await new Promise((r) => setTimeout(r, 200));
+  } while (after);
+
+  return rows.slice(0, limit);
+}
+
+export interface DesoBalanceNode {
+  publicKey: string;
+  balanceNanos: string;
+  balanceDeso: number;
+}
+
+/** Fetch top DESO balance holders (min balance filter ~0.25 DESO / ~$1). Excludes no one here; caller filters tracked. */
+export async function fetchDesoBalancesTopHolders(
+  first: number = 500,
+  minBalanceNanos: number = 250_000_000
+): Promise<DesoBalanceNode[]> {
+  const res = await fetch(getGraphqlUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: DESO_BALANCES_QUERY,
+      variables: {
+        first,
+        filter: { balanceNanos: { greaterThan: String(minBalanceNanos) } },
+      },
+    }),
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as {
+    data?: {
+      desoBalances?: {
+        nodes?: Array<{ publicKey?: string; balanceNanos?: string }>;
+        totalCount?: number;
+      };
+    };
+    errors?: Array<{ message?: string }>;
+  };
+  if (data?.errors?.length) return [];
+  const nodes = data?.data?.desoBalances?.nodes ?? [];
+  return nodes
+    .filter((n) => n.publicKey)
+    .map((n) => ({
+      publicKey: n.publicKey!,
+      balanceNanos: n.balanceNanos ?? '0',
+      balanceDeso: Number(n.balanceNanos ?? '0') / NANOS_PER_DESO,
+    }));
+}
+
 async function fetchAllStakeNodes(
   query: string,
   variables: { pks: string[]; after?: string | null }
@@ -497,7 +667,7 @@ async function fetchAllStakeNodes(
   const connKey = query.includes('lockedStakeEntries') ? 'lockedStakeEntries' : 'stakeEntries';
 
   do {
-    const res = await fetch(DESO_GRAPHQL, {
+    const res = await fetch(getGraphqlUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { ...variables, after } }),
@@ -541,7 +711,7 @@ async function fetchAllStakeNodesUnfiltered(
   const connKey = query.includes('lockedStakeEntries') ? 'lockedStakeEntries' : 'stakeEntries';
 
   do {
-    const res = await fetch(DESO_GRAPHQL, {
+    const res = await fetch(getGraphqlUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { after } }),
@@ -607,6 +777,17 @@ async function fetchStakedByPublicKey(
     if (entries.length > 0) result.set(pk, entries);
   }
   return result;
+}
+
+/** Total staked DESO per public key (sum across validators). For desoBalances top holders. */
+export async function getStakedTotalByPublicKeys(publicKeys: string[]): Promise<Map<string, number>> {
+  const byPk = await fetchStakedByPublicKey(publicKeys);
+  const out = new Map<string, number>();
+  for (const [pk, entries] of byPk) {
+    const total = entries.reduce((s, e) => s + e.amount, 0);
+    if (total > 0) out.set(pk, total);
+  }
+  return out;
 }
 
 /** Fetch DESO balance (total) per public key for untracked wallets. Used by Free Float to show accurate holdings. */

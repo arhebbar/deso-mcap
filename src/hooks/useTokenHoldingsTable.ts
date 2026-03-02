@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
 import { useFreeFloatTop100 } from './useFreeFloatTop100';
+import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'DeSo Bulls' | 'Others';
 
@@ -26,7 +27,7 @@ export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
 
 export interface TokenHoldingsRow {
   id: string;
-  type: 'issued' | 'price' | 'account' | 'overallTotal';
+  type: 'issued' | 'heldByIssuer' | 'price' | 'account' | 'overallTotal';
   category?: HoldingsCategory;
   /** For default order: Foundation, AMM, Core, DeSo Bulls, Others */
   defaultOrder?: number;
@@ -67,6 +68,7 @@ export function useTokenHoldingsTable(): {
   const { wallets, isLoading: walletsLoading } = useWalletData();
   const { marketData } = useLiveData();
   const { top100: freeFloatTop100 } = useFreeFloatTop100();
+  const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
 
   const prices = useMemo(
     () => ({
@@ -89,8 +91,8 @@ export function useTokenHoldingsTable(): {
     const desoStakedIssued = marketData.desoStaked;
     const desoUnstakedIssued = Math.max(0, desoIssued - desoStakedIssued);
     const openfundIssued = 95_000_000; // approximate
-    /** Focus: 165B total; 120B in Focus account; circulation for table = 45B (MC in DESO ~2M) */
-    const FOCUS_IN_FOCUS_ACCOUNT = 120_000_000_000;
+    /** Focus: 165B total; 120B in Focus account (excluded from circulation); circulation for table = 45B. Held by issuer row shows 165B for Focus. */
+    const FOCUS_TOTAL_SUPPLY = 165_000_000_000;
     const focusCirculation = 45_000_000_000; // 165B - 120B
     const dusdcIssued = 9_200_000;
     const totalSupplyUsd =
@@ -117,11 +119,31 @@ export function useTokenHoldingsTable(): {
       totalUsd: totalSupplyUsd,
     });
 
+    // Held by own account (issuer) row: Openfund column = openfund account's Openfund, Focus = 165B, dUSDC_/dBTC_/dETH_/dSOL_ from issuer if available
+    const openfundHeldByIssuer = wallets.find((w) => w.name === 'openfund')?.balances.Openfund ?? 0;
+    out.push({
+      id: 'heldByIssuer',
+      type: 'heldByIssuer',
+      account: 'Held by own account',
+      DESO: 0,
+      DESOStaked: 0,
+      DESOUnstaked: 0,
+      OpenFund: openfundHeldByIssuer,
+      Focus: FOCUS_TOTAL_SUPPLY,
+      dUSDC: 0,
+      dBTC: 0,
+      dETH: 0,
+      dSOL: 0,
+      totalUsd:
+        openfundHeldByIssuer * p.openfund +
+        FOCUS_TOTAL_SUPPLY * p.focus,
+    });
+
     // Token Price row
     out.push({
       id: 'price',
       type: 'price',
-      account: 'Token Price',
+      account: 'Token Price ($)',
       DESO: p.deso,
       OpenFund: p.openfund,
       Focus: p.focus,
@@ -183,10 +205,36 @@ export function useTokenHoldingsTable(): {
     }
 
     // Top 100 free-float accounts (from Free Float table) as individual rows under Others
+    const ffPks = new Set(freeFloatTop100.map((w) => w.pk));
     for (const w of freeFloatTop100) {
       const deso = w.staked + w.unstaked;
       out.push({
         id: `account-freefloat-${w.pk}`,
+        type: 'account',
+        category: 'Others',
+        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        account: w.name,
+        DESO: deso,
+        DESOStaked: w.staked,
+        DESOUnstaked: w.unstaked,
+        OpenFund: 0,
+        Focus: 0,
+        dUSDC: 0,
+        dBTC: 0,
+        dETH: 0,
+        dSOL: 0,
+        CCv1: 0,
+        CCv2: 0,
+        totalUsd: w.totalUsd,
+        isNamed: w.isNamed,
+      });
+    }
+    // desoBalances top holders not already in free-float list (by public key)
+    const extraFromDesoBalances = desoBalancesHolders.filter((h) => !ffPks.has(h.pk));
+    for (const w of extraFromDesoBalances) {
+      const deso = w.staked + w.unstaked;
+      out.push({
+        id: `account-desobalances-${w.pk}`,
         type: 'account',
         category: 'Others',
         defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
@@ -241,7 +289,6 @@ export function useTokenHoldingsTable(): {
     const othersDsol = Math.max(0, 2650 - sumDsol);
     const othersCcv1 = 0;
     const othersCcv2 = 0;
-    // DESO Unstaked (Others) = Others Total Value minus all other columns' USD contribution
     const othersOtherColsUsd =
       othersDesoStaked * p.deso +
       othersOpenfund * p.openfund +
@@ -266,34 +313,22 @@ export function useTokenHoldingsTable(): {
       othersDeth > 0 ||
       othersDsol > 0;
 
-    if (hasOthers) {
-      out.push({
-        id: 'others',
-        type: 'account',
-        category: 'Others',
-        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
-        account: 'Others',
-        DESO: othersDeso,
-        DESOStaked: othersDesoStaked,
-        DESOUnstaked: othersUnstakedDeso,
-        OpenFund: othersOpenfund,
-        Focus: othersFocus,
-        dUSDC: othersDusdc,
-        dBTC: othersDbtc,
-        dETH: othersDeth,
-        dSOL: othersDsol,
-        CCv1: othersCcv1,
-        CCv2: othersCcv2,
-        totalUsd: othersTotalUsd,
-        isNamed: true,
-      });
-    }
+    // Do NOT push an "Others" aggregate row: it would double-count. Others = top 100 + Unaccounted;
+    // we only push top 100 rows and Unaccounted so category subtotals and Total row add up.
 
-    // Unaccounted = Others total minus sum of top 100 free-float rows (named + public key)
+    // Unaccounted = Others total minus sum of free-float top 100 and desoBalances top holders (avoid double-count by pk)
     const sumFfTotalUsd = freeFloatTop100.reduce((s, w) => s + w.totalUsd, 0);
     const sumFfStaked = freeFloatTop100.reduce((s, w) => s + w.staked, 0);
-    const unaccountedTotalUsd = Math.max(0, (hasOthers ? othersTotalUsd : 0) - sumFfTotalUsd);
-    const unaccountedStaked = Math.max(0, (hasOthers ? othersDesoStaked : 0) - sumFfStaked);
+    const sumDesoBalancesTotalUsd = extraFromDesoBalances.reduce((s, w) => s + w.totalUsd, 0);
+    const sumDesoBalancesStaked = extraFromDesoBalances.reduce((s, w) => s + w.staked, 0);
+    const unaccountedTotalUsd = Math.max(
+      0,
+      (hasOthers ? othersTotalUsd : 0) - sumFfTotalUsd - sumDesoBalancesTotalUsd
+    );
+    const unaccountedStaked = Math.max(
+      0,
+      (hasOthers ? othersDesoStaked : 0) - sumFfStaked - sumDesoBalancesStaked
+    );
     // Token columns: Others minus top100 (top100 have 0 for OpenFund, Focus, dUSDC, etc.)
     const unaccountedOpenfund = hasOthers ? othersOpenfund : 0;
     const unaccountedFocus = hasOthers ? othersFocus : 0;
@@ -352,7 +387,7 @@ export function useTokenHoldingsTable(): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders]);
 
-  return { rows, prices, isLoading: walletsLoading };
+  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading };
 }

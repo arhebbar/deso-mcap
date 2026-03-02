@@ -97,6 +97,10 @@ export default function TrendCharts() {
       <div className="h-72 relative">
         {(isLoading && chartData.length === 0) ? (
           <Skeleton className="h-full w-full rounded" />
+        ) : chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+            No historical data available for this range.
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>

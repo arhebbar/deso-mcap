@@ -11,7 +11,7 @@ export type SectionFilter = 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'OT
 
 const SEGMENTS: { key: SectionFilter; label: string; color: string }[] = [
   { key: 'FOUNDATION', label: 'Foundation', color: 'hsl(280, 65%, 60%)' },
-  { key: 'AMM', label: 'AMM', color: 'hsl(38, 92%, 50%)' },
+  { key: 'AMM', label: 'AMM+Holding Accounts', color: 'hsl(38, 92%, 50%)' },
   { key: 'FOUNDER', label: 'Core Team', color: 'hsl(0, 72%, 51%)' },
   { key: 'DESO_BULL', label: 'DeSo Bulls', color: 'hsl(262, 52%, 47%)' },
   { key: 'OTHERS', label: 'Free Float', color: 'hsl(152, 69%, 45%)' },

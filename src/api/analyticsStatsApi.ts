@@ -13,8 +13,9 @@
  */
 
 import { getCachedValue, setCachedValue } from '@/utils/localCache';
+import { getGraphqlUrl } from '@/api/graphqlEndpoint';
 
-const DESO_GRAPHQL = import.meta.env.DEV ? '/deso-graphql' : '/api/deso-graphql';
+const getDesoGraphql = () => getGraphqlUrl();
 const ANALYTICS_CACHE_KEY = 'analytics-stats-cache-v1';
 const TREND_CACHE_KEY = 'analytics-trend-cache-v1';
 // Bump version whenever we change the shape or queries of the filtered counts payload.
@@ -30,6 +31,21 @@ export function getFilteredCountsCacheKey(window: TimeWindow): string {
 
 export function getFilteredCountsPrevCacheKey(window: TimeWindow): string {
   return `analytics-filtered-${window}-prev-${FILTERED_COUNTS_CACHE_VERSION}`;
+}
+
+/** Clear analytics/filtered caches so switching GraphQL provider shows fresh data. */
+export function clearGraphqlCaches(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(ANALYTICS_CACHE_KEY);
+    window.localStorage.removeItem(TREND_CACHE_KEY);
+    (['7d', '30d', '90d', '365d'] as TimeWindow[]).forEach((w) => {
+      window.localStorage.removeItem(getFilteredCountsCacheKey(w));
+      window.localStorage.removeItem(getFilteredCountsPrevCacheKey(w));
+    });
+  } catch {
+    // ignore
+  }
 }
 
 /** Raw dashboard node from GraphQL (BigInt/BigFloat are returned as strings). */
@@ -437,7 +453,7 @@ function parseNum(s: string | null | undefined): number | null {
 /** Run a single posts totalCount query; returns count or null. */
 async function runPostsCountQuery(query: string): Promise<number | null> {
   try {
-    const res = await fetch(DESO_GRAPHQL, {
+    const res = await fetch(getDesoGraphql(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -458,7 +474,7 @@ async function runPostsCountQuery(query: string): Promise<number | null> {
 /** Run a single transactions totalCount query; returns count or null. */
 async function runTransactionsCountQuery(query: string): Promise<number | null> {
   try {
-    const res = await fetch(DESO_GRAPHQL, {
+    const res = await fetch(getDesoGraphql(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -658,12 +674,12 @@ export async function fetchAnalyticsStats(): Promise<AnalyticsStats> {
 
   try {
     const [dashboardRes, accountsRes] = await Promise.all([
-      fetch(DESO_GRAPHQL, {
+      fetch(getDesoGraphql(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: DASHBOARD_METRICS_QUERY }),
       }),
-      fetch(DESO_GRAPHQL, {
+      fetch(getDesoGraphql(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: ACCOUNTS_TOTAL_QUERY }),
@@ -744,7 +760,7 @@ export function dashboardBlockHeight(dashboard: DashboardStatsNode | null): numb
 /** Fetch 30-day daily stats for the trend chart. Returns chronological (oldest first). Cached. */
 export async function fetchDailyTrend(): Promise<DailyTrendPoint[]> {
   try {
-    const res = await fetch(DESO_GRAPHQL, {
+    const res = await fetch(getDesoGraphql(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: DAILY_TREND_QUERY, variables: { first: 30 } }),

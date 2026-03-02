@@ -225,7 +225,7 @@ export function useCirculationTable(): CirculationTableData {
       else usd = (v) => v; // dUSDC 1:1
       return [
         { label: 'Foundation', amount: map.Foundation, usdValue: usd(map.Foundation) },
-        { label: 'AMM', amount: map.AMM, usdValue: usd(map.AMM) },
+        { label: 'AMM+Holding Accounts', amount: map.AMM, usdValue: usd(map.AMM) },
         { label: 'Core Team', amount: map.CoreTeam, usdValue: usd(map.CoreTeam) },
         { label: 'DeSo Bulls', amount: map.DeSoBulls, usdValue: usd(map.DeSoBulls) },
         { label: 'Others', amount: map.Others, usdValue: usd(map.Others) },
@@ -289,7 +289,7 @@ export function useCirculationTable(): CirculationTableData {
           const deso = desoPrice > 0 ? usdVal / desoPrice : 0;
           return { label: profileName, amount: deso, usdValue: usdVal };
         })
-      : [{ label: 'AMM', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
+      : [{ label: 'AMM+Holding Accounts', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
     const ccv2Deso = ccv2ByCategory.reduce((s, c) => s + c.amount, 0) || (desoPrice > 0 ? (CCV2_AMM_DESO * desoPrice) / desoPrice : CCV2_AMM_DESO);
     const ccv2Usd = ccv2ByCategory.reduce((s, c) => s + c.usdValue, 0) || CCV2_AMM_DESO * desoPrice;
 
@@ -399,14 +399,23 @@ export function useCirculationTable(): CirculationTableData {
     const dethNonFoundation = nonFoundationExcludingStaked('dETH');
     const dsolNonFoundation = nonFoundationExcludingStaked('dSOL');
 
-    // DESO - Unstaked: Others = 12.2M × DESO Price − sum(tracked totalUsd); same logic as Token Holdings
-    const sumTrackedDeso = wallets.reduce((s, w) => s + (w.balances.DESO ?? 0), 0);
+    // DESO - Unstaked Others = Market Cap (12.2M × Price) − Staked − User Project Tokens − Currency/Liquidity − (Foundation + AMM + DeSo Bulls)
     const nativeDesoByCat = byCategoryForToken('DESO');
-    const totalSupplyUsd = totalSupply * desoPrice;
-    const othersUnstakedUsd = Math.max(0, totalSupplyUsd - sumTrackedTotalUsd);
-    const othersUnstakedDeso = desoPrice > 0 ? othersUnstakedUsd / desoPrice : 0;
+    const currencyTokensDesoEquiv =
+      desoPrice > 0
+        ? (dUsdcTotal + dBtcTotal * prices.btc + dEthTotal * prices.eth + dSolTotal * prices.sol) / desoPrice
+        : 0;
+    const userProjectDeso = openfundCirculationDesoEquiv + focusDesoEquiv + ccv2Deso;
+    const trackedUnstakedDeso = nativeDesoByCat
+      .filter((c) => c.label === 'Foundation' || c.label === 'AMM+Holding Accounts' || c.label === 'DeSo Bulls')
+      .reduce((s, c) => s + c.amount, 0);
+    const othersUnstakedDeso = Math.max(
+      0,
+      totalSupply - totalStaked - userProjectDeso - currencyTokensDesoEquiv - trackedUnstakedDeso
+    );
+    const othersUnstakedUsd = othersUnstakedDeso * desoPrice;
     const nativeDesoByCatWithOthers = [
-      ...nativeDesoByCat,
+      ...nativeDesoByCat.filter((c) => c.label !== 'Others'),
       ...(othersUnstakedDeso > 0 ? [{ label: 'Others', amount: othersUnstakedDeso, usdValue: othersUnstakedUsd }] : []),
     ];
     const nativeDesoTotal = nativeDesoByCatWithOthers.reduce((s, c) => s + c.amount, 0);
