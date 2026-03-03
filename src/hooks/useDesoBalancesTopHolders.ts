@@ -11,6 +11,7 @@ import {
   fetchDesoBalancesTopHolders,
   fetchBalancesForPublicKeys,
   getStakedTotalByPublicKeys,
+  fetchUsernamesForPks,
 } from '@/api/walletApi';
 
 const FIRST = 500;
@@ -30,9 +31,10 @@ async function fetchHoldersWithBalances(): Promise<DesoBalanceHolder[]> {
   if (nodes.length === 0) return [];
 
   const pks = nodes.map((n) => n.publicKey);
-  const [balanceByPk, stakedByPk] = await Promise.all([
+  const [balanceByPk, stakedByPk, usernameByPk] = await Promise.all([
     fetchBalancesForPublicKeys(pks),
     getStakedTotalByPublicKeys(pks),
+    fetchUsernamesForPks(pks),
   ]);
 
   const desoPrice = 1; // will be overwritten by useLiveData in hook
@@ -40,13 +42,15 @@ async function fetchHoldersWithBalances(): Promise<DesoBalanceHolder[]> {
     const totalDeso = balanceByPk.get(n.publicKey) ?? n.balanceDeso;
     const staked = stakedByPk.get(n.publicKey) ?? 0;
     const unstaked = Math.max(0, totalDeso - staked);
+    const username = usernameByPk.get(n.publicKey);
+    const name = username ?? `${n.publicKey.slice(0, 8)}…`;
     return {
-      name: `${n.publicKey.slice(0, 8)}…`,
+      name,
       pk: n.publicKey,
       staked,
       unstaked,
       totalUsd: totalDeso * desoPrice,
-      isNamed: false,
+      isNamed: !!username,
     };
   });
 }

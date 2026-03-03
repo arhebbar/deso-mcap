@@ -850,23 +850,27 @@ export async function fetchBalancesForPublicKeys(
   return out;
 }
 
-/** Resolve public keys to usernames via get-users-stateless (ProfileEntryResponse.Username) */
-async function fetchUsernamesForPks(pks: string[]): Promise<Map<string, string>> {
+/** Resolve public keys to usernames via get-users-stateless (ProfileEntryResponse.Username). Exported for Token Holdings Others. Batches to avoid API limits (~100 keys/request). */
+export async function fetchUsernamesForPks(pks: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (pks.length === 0) return map;
-  try {
-    const res = (await desoPost('/get-users-stateless', {
-      PublicKeysBase58Check: pks,
-      SkipForLeaderboard: true,
-      IncludeBalance: false,
-    })) as { UserList?: Array<{ PublicKeyBase58Check?: string; ProfileEntryResponse?: { Username?: string }; Profile?: { Username?: string } }> };
-    for (const u of res.UserList ?? []) {
-      const pk = u.PublicKeyBase58Check;
-      const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
-      if (pk && username) map.set(pk, username);
+  const BATCH = 100;
+  for (let i = 0; i < pks.length; i += BATCH) {
+    const batch = pks.slice(i, i + BATCH);
+    try {
+      const res = (await desoPost('/get-users-stateless', {
+        PublicKeysBase58Check: batch,
+        SkipForLeaderboard: true,
+        IncludeBalance: false,
+      })) as { UserList?: Array<{ PublicKeyBase58Check?: string; ProfileEntryResponse?: { Username?: string }; Profile?: { Username?: string } }> };
+      for (const u of res.UserList ?? []) {
+        const pk = u.PublicKeyBase58Check;
+        const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
+        if (pk && username) map.set(pk, username);
+      }
+    } catch {
+      // ignore failed batch
     }
-  } catch {
-    // ignore
   }
   return map;
 }
