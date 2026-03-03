@@ -11,6 +11,7 @@ import { useLiveData } from './useLiveData';
 import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
+import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'DeSo Bulls' | 'Others';
 
@@ -73,6 +74,7 @@ export function useTokenHoldingsTable(): {
   const { top100: freeFloatTop100 } = useFreeFloatTop100();
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
   const { holderMap: openfundFocusByPk, isLoading: openfundFocusLoading } = useOpenfundFocusHolders();
+  const { trackedPks, isLoading: trackedPksLoading } = useTrackedPublicKeys();
 
   const prices = useMemo(
     () => ({
@@ -209,8 +211,10 @@ export function useTokenHoldingsTable(): {
     }
 
     // Top 100 free-float accounts (from Free Float table) as individual rows under Others
-    const ffPks = new Set(freeFloatTop100.map((w) => w.pk));
-    for (const w of freeFloatTop100) {
+    // Exclude Foundation/AMM/Core/DeSo Bulls to avoid double-counting (e.g. Focus_Floor_Bid)
+    const freeFloatFiltered = freeFloatTop100.filter((w) => !trackedPks.has(w.pk));
+    const ffPks = new Set(freeFloatFiltered.map((w) => w.pk));
+    for (const w of freeFloatFiltered) {
       const deso = w.staked + w.unstaked;
       const of = openfundFocusByPk.get(w.pk);
       const openfund = of?.Openfund ?? 0;
@@ -240,7 +244,9 @@ export function useTokenHoldingsTable(): {
       });
     }
     // desoBalances top holders not already in free-float list (by public key)
-    const extraFromDesoBalances = desoBalancesHolders.filter((h) => !ffPks.has(h.pk));
+    // Exclude Foundation/AMM/Core/DeSo Bulls to avoid double-counting
+    const desoBalancesFiltered = desoBalancesHolders.filter((h) => !trackedPks.has(h.pk));
+    const extraFromDesoBalances = desoBalancesFiltered.filter((h) => !ffPks.has(h.pk));
     for (const w of extraFromDesoBalances) {
       const deso = w.staked + w.unstaked;
       const of = openfundFocusByPk.get(w.pk);
@@ -333,8 +339,8 @@ export function useTokenHoldingsTable(): {
     // we only push top 100 rows and Unaccounted so category subtotals and Total row add up.
 
     // Unaccounted = Others total minus sum of free-float top 100 and desoBalances top holders (avoid double-count by pk)
-    const sumFfTotalUsd = freeFloatTop100.reduce((s, w) => s + w.totalUsd, 0);
-    const sumFfStaked = freeFloatTop100.reduce((s, w) => s + w.staked, 0);
+    const sumFfTotalUsd = freeFloatFiltered.reduce((s, w) => s + w.totalUsd, 0);
+    const sumFfStaked = freeFloatFiltered.reduce((s, w) => s + w.staked, 0);
     const sumDesoBalancesTotalUsd = extraFromDesoBalances.reduce((s, w) => s + w.totalUsd, 0);
     const sumDesoBalancesStaked = extraFromDesoBalances.reduce((s, w) => s + w.staked, 0);
     const unaccountedTotalUsd = Math.max(
@@ -403,7 +409,7 @@ export function useTokenHoldingsTable(): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk, trackedPks]);
 
-  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || openfundFocusLoading };
+  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || openfundFocusLoading || trackedPksLoading };
 }

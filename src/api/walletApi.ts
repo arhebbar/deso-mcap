@@ -314,6 +314,32 @@ async function desoPost(endpoint: string, body: object): Promise<unknown> {
   return res.json();
 }
 
+/** Public keys of Foundation, AMM, Core Team, DeSo Bulls. Used to exclude from Others (avoid double-count). */
+export async function fetchTrackedPublicKeys(): Promise<Set<string>> {
+  const pks = new Set<string>();
+  for (const c of WALLET_CONFIG) {
+    if (c.publicKeyBase58Check) {
+      pks.add(c.publicKeyBase58Check);
+    }
+  }
+  const usernameConfigs = WALLET_CONFIG.filter((c) => !c.publicKeyBase58Check);
+  const results = await runBatched(usernameConfigs, 5, async (config) => {
+    try {
+      const res = (await desoPost('/get-single-profile', {
+        Username: config.username,
+      })) as { Profile?: { PublicKeyBase58Check?: string } };
+      const pk = res.Profile?.PublicKeyBase58Check;
+      return pk ? { pk } : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  for (const r of results.values()) {
+    if (r?.pk) pks.add(r.pk);
+  }
+  return pks;
+}
+
 const STAKE_ENTRIES_QUERY = `
   query GetStakeEntries($pks: [String!]!, $after: Cursor) {
     stakeEntries(first: 100, filter: { staker: { publicKey: { in: $pks } } }, after: $after) {
