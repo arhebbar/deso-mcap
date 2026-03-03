@@ -145,7 +145,8 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     ? ([...BASE_COLS.slice(0, 2), ...UNSTAKED_SUB_COLS] as const)
     : BASE_COLS;
 
-  const getColLabel = (col: string) => TOKEN_COL_LABELS[col] ?? col;
+  const getColLabel = (col: string) =>
+    unstakedExpanded && col === 'DESOUnstaked' ? 'DESO' : (TOKEN_COL_LABELS[col] ?? col);
 
   /** Total = DESO Staked + CCv1 + DeSo Unstaked (always) */
   const getTotalForDisplay = useCallback(
@@ -460,7 +461,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                         <Plus className="h-3 w-3" />
                       </button>
                     )}
-                    {col === 'OpenFund' && unstakedExpanded && (
+                    {col === 'DESOUnstaked' && unstakedExpanded && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setUnstakedExpanded(false); }}
@@ -559,6 +560,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                             <td className="py-1.5 px-3 text-muted-foreground pl-6">{row.category ?? '–'}</td>
                             <AccountCell
                               row={row}
+                              displayOverride={row.account === 'Unaccounted' ? 'Others-Unaccounted' : undefined}
                             />
                             {displayCols.map((col) => (
                               <td key={col} className="text-right py-1.5 px-3">
@@ -600,6 +602,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     <td className="py-1.5 px-3 text-muted-foreground">{row.category ?? '–'}</td>
                     <AccountCell
                       row={row}
+                      displayOverride={row.account === 'Unaccounted' ? 'Others-Unaccounted' : undefined}
                     />
                           {displayCols.map((col) => (
                       <td key={col} className="text-right py-1.5 px-3">
