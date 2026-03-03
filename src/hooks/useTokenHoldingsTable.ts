@@ -10,6 +10,7 @@ import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
 import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
+import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'DeSo Bulls' | 'Others';
 
@@ -51,6 +52,8 @@ export interface TokenHoldingsRow {
   highlight?: TokenHighlight;
   /** True if account has a display name (tracked or chain username); used for "Named accounts only" filter */
   isNamed?: boolean;
+  /** Full public key (base58) when account is a truncated pk; for copy + explorer link */
+  publicKey?: string;
 }
 
 const CATEGORY_BY_CLASS: Record<string, HoldingsCategory> = {
@@ -69,6 +72,7 @@ export function useTokenHoldingsTable(): {
   const { marketData } = useLiveData();
   const { top100: freeFloatTop100 } = useFreeFloatTop100();
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
+  const { holderMap: openfundFocusByPk, isLoading: openfundFocusLoading } = useOpenfundFocusHolders();
 
   const prices = useMemo(
     () => ({
@@ -208,24 +212,30 @@ export function useTokenHoldingsTable(): {
     const ffPks = new Set(freeFloatTop100.map((w) => w.pk));
     for (const w of freeFloatTop100) {
       const deso = w.staked + w.unstaked;
+      const of = openfundFocusByPk.get(w.pk);
+      const openfund = of?.Openfund ?? 0;
+      const focus = of?.Focus ?? 0;
+      const totalUsd =
+        w.totalUsd + openfund * p.openfund + focus * p.focus;
       out.push({
         id: `account-freefloat-${w.pk}`,
         type: 'account',
         category: 'Others',
         defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
         account: w.name,
+        publicKey: w.pk,
         DESO: deso,
         DESOStaked: w.staked,
         DESOUnstaked: w.unstaked,
-        OpenFund: 0,
-        Focus: 0,
+        OpenFund: openfund,
+        Focus: focus,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
         dSOL: 0,
         CCv1: 0,
         CCv2: 0,
-        totalUsd: w.totalUsd,
+        totalUsd,
         isNamed: w.isNamed,
       });
     }
@@ -233,24 +243,30 @@ export function useTokenHoldingsTable(): {
     const extraFromDesoBalances = desoBalancesHolders.filter((h) => !ffPks.has(h.pk));
     for (const w of extraFromDesoBalances) {
       const deso = w.staked + w.unstaked;
+      const of = openfundFocusByPk.get(w.pk);
+      const openfund = of?.Openfund ?? 0;
+      const focus = of?.Focus ?? 0;
+      const totalUsd =
+        w.totalUsd + openfund * p.openfund + focus * p.focus;
       out.push({
         id: `account-desobalances-${w.pk}`,
         type: 'account',
         category: 'Others',
         defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
         account: w.name,
+        publicKey: w.pk,
         DESO: deso,
         DESOStaked: w.staked,
         DESOUnstaked: w.unstaked,
-        OpenFund: 0,
-        Focus: 0,
+        OpenFund: openfund,
+        Focus: focus,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
         dSOL: 0,
         CCv1: 0,
         CCv2: 0,
-        totalUsd: w.totalUsd,
+        totalUsd,
         isNamed: w.isNamed,
       });
     }
@@ -387,7 +403,7 @@ export function useTokenHoldingsTable(): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk]);
 
-  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading };
+  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || openfundFocusLoading };
 }

@@ -16,7 +16,7 @@ const ROWS_PER_PAGE = 50;
 export default function CCv1HoldingsTable() {
   const { marketData } = useLiveData();
   const desoPrice = marketData.desoPrice;
-  const { rows, isLoading, isBackgroundLoading, totalDesoLocked, totalUsd, error } = useCCv1HoldingsTable();
+  const { rows, isLoading, isBackgroundLoading, totalDesoLocked, totalUsd, error, jobMeta } = useCCv1HoldingsTable();
   const [page, setPage] = useState(0);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
@@ -70,10 +70,16 @@ export default function CCv1HoldingsTable() {
         <div>
           <h2 className="text-lg font-semibold">DESO locked in CCv1</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Top creator coins by DESO locked (cached, up to 10K)
+            Top creator coins by DESO locked (cached, up to 25K)
             {isBackgroundLoading && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                 <Loader2 className="h-3 w-3 animate-spin" /> Loading more…
+              </span>
+            )}
+            {jobMeta && !isBackgroundLoading && (
+              <span className="ml-2 text-muted-foreground" title={jobMeta.lastPageInfo ? `lastPageInfo: ${JSON.stringify(jobMeta.lastPageInfo)}` : undefined}>
+                Job stopped: {jobMeta.stoppedReason}
+                {jobMeta.lastPageInfo && ` (hasNextPage: ${jobMeta.lastPageInfo.hasNextPage})`}
               </span>
             )}
           </p>

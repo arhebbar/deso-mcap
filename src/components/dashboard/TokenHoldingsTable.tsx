@@ -5,10 +5,11 @@
  * Bar filter (expandedSectionOnly): in default order expands only that section; in other sort filters to that category.
  */
 
-import { useMemo, useState, useEffect, Fragment } from 'react';
+import { useMemo, useState, useEffect, Fragment, useCallback } from 'react';
 import { useTokenHoldingsTable, type TokenHoldingsRow, type HoldingsCategory } from '@/hooks/useTokenHoldingsTable';
+import { useCCv1NetworkTotal } from '@/hooks/useCCv1NetworkTotal';
 import { formatUsd, formatNumberShort } from '@/lib/formatters';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Copy } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
@@ -31,8 +32,48 @@ function categoryDisplayName(cat: HoldingsCategory): string {
   return cat === 'Others' ? FREE_FLOAT_LABEL : cat;
 }
 
+function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {
+  const account = displayOverride ?? row.account ?? '–';
+  const pk = row.publicKey;
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (pk) navigator.clipboard?.writeText(pk);
+  };
+
+  if (pk) {
+    return (
+      <td className="py-1.5 px-3 font-medium">
+        <span className="inline-flex items-center gap-1.5 min-w-0">
+          <a
+            href={`https://explorer.deso.com/u/${encodeURIComponent(pk)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-mono truncate"
+          >
+            {account}
+          </a>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            title="Copy public key"
+            aria-label="Copy public key"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      </td>
+    );
+  }
+
+  return <td className="py-1.5 px-3 font-medium">{account}</td>;
+}
+
 // Order: DESO Staked, OpenFund, Focus, CCv1, CCv2, dUSDC, dBTC, dETH, dSOL, DESO Unstaked (no DESO Total; row total in Total column)
 const TOKEN_COLS = ['DESOStaked', 'OpenFund', 'Focus', 'CCv1', 'CCv2', 'dUSDC', 'dBTC', 'dETH', 'dSOL', 'DESOUnstaked'] as const;
+type AltCol = 'DESOStaked' | 'CCv1' | 'DESOUnstaked';
 type TokenCol = (typeof TOKEN_COLS)[number];
 
 const TOKEN_COL_LABELS: Record<TokenCol, string> = {
@@ -48,12 +89,21 @@ const TOKEN_COL_LABELS: Record<TokenCol, string> = {
   DESOUnstaked: 'DESO Unstaked',
 };
 
-function getSortKey(row: TokenHoldingsRow, col: TokenCol | 'category' | 'account' | 'total' | 'defaultOrder'): number | string {
+const ALT_COL_LABELS: Record<AltCol, string> = {
+  DESOStaked: 'DESO Staked',
+  CCv1: 'CCv1',
+  DESOUnstaked: 'DESO Unstaked',
+};
+
+function getSortKey(
+  row: TokenHoldingsRow,
+  col: TokenCol | AltCol | 'category' | 'account' | 'total' | 'defaultOrder'
+): number | string {
   if (col === 'defaultOrder') return row.defaultOrder ?? 999;
   if (col === 'category') return row.category ?? '';
   if (col === 'account') return row.account ?? '';
   if (col === 'total') return row.totalUsd ?? 0;
-  const v = row[col];
+  const v = row[col as TokenCol];
   return typeof v === 'number' ? v : 0;
 }
 
@@ -64,15 +114,37 @@ interface TokenHoldingsTableProps {
 
 type ValueMode = 'usd' | 'deso' | 'tokens';
 
+type ViewMode = 'standard' | 'deso-backed';
+
+const ALT_COLS: AltCol[] = ['DESOStaked', 'CCv1', 'DESOUnstaked'];
+
 export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHoldingsTableProps = {}) {
   const { rows, prices, isLoading } = useTokenHoldingsTable();
+  const { ccv1NetworkTotalDeso } = useCCv1NetworkTotal();
+  const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [valueMode, setValueMode] = useState<ValueMode>('usd'); // Value in US$ | Value in DESOs | # of Tokens
-  const [sortCol, setSortCol] = useState<TokenCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
+  const [sortCol, setSortCol] = useState<TokenCol | AltCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [useDefaultOrder, setUseDefaultOrder] = useState(true);
   const [namedOnly, setNamedOnly] = useState(false);
 
   const categoryFromFilter = expandedSectionOnly != null ? SECTION_FILTER_TO_CATEGORY[expandedSectionOnly] : undefined;
+  const displayCols = viewMode === 'deso-backed' ? ALT_COLS : ([...TOKEN_COLS] as (TokenCol | AltCol)[]);
+  const getColLabel = (col: TokenCol | AltCol) =>
+    viewMode === 'deso-backed' ? ALT_COL_LABELS[col as AltCol] : TOKEN_COL_LABELS[col as TokenCol];
+
+  /** In DESO-backed view, Total = Staked + CCv1 + Unstaked only (avoids double-counting OpenFund/Focus etc.) */
+  const getTotalForDisplay = useCallback(
+    (row: TokenHoldingsRow): number | null | undefined => {
+      if (viewMode === 'standard') return row.totalUsd;
+      const staked = row.DESOStaked ?? 0;
+      const ccv1 = row.type === 'issued' ? (ccv1NetworkTotalDeso ?? 0) : (row.CCv1 ?? 0);
+      const unstaked = row.DESOUnstaked ?? 0;
+      const totalDeso = staked + ccv1 + unstaked;
+      return totalDeso * prices.deso;
+    },
+    [viewMode, prices.deso, ccv1NetworkTotalDeso]
+  );
 
   const [openSections, setOpenSections] = useState<Record<HoldingsCategory, boolean>>(() =>
     CATEGORY_ORDER.reduce((acc, cat) => ({ ...acc, [cat]: false }), {} as Record<HoldingsCategory, boolean>)
@@ -103,14 +175,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         const orderA = getSortKey(a, 'defaultOrder') as number;
         const orderB = getSortKey(b, 'defaultOrder') as number;
         if (orderA !== orderB) return orderA - orderB;
-        const totalA = (a.totalUsd ?? 0);
-        const totalB = (b.totalUsd ?? 0);
+        const totalA = getTotalForDisplay(a) ?? 0;
+        const totalB = getTotalForDisplay(b) ?? 0;
         return totalB - totalA;
       });
     } else if (sortCol) {
       sorted.sort((a, b) => {
-        const ka = getSortKey(a, sortCol);
-        const kb = getSortKey(b, sortCol);
+        const ka = sortCol === 'total' ? (getTotalForDisplay(a) ?? 0) : getSortKey(a, sortCol);
+        const kb = sortCol === 'total' ? (getTotalForDisplay(b) ?? 0) : getSortKey(b, sortCol);
         const cmp = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
         return sortDir === 'asc' ? cmp : -cmp;
       });
@@ -119,7 +191,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       sorted = sorted.filter((r) => r.category === categoryFromFilter);
     }
     return sorted;
-  }, [dataRows, sortCol, sortDir, useDefaultOrder, categoryFromFilter]);
+  }, [dataRows, sortCol, sortDir, useDefaultOrder, categoryFromFilter, getTotalForDisplay]);
 
   const fullSortedForGrouping = useMemo(() => {
     const sorted = [...dataRows];
@@ -129,16 +201,16 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         const orderB = getSortKey(b, 'defaultOrder') as number;
         if (orderA !== orderB) return orderA - orderB;
         if (sortCol) {
-          const ka = getSortKey(a, sortCol);
-          const kb = getSortKey(b, sortCol);
+          const ka = sortCol === 'total' ? (getTotalForDisplay(a) ?? 0) : getSortKey(a, sortCol);
+          const kb = sortCol === 'total' ? (getTotalForDisplay(b) ?? 0) : getSortKey(b, sortCol);
           const cmp = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
           return sortDir === 'asc' ? cmp : -cmp;
         }
-        return (b.totalUsd ?? 0) - (a.totalUsd ?? 0);
+        return (getTotalForDisplay(b) ?? 0) - (getTotalForDisplay(a) ?? 0);
       });
     }
     return sorted;
-  }, [dataRows, useDefaultOrder, sortCol, sortDir]);
+  }, [dataRows, useDefaultOrder, sortCol, sortDir, getTotalForDisplay]);
 
   const rowsByCategory = useMemo(() => {
     const map = new Map<HoldingsCategory, TokenHoldingsRow[]>();
@@ -177,7 +249,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     return out;
   }, [rowsByCategory]);
 
-  const handleSort = (col: TokenCol | 'category' | 'account' | 'total') => {
+  const handleSort = (col: TokenCol | AltCol | 'category' | 'account' | 'total') => {
     setUseDefaultOrder(false);
     if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else {
@@ -198,8 +270,12 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     return '–';
   };
 
-  const renderCell = (row: TokenHoldingsRow, col: TokenCol) => {
-    const v = row[col];
+  const renderCell = (row: TokenHoldingsRow, col: TokenCol | AltCol) => {
+    // DESO-backed Issued row: CCv1 uses network total from CC Locked
+    const v =
+      viewMode === 'deso-backed' && row.type === 'issued' && col === 'CCv1'
+        ? (ccv1NetworkTotalDeso ?? row.CCv1 ?? 0)
+        : row[col as TokenCol];
 
     // Issued row: show as # (B/M/K, no $)
     if (row.type === 'issued') {
@@ -272,7 +348,9 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         <div>
           <h2 className="text-lg font-semibold">Token Holdings</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Sort by any column to see top holders by category (Foundation, Core Team, AMMs, DeSo Bulls).
+            {viewMode === 'deso-backed'
+              ? 'DESO-backed: Staked, CCv1, and Unstaked (12.2M). Openfund/Focus etc. are DeSo-backed.'
+              : 'Sort by any column to see top holders by category (Foundation, Core Team, AMMs, DeSo Bulls).'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -281,6 +359,30 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
             <Label htmlFor="token-holdings-named-only" className="text-sm cursor-pointer whitespace-nowrap">
               Named accounts only
             </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">View:</span>
+            <button
+              onClick={() => setViewMode('standard')}
+              className={`px-3 py-1 text-xs rounded border ${
+                viewMode === 'standard'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+            >
+              Token breakdown
+            </button>
+            <button
+              onClick={() => setViewMode('deso-backed')}
+              className={`px-3 py-1 text-xs rounded border ${
+                viewMode === 'deso-backed'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+              title="Staked, CCv1, and Unstaked only; Openfund/Focus etc. are DeSo-backed"
+            >
+              DESO-backed
+            </button>
           </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -342,13 +444,13 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
               >
                 Accounts {sortCol === 'account' && !useDefaultOrder && (sortDir === 'asc' ? '↑' : '↓')}
               </th>
-              {TOKEN_COLS.map((col) => (
+              {displayCols.map((col) => (
                 <th
                   key={col}
                   className="text-right py-2 px-3 cursor-pointer hover:bg-muted/80 whitespace-nowrap"
                   onClick={() => handleSort(col)}
                 >
-                  {TOKEN_COL_LABELS[col]} {sortCol === col && !useDefaultOrder && (sortDir === 'asc' ? '↑' : '↓')}
+                  {getColLabel(col)} {sortCol === col && !useDefaultOrder && (sortDir === 'asc' ? '↑' : '↓')}
                 </th>
               ))}
               <th
@@ -364,14 +466,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                 <tr className="border-b border-border bg-muted/40 font-medium">
                   <td className="py-1.5 px-3 w-12" />
                   <td className="py-1.5 px-3" />
-                  <td className="py-1.5 px-3">{totalRow.account}</td>
-                  {TOKEN_COLS.map((col) => (
+                  <AccountCell row={totalRow} />
+                          {displayCols.map((col) => (
                     <td key={col} className="text-right py-1.5 px-3">
                       {renderCell(totalRow, col)}
                     </td>
                   ))}
                   <td className="text-right py-1.5 px-3">
-                    {formatTotal(totalRow.totalUsd)}
+                    {formatTotal(getTotalForDisplay(totalRow))}
                   </td>
                 </tr>
               );
@@ -382,14 +484,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
               <tr key={row.id} className="border-b border-border bg-muted/30">
                 <td className="py-1.5 px-3">{idx + 1}</td>
                 <td className="py-1.5 px-3" />
-                <td className="py-1.5 px-3 font-medium">{row.account}</td>
-                {TOKEN_COLS.map((col) => (
+                <AccountCell row={row} />
+                          {displayCols.map((col) => (
                   <td key={col} className="text-right py-1.5 px-3">
                     {renderCell(row, col)}
                   </td>
                 ))}
                 <td className="text-right py-1.5 px-3">
-                  {(row.type === 'issued' || row.type === 'heldByIssuer') && row.totalUsd != null ? formatTotal(row.totalUsd) : '–'}
+                  {(row.type === 'issued' || row.type === 'heldByIssuer') && getTotalForDisplay(row) != null ? formatTotal(getTotalForDisplay(row)) : '–'}
                 </td>
               </tr>
             ))}
@@ -398,7 +500,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   const open = openSections[cat];
                   const accountRows = rowsByCategory.get(cat) ?? [];
                   const sub = categorySubtotals[cat];
-                  const subTotalUsd = sub?.totalUsd ?? 0;
+                  const subTotalUsd = sub ? (getTotalForDisplay(sub) ?? 0) : 0;
                   return (
                     <Fragment key={cat}>
                       <tr
@@ -413,7 +515,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                           </span>
                         </td>
                         <td className="py-1.5 px-3" />
-                        {TOKEN_COLS.map((col) => (
+                        {displayCols.map((col) => (
                           <td key={col} className="text-right py-1.5 px-3">
                             {sub ? renderCell(sub, col) : '–'}
                           </td>
@@ -433,14 +535,17 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                           >
                             <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
                             <td className="py-1.5 px-3 text-muted-foreground pl-6">{row.category ?? '–'}</td>
-                            <td className="py-1.5 px-3 font-medium">{row.account ?? '–'}</td>
-                            {TOKEN_COLS.map((col) => (
+                            <AccountCell
+                              row={row}
+                              displayOverride={viewMode === 'deso-backed' && row.account === 'Unaccounted' ? 'Others-Unaccounted' : undefined}
+                            />
+                            {displayCols.map((col) => (
                               <td key={col} className="text-right py-1.5 px-3">
                                 {renderCell(row, col)}
                               </td>
                             ))}
                             <td className="text-right py-1.5 px-3">
-                              {formatTotal(row.totalUsd)}
+                              {formatTotal(getTotalForDisplay(row))}
                             </td>
                           </tr>
                         ))}
@@ -448,14 +553,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                         <tr key={`sub-${cat}`} className="border-b border-border bg-muted/30 font-medium">
                           <td className="py-1.5 px-3" />
                           <td className="py-1.5 px-3" />
-                          <td className="py-1.5 px-3">{sub.account}</td>
-                          {TOKEN_COLS.map((col) => (
+                          <AccountCell row={sub} />
+                          {displayCols.map((col) => (
                             <td key={col} className="text-right py-1.5 px-3">
                               {renderCell(sub, col)}
                             </td>
                           ))}
                           <td className="text-right py-1.5 px-3">
-                            {formatTotal(sub.totalUsd)}
+                            {formatTotal(getTotalForDisplay(sub))}
                           </td>
                         </tr>
                       )}
@@ -472,14 +577,17 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   >
                     <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
                     <td className="py-1.5 px-3 text-muted-foreground">{row.category ?? '–'}</td>
-                    <td className="py-1.5 px-3 font-medium">{row.account ?? '–'}</td>
-                    {TOKEN_COLS.map((col) => (
+                    <AccountCell
+                      row={row}
+                      displayOverride={viewMode === 'deso-backed' && row.account === 'Unaccounted' ? 'Others-Unaccounted' : undefined}
+                    />
+                          {displayCols.map((col) => (
                       <td key={col} className="text-right py-1.5 px-3">
                         {renderCell(row, col)}
                       </td>
                     ))}
                     <td className="text-right py-1.5 px-3">
-                      {formatTotal(row.totalUsd)}
+                      {formatTotal(getTotalForDisplay(row))}
                     </td>
                   </tr>
                 ))}
@@ -487,14 +595,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
               <tr key={row.id} className="border-b border-border bg-muted/30 font-medium">
                 <td className="py-1.5 px-3" />
                 <td className="py-1.5 px-3" />
-                <td className="py-1.5 px-3">{row.account}</td>
-                {TOKEN_COLS.map((col) => (
+                <AccountCell row={row} />
+                          {displayCols.map((col) => (
                   <td key={col} className="text-right py-1.5 px-3">
                     {renderCell(row, col)}
                   </td>
                 ))}
                 <td className="text-right py-1.5 px-3">
-                  {formatTotal(row.totalUsd)}
+                  {formatTotal(getTotalForDisplay(row))}
                 </td>
               </tr>
             ))}

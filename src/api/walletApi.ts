@@ -1149,6 +1149,33 @@ function parseDaoBalance(entry: { BalanceNanos?: number; BalanceNanosUint256?: s
   return 0;
 }
 
+/** Openfund + Focus balances per holder PK. Used by Token Holdings Others rows. */
+export interface OpenfundFocusByPk {
+  Openfund: number;
+  Focus: number;
+}
+
+/**
+ * Fetch Openfund and Focus holder maps, return combined map of pk -> {Openfund, Focus}.
+ * Used by Token Holdings to show Openfund/Focus for Others (free-float, desoBalances) rows.
+ */
+export async function fetchOpenfundFocusHolderMap(): Promise<Map<string, OpenfundFocusByPk>> {
+  const [openfundHolders, focusHolders] = await Promise.all([
+    fetchTokenHolders('openfund', 'Openfund'),
+    fetchTokenHolders('focus', 'Focus'),
+  ]);
+  const out = new Map<string, OpenfundFocusByPk>();
+  const allPks = new Set([...openfundHolders.keys(), ...focusHolders.keys()]);
+  for (const pk of allPks) {
+    const openfund = openfundHolders.get(pk) ?? 0;
+    const focus = focusHolders.get(pk) ?? 0;
+    if (openfund > 0 || focus > 0) {
+      out.set(pk, { Openfund: openfund, Focus: focus });
+    }
+  }
+  return out;
+}
+
 /** Run up to N promises at a time */
 async function runBatched<T, R>(
   items: T[],

@@ -11,6 +11,7 @@ import {
   getCCv1HoldingsTableRows,
   setCCv1HoldingsTableCache,
   appendCCv1HoldingsTableCache,
+  recordCCv1HoldingsJobFinished,
   subscribeCCv1HoldingsTableCache,
   MAX_ROWS,
 } from '@/lib/ccv1HoldingsTableCache';
@@ -26,19 +27,34 @@ export function useCCv1HoldingsTable(): {
   totalDesoLocked: number;
   totalUsd: number;
   error: Error | null;
+  jobMeta: { stoppedReason?: string; lastPageInfo?: { hasNextPage: boolean; endCursor: string | null }; stoppedAt?: number } | null;
 } {
   const { marketData } = useLiveData();
   const [rows, setRows] = useState<CCv1HoldingRow[]>(() => getCCv1HoldingsTableRows());
   const [isLoading, setIsLoading] = useState<boolean>(() => rows.length === 0);
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [jobMeta, setJobMeta] = useState<{
+    stoppedReason?: string;
+    lastPageInfo?: { hasNextPage: boolean; endCursor: string | null };
+    stoppedAt?: number;
+  } | null>(() => {
+    const c = getCCv1HoldingsTableCache();
+    return c?.stoppedReason != null ? { stoppedReason: c.stoppedReason, lastPageInfo: c.lastPageInfo, stoppedAt: c.stoppedAt } : null;
+  });
   const jobRunning = useRef(false);
   const jobStarted = useRef(false);
 
-  // Subscribe to cache updates (e.g. background job appending)
+  // Subscribe to cache updates (e.g. background job appending or job finished)
   useEffect(() => {
     const unsub = subscribeCCv1HoldingsTableCache(() => {
       setRows(getCCv1HoldingsTableRows());
+      const c = getCCv1HoldingsTableCache();
+      setJobMeta(
+        c?.stoppedReason != null
+          ? { stoppedReason: c.stoppedReason, lastPageInfo: c.lastPageInfo, stoppedAt: c.stoppedAt }
+          : null
+      );
     });
     return unsub;
   }, []);
@@ -56,6 +72,8 @@ export function useCCv1HoldingsTable(): {
         const { rows: pageRows, hasNextPage, endCursor } = await fetchCCv1HoldingsPage(PAGE_SIZE, null);
         if (cancelled) return;
         setCCv1HoldingsTableCache(pageRows, hasNextPage ? endCursor : null);
+        if (!hasNextPage)
+          recordCCv1HoldingsJobFinished('no_more_pages', { hasNextPage, endCursor });
         setRows(getCCv1HoldingsTableRows());
         setError(null);
       } catch (e) {
@@ -77,9 +95,14 @@ export function useCCv1HoldingsTable(): {
     jobStarted.current = true;
 
     const run = async () => {
+      let lastPageInfo: { hasNextPage: boolean; endCursor: string | null } | undefined;
       while (true) {
         const cache = getCCv1HoldingsTableCache();
-        if (!cache || cache.rows.length >= MAX_ROWS || !cache.nextCursor) break;
+        if (!cache || !cache.nextCursor) break;
+        if (cache.rows.length >= MAX_ROWS) {
+          recordCCv1HoldingsJobFinished('max_rows_reached', lastPageInfo);
+          break;
+        }
         jobRunning.current = true;
         setIsBackgroundLoading(true);
         try {
@@ -88,9 +111,14 @@ export function useCCv1HoldingsTable(): {
             PAGE_SIZE,
             cache.nextCursor
           );
+          lastPageInfo = { hasNextPage, endCursor };
           appendCCv1HoldingsTableCache(pageRows, hasNextPage ? endCursor : null);
-          if (pageRows.length === 0 || !hasNextPage) break;
+          if (pageRows.length === 0 || !hasNextPage) {
+            recordCCv1HoldingsJobFinished('no_more_pages', lastPageInfo);
+            break;
+          }
         } catch {
+          recordCCv1HoldingsJobFinished('error', lastPageInfo);
           break;
         } finally {
           jobRunning.current = false;
@@ -116,5 +144,6 @@ export function useCCv1HoldingsTable(): {
     totalDesoLocked: totals.totalDesoLocked,
     totalUsd: totals.totalUsd,
     error,
+    jobMeta,
   };
 }

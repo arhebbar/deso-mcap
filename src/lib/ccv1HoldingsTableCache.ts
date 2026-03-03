@@ -9,10 +9,23 @@ const CACHE_KEY = 'deso-ccv1-holdings-table';
 export const MAX_ROWS = 25_000;
 export const CCV1_HOLDINGS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 
+export interface CCv1HoldingsPageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+export type CCv1HoldingsStoppedReason = 'no_more_pages' | 'max_rows_reached' | 'error';
+
 export interface CachedCCv1Holdings {
   rows: CCv1HoldingRow[];
   nextCursor: string | null;
   timestamp: number;
+  /** Set when background job finishes – why it stopped pulling. */
+  stoppedReason?: CCv1HoldingsStoppedReason;
+  /** Set when job finishes – last pageInfo from GraphQL (hasNextPage, endCursor). */
+  lastPageInfo?: CCv1HoldingsPageInfo;
+  /** Timestamp when job stopped. */
+  stoppedAt?: number;
 }
 
 const listeners = new Set<() => void>();
@@ -32,6 +45,9 @@ export function getCCv1HoldingsTableCache(): CachedCCv1Holdings | null {
       rows: parsed.rows,
       nextCursor: parsed.nextCursor ?? null,
       timestamp: typeof parsed.timestamp === 'number' ? parsed.timestamp : 0,
+      stoppedReason: parsed.stoppedReason,
+      lastPageInfo: parsed.lastPageInfo,
+      stoppedAt: parsed.stoppedAt,
     };
   } catch {
     return null;
@@ -44,13 +60,17 @@ export function getCCv1HoldingsTableRows(): CCv1HoldingRow[] {
   return c?.rows ?? [];
 }
 
-/** Replace full cache (e.g. initial load). Notifies subscribers. */
+/** Replace full cache (e.g. initial load). Preserves stoppedReason/lastPageInfo/stoppedAt only when nextCursor is null (job finished). */
 export function setCCv1HoldingsTableCache(rows: CCv1HoldingRow[], nextCursor: string | null = null): void {
   try {
+    const existing = getCCv1HoldingsTableCache();
     const payload: CachedCCv1Holdings = {
       rows,
       nextCursor,
       timestamp: Date.now(),
+      ...(nextCursor === null && existing
+        ? { stoppedReason: existing.stoppedReason, lastPageInfo: existing.lastPageInfo, stoppedAt: existing.stoppedAt }
+        : {}),
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
     notifyListeners();
@@ -68,6 +88,27 @@ export function appendCCv1HoldingsTableCache(
   const rows = c ? [...c.rows, ...newRows] : newRows;
   const capped = rows.slice(0, MAX_ROWS);
   setCCv1HoldingsTableCache(capped, nextCursor);
+}
+
+/** Record why the background job stopped and final pageInfo. Notifies subscribers. */
+export function recordCCv1HoldingsJobFinished(
+  reason: CCv1HoldingsStoppedReason,
+  lastPageInfo?: CCv1HoldingsPageInfo
+): void {
+  try {
+    const c = getCCv1HoldingsTableCache();
+    if (!c) return;
+    const payload: CachedCCv1Holdings = {
+      ...c,
+      stoppedReason: reason,
+      lastPageInfo,
+      stoppedAt: Date.now(),
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    notifyListeners();
+  } catch {
+    // localStorage may be full
+  }
 }
 
 /** Subscribe to cache updates (e.g. when background job appends). Returns unsubscribe. */
