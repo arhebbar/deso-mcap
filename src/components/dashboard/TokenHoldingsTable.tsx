@@ -124,11 +124,11 @@ interface TokenHoldingsTableProps {
 type ValueMode = 'usd' | 'deso' | 'tokens';
 
 export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHoldingsTableProps = {}) {
-  const { rows, prices, isLoading } = useTokenHoldingsTable();
+  const [desoOnlyView, setDesoOnlyView] = useState(false);
+  const { rows, prices, isLoading } = useTokenHoldingsTable(desoOnlyView);
   const { totalDesoLocked: ccv1TableTotalDeso } = useCCv1HoldingsTable();
   const [valueMode, setValueMode] = useState<ValueMode>('usd'); // Value in US$ | Value in DESOs | # of Tokens
   const [unstakedExpanded, setUnstakedExpanded] = useState(false);
-  const [desoOnlyView, setDesoOnlyView] = useState(false);
   const [sortCol, setSortCol] = useState<TokenCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [useDefaultOrder, setUseDefaultOrder] = useState(true);
@@ -530,7 +530,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                 </th>
               ))}
               <th
-                className="text-right py-2 px-3 cursor-pointer hover:bg-muted/80"
+                className="text-right py-2 px-3 cursor-pointer hover:bg-muted/80 min-w-[140px]"
                 onClick={() => handleSort('total')}
               >
                 Total {sortCol === 'total' && !useDefaultOrder && (sortDir === 'asc' ? '↑' : '↓')}
@@ -548,7 +548,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                       {renderCell(totalRow, col)}
                     </td>
                   ))}
-                  <td className="text-right py-1.5 px-3">
+                  <td className="text-right py-1.5 px-3 min-w-[140px]">
                     {formatTotalWithPct(getTotalForDisplay(totalRow), true)}
                   </td>
                 </tr>
@@ -566,7 +566,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     {renderCell(row, col)}
                   </td>
                 ))}
-                <td className="text-right py-1.5 px-3">
+                <td className="text-right py-1.5 px-3 min-w-[140px]">
                   {(row.type === 'issued' || row.type === 'heldByIssuer') && getTotalForDisplay(row) != null ? formatTotalWithPct(getTotalForDisplay(row), true) : '–'}
                 </td>
               </tr>
@@ -596,7 +596,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                             {sub ? renderCell(sub, col) : '–'}
                           </td>
                         ))}
-                        <td className="text-right py-1.5 px-3 font-medium">
+                        <td className="text-right py-1.5 px-3 font-medium min-w-[140px]">
                           {formatTotalWithPct(subTotalUsd, true)}
                         </td>
                       </tr>
@@ -620,7 +620,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                                 {renderCell(row, col)}
                               </td>
                             ))}
-                            <td className="text-right py-1.5 px-3">
+                            <td className="text-right py-1.5 px-3 min-w-[140px]">
                               {formatTotalWithPct(getTotalForDisplay(row), true)}
                             </td>
                           </tr>
@@ -647,7 +647,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                         {renderCell(row, col)}
                       </td>
                     ))}
-                    <td className="text-right py-1.5 px-3">
+                    <td className="text-right py-1.5 px-3 min-w-[140px]">
                       {formatTotalWithPct(getTotalForDisplay(row), true)}
                     </td>
                   </tr>
