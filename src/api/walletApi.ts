@@ -339,6 +339,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Exchange (…Stn)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLfki5fnATeRysFiWZ9BfkSoL9iCxNa43FzCeBL4Tcmj6fXiNStn' },
   { username: '', displayName: 'Exchange (…Mdd)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLjU48gkK9cbA8h613zcWiDpsnuhsL3jGQ4sNtwnNRvjhWUS5Mdd' },
   { username: '', displayName: 'Exchange (…a583)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583' },
+  { username: '', displayName: 'Exchange (…NrY7)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLi7CWybSunGG2mVCSiHggMqvCKLARiiyqbCBXhKe27iyE42NrY7' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {

@@ -126,6 +126,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   const { totalDesoLocked: ccv1TableTotalDeso } = useCCv1HoldingsTable();
   const [valueMode, setValueMode] = useState<ValueMode>('usd'); // Value in US$ | Value in DESOs | # of Tokens
   const [unstakedExpanded, setUnstakedExpanded] = useState(false);
+  const [desoOnlyView, setDesoOnlyView] = useState(false);
   const [sortCol, setSortCol] = useState<TokenCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [useDefaultOrder, setUseDefaultOrder] = useState(true);
@@ -133,10 +134,11 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
 
   const categoryFromFilter = expandedSectionOnly != null ? SECTION_FILTER_TO_CATEGORY[expandedSectionOnly] : undefined;
 
-  /** Unstaked = Openfund + Focus + CCv2 + dUSDC + dBTC + dETH + dSOL + DESO (in USD) */
+  /** Unstaked = Openfund + Focus + CCv2 + dUSDC + dBTC + dETH + dSOL + DESO (in USD). DeSo only: just DESO. */
   const getUnstakedUsd = useCallback(
     (row: TokenHoldingsRow): number => {
       const p = prices;
+      if (desoOnlyView) return (row.DESOUnstaked ?? 0) * p.deso;
       return (
         (row.OpenFund ?? 0) * p.openfund +
         (row.Focus ?? 0) * p.focus +
@@ -148,26 +150,27 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         (row.DESOUnstaked ?? 0) * p.deso
       );
     },
-    [prices]
+    [prices, desoOnlyView]
   );
 
-  const displayCols = unstakedExpanded
-    ? ([...BASE_COLS.slice(0, 2), ...UNSTAKED_SUB_COLS] as const)
-    : BASE_COLS;
+  const displayCols = desoOnlyView
+    ? BASE_COLS
+    : unstakedExpanded
+      ? ([...BASE_COLS.slice(0, 2), ...UNSTAKED_SUB_COLS] as const)
+      : BASE_COLS;
 
   const getColLabel = (col: string) =>
-    unstakedExpanded && col === 'DESOUnstaked' ? 'DESO' : (TOKEN_COL_LABELS[col] ?? col);
+    !desoOnlyView && unstakedExpanded && col === 'DESOUnstaked' ? 'DESO' : (TOKEN_COL_LABELS[col] ?? col);
 
   /** Total = DESO Staked + CCv1 + DeSo Unstaked (always) */
   const getTotalForDisplay = useCallback(
     (row: TokenHoldingsRow): number | null | undefined => {
       const staked = row.DESOStaked ?? 0;
-      const ccv1 = row.type === 'issued' ? (ccv1TableTotalDeso ?? 0) : (row.CCv1 ?? 0);
-      const unstakedUsd = getUnstakedUsd(row);
-      const unstakedDeso = prices.deso > 0 ? unstakedUsd / prices.deso : 0;
+      const ccv1 = row.type === 'issued' || row.type === 'overallTotal' ? (ccv1TableTotalDeso ?? 0) : (row.CCv1 ?? 0);
+      const unstakedDeso = desoOnlyView ? (row.DESOUnstaked ?? 0) : (getUnstakedUsd(row) / (prices.deso || 1));
       return (staked + ccv1 + unstakedDeso) * prices.deso;
     },
-    [prices.deso, ccv1TableTotalDeso, getUnstakedUsd]
+    [prices.deso, ccv1TableTotalDeso, getUnstakedUsd, desoOnlyView]
   );
 
   const [openSections, setOpenSections] = useState<Record<HoldingsCategory, boolean>>(() =>
@@ -185,12 +188,13 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   }, [categoryFromFilter]);
 
   const { headerRows, dataRows, footerRows } = useMemo(() => {
-    const header = rows.filter((r) => r.type === 'issued' || r.type === 'heldByIssuer' || r.type === 'price');
+    let header = rows.filter((r) => r.type === 'issued' || r.type === 'heldByIssuer' || r.type === 'price');
+    if (desoOnlyView) header = header.filter((r) => r.type === 'issued'); // Hide Held by own account, Token Price
     let data = rows.filter((r) => r.type === 'account');
     if (namedOnly) data = data.filter((r) => r.isNamed === true);
     const footer = rows.filter((r) => r.type === 'overallTotal');
     return { headerRows: header, dataRows: data, footerRows: footer };
-  }, [rows, namedOnly]);
+  }, [rows, namedOnly, desoOnlyView]);
 
   const sortedDataRows = useMemo(() => {
     let sorted = [...dataRows];
@@ -382,10 +386,18 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         <div>
           <h2 className="text-lg font-semibold">Token Holdings</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Total = DESO Staked + CCv1 + DeSo Unstaked. Expand DeSo Unstaked (+) to see Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO.
+            {desoOnlyView
+              ? 'DeSo only: Total = DESO Staked + CCv1 + DeSo Unstaked (12.2M). Foundation + Core share of supply.'
+              : 'Total = DESO Staked + CCv1 + DeSo Unstaked. Expand DeSo Unstaked (+) to see Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch id="token-holdings-deso-only" checked={desoOnlyView} onCheckedChange={setDesoOnlyView} />
+            <Label htmlFor="token-holdings-deso-only" className="text-sm cursor-pointer whitespace-nowrap">
+              DeSo only
+            </Label>
+          </div>
           <div className="flex items-center gap-2">
             <Switch id="token-holdings-named-only" checked={namedOnly} onCheckedChange={setNamedOnly} />
             <Label htmlFor="token-holdings-named-only" className="text-sm cursor-pointer whitespace-nowrap">
@@ -460,7 +472,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                 >
                   <span className="inline-flex items-center gap-1 justify-end w-full">
                     {getColLabel(col)}
-                    {col === 'DESOUnstaked' && !unstakedExpanded && (
+                    {col === 'DESOUnstaked' && !desoOnlyView && !unstakedExpanded && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setUnstakedExpanded(true); }}
@@ -471,7 +483,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                         <Plus className="h-3 w-3" />
                       </button>
                     )}
-                    {col === 'DESOUnstaked' && unstakedExpanded && (
+                    {col === 'DESOUnstaked' && !desoOnlyView && unstakedExpanded && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setUnstakedExpanded(false); }}

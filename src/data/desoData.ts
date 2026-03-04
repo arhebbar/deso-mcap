@@ -295,6 +295,7 @@ export const EXCHANGE_WALLETS: WalletData[] = [
   { name: 'Exchange (…Stn)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
   { name: 'Exchange (…Mdd)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
   { name: 'Exchange (…a583)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…NrY7)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
 ];
 
 /** Validator usernames considered "Core" (foundation-run). */
