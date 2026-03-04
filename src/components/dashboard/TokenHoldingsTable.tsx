@@ -300,6 +300,29 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     return '–';
   };
 
+  /** Overall supply (12.2M DESO equiv + tokens) for % calculation */
+  const totalSupplyUsd = useMemo(() => {
+    if (footerRows.length === 0) return 0;
+    return getTotalForDisplay(footerRows[0]) ?? 0;
+  }, [footerRows, getTotalForDisplay]);
+
+  const formatTotalWithPct = useCallback(
+    (totalUsd: number | null | undefined, showPct: boolean) => {
+      const formatted =
+        totalUsd == null
+          ? '–'
+          : valueMode === 'usd'
+            ? formatUsd(totalUsd)
+            : valueMode === 'deso'
+              ? formatNumberShort(prices.deso > 0 ? totalUsd / prices.deso : 0)
+              : '–';
+      if (formatted === '–' || !showPct || totalSupplyUsd <= 0) return formatted;
+      const pct = totalUsd != null ? (totalUsd / totalSupplyUsd) * 100 : 0;
+      return `${formatted} (${pct.toFixed(1)}%)`;
+    },
+    [valueMode, prices.deso, totalSupplyUsd]
+  );
+
   const renderCell = (row: TokenHoldingsRow, col: string) => {
     // Collapsed DeSo Unstaked = sum of Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO
     if (col === 'DESOUnstaked' && !unstakedExpanded) {
@@ -520,7 +543,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     </td>
                   ))}
                   <td className="text-right py-1.5 px-3">
-                    {formatTotal(getTotalForDisplay(totalRow))}
+                    {formatTotalWithPct(getTotalForDisplay(totalRow), true)}
                   </td>
                 </tr>
               );
@@ -538,7 +561,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   </td>
                 ))}
                 <td className="text-right py-1.5 px-3">
-                  {(row.type === 'issued' || row.type === 'heldByIssuer') && getTotalForDisplay(row) != null ? formatTotal(getTotalForDisplay(row)) : '–'}
+                  {(row.type === 'issued' || row.type === 'heldByIssuer') && getTotalForDisplay(row) != null ? formatTotalWithPct(getTotalForDisplay(row), true) : '–'}
                 </td>
               </tr>
             ))}
@@ -568,7 +591,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                           </td>
                         ))}
                         <td className="text-right py-1.5 px-3 font-medium">
-                          {formatTotal(subTotalUsd)}
+                          {formatTotalWithPct(subTotalUsd, true)}
                         </td>
                       </tr>
                       {open &&
@@ -592,7 +615,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                               </td>
                             ))}
                             <td className="text-right py-1.5 px-3">
-                              {formatTotal(getTotalForDisplay(row))}
+                              {formatTotalWithPct(getTotalForDisplay(row), true)}
                             </td>
                           </tr>
                         ))}
@@ -619,7 +642,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                       </td>
                     ))}
                     <td className="text-right py-1.5 px-3">
-                      {formatTotal(getTotalForDisplay(row))}
+                      {formatTotalWithPct(getTotalForDisplay(row), true)}
                     </td>
                   </tr>
                 ))}
@@ -634,7 +657,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   </td>
                 ))}
                 <td className="text-right py-1.5 px-3">
-                  {formatTotal(getTotalForDisplay(row))}
+                  {formatTotalWithPct(getTotalForDisplay(row), true)}
                 </td>
               </tr>
             ))}
