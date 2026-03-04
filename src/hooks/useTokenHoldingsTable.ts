@@ -10,6 +10,7 @@ import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
 import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
+import { useStakeEntriesTopStakers } from './useStakeEntriesTopStakers';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
@@ -78,6 +79,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
   const { marketData } = useLiveData();
   const { top100: freeFloatTop100 } = useFreeFloatTop100();
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
+  const { topStakers: stakeEntriesStakers, isLoading: stakeEntriesLoading } = useStakeEntriesTopStakers();
   const { holderMap: openfundFocusByPk, isLoading: openfundFocusLoading } = useOpenfundFocusHolders();
   const { trackedPks, isLoading: trackedPksLoading } = useTrackedPublicKeys();
   const { validatorBuckets } = useStakedDesoData();
@@ -265,9 +267,9 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       });
     }
     // desoBalances top holders not already in free-float list (by public key)
-    // Exclude tracked and Core-related anon stakers
     const desoBalancesFiltered = desoBalancesHolders.filter((h) => !excludeFromOthersPks.has(h.pk));
     const extraFromDesoBalances = desoBalancesFiltered.filter((h) => !ffPks.has(h.pk));
+    const desoBalancesPks = new Set([...ffPks, ...extraFromDesoBalances.map((h) => h.pk)]);
     for (const w of extraFromDesoBalances) {
       const deso = w.staked + w.unstaked;
       const of = openfundFocusByPk.get(w.pk);
@@ -278,6 +280,39 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       if (totalUsd === 0) continue;
       out.push({
         id: `account-desobalances-${w.pk}`,
+        type: 'account',
+        category: 'Others',
+        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        account: w.name,
+        publicKey: w.pk,
+        DESO: deso,
+        DESOStaked: w.staked,
+        DESOUnstaked: w.unstaked,
+        OpenFund: openfund,
+        Focus: focus,
+        dUSDC: 0,
+        dBTC: 0,
+        dETH: 0,
+        dSOL: 0,
+        CCv1: 0,
+        CCv2: 0,
+        totalUsd,
+        isNamed: w.isNamed,
+      });
+    }
+    // Stake entries top stakers (for review/classification) – exclude already in free float or desoBalances
+    const stakeEntriesFiltered = stakeEntriesStakers.filter((h) => !excludeFromOthersPks.has(h.pk));
+    const extraFromStakeEntries = stakeEntriesFiltered.filter((h) => !desoBalancesPks.has(h.pk));
+    for (const w of extraFromStakeEntries) {
+      const deso = w.staked + w.unstaked;
+      const of = openfundFocusByPk.get(w.pk);
+      const openfund = of?.Openfund ?? 0;
+      const focus = of?.Focus ?? 0;
+      const totalUsd =
+        w.totalUsd + openfund * p.openfund + focus * p.focus;
+      if (totalUsd === 0) continue;
+      out.push({
+        id: `account-stakeentries-${w.pk}`,
         type: 'account',
         category: 'Others',
         defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
@@ -455,7 +490,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
 
-  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || openfundFocusLoading || trackedPksLoading };
+  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || stakeEntriesLoading || openfundFocusLoading || trackedPksLoading };
 }

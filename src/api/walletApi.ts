@@ -442,6 +442,20 @@ const ALL_LOCKED_STAKE_ENTRIES_QUERY = `
   }
 `;
 
+/** Stake entries ordered by stake amount DESC – for adding top stakers to Others for review. */
+const STAKE_ENTRIES_BY_AMOUNT_QUERY = `
+  query StakeEntriesByAmount($first: Int!, $after: Cursor) {
+    stakeEntries(first: $first, after: $after, orderBy: STAKE_AMOUNT_NANOS_DESC) {
+      nodes {
+        stakerPkid
+        stakeAmountNanos
+        validatorEntry { account { publicKey } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
 const CREATOR_COIN_BALANCES_SINGLE_QUERY = `
   query CreatorCoinBalancesSingle($pk: String!, $after: Cursor) {
     creatorCoinBalances(first: 500, filter: { holder: { publicKey: { equalTo: $pk } } }, after: $after) {
@@ -541,6 +555,53 @@ const DESO_BALANCES_QUERY = `
     }
   }
 `;
+
+/** Fetch ALL stake entries (orderBy STAKE_AMOUNT_NANOS_DESC), aggregate by staker. For adding to Others for review/classification. */
+export async function fetchStakeEntriesTopStakers(limit: number = 50_000): Promise<Array<{ pk: string; staked: number }>> {
+  const byStaker = new Map<string, number>();
+  let after: string | null = null;
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = 500; // Safety: ~50K stake entries
+
+  const runQuery = async (query: string, variables: { first: number; after: string | null }) => {
+    const res = await fetch(getGraphqlUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as {
+      data?: { stakeEntries?: { nodes?: Array<{ stakerPkid?: string; stakeAmountNanos?: string }>; pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } } };
+      errors?: Array<{ message?: string }>;
+    };
+  };
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    let data = await runQuery(STAKE_ENTRIES_BY_AMOUNT_QUERY, { first: PAGE_SIZE, after });
+    if (data?.errors?.length) {
+      data = await runQuery(ALL_STAKE_ENTRIES_QUERY, { after } as { first: number; after: string | null });
+    }
+    if (!data || data?.errors?.length) break;
+    const nodes = data?.data?.stakeEntries?.nodes ?? [];
+    for (const n of nodes) {
+      const pk = n.stakerPkid ?? '';
+      const nanos = Number(n.stakeAmountNanos ?? 0);
+      if (pk && nanos > 0) {
+        byStaker.set(pk, (byStaker.get(pk) ?? 0) + nanos);
+      }
+    }
+    const conn = data?.data?.stakeEntries;
+    const hasNext = conn?.pageInfo?.hasNextPage ?? false;
+    after = hasNext ? (conn?.pageInfo?.endCursor ?? null) : null;
+    if (!hasNext || nodes.length === 0) break;
+    if (after) await new Promise((r) => setTimeout(r, 100));
+  }
+
+  return Array.from(byStaker.entries())
+    .map(([pk, nanos]) => ({ pk, staked: nanos / NANOS_PER_DESO }))
+    .sort((a, b) => b.staked - a.staked)
+    .slice(0, limit);
+}
 
 /** Fetch total NET CCv1 (DESO locked in Creator Coins v1) via GraphQL.
  * Ordered by desoLockedNanos DESC so top creators come first (~99% in first 10K).

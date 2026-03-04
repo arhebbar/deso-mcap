@@ -27,6 +27,8 @@ export interface AccountRow {
   category: string;
   amount: number;
   usdValue: number;
+  /** Full public key (base58) for link and copy, same as Token Holdings */
+  publicKey?: string;
 }
 
 export interface CategoryBreakdown {
