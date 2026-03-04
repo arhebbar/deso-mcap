@@ -333,13 +333,12 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Core Affiliated (…W3Av)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgyjPzY82hWq2yuBsPPf5cyg9MsGfJqbFfED1GfEKgJDW9eW3Av' },
   { username: '2times', classification: 'CORE_AFFILIATED' },
   { username: 'tickerpump', classification: 'CORE_AFFILIATED' },
-  // Exchange Accounts
-  { username: '', displayName: 'Exchange (…9zN)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLg37J6koL3xDwUbQMphtf7Hd7xdktNWmiyifi7uZooaMr6N69zN' },
+  // Exchange Accounts (excluded from Others)
   { username: '', displayName: 'Exchange (…Dbh)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLigdNktFqD2LrK2cAAdm2JkPhs8qJ3RJrC3erhRAU5FcaSntDbh' },
-  { username: '', displayName: 'Exchange (…Stn)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLfki5fnATeRysFiWZ9BfkSoL9iCxNa43FzCeBL4Tcmj6fXiNStn' },
-  { username: '', displayName: 'Exchange (…Mdd)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLjU48gkK9cbA8h613zcWiDpsnuhsL3jGQ4sNtwnNRvjhWUS5Mdd' },
-  { username: '', displayName: 'Exchange (…a583)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583' },
+  { username: '', displayName: 'Exchange (…poG)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLhxvk9Z6dHHnXbnawMpaGKGZePPsApVRcLNBCK3J8NAGgVoHpoG' },
   { username: '', displayName: 'Exchange (…NrY7)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLi7CWybSunGG2mVCSiHggMqvCKLARiiyqbCBXhKe27iyE42NrY7' },
+  { username: '', displayName: 'Exchange (…H49C)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLhVZBgtX7Hmipyxiw1BJWyYK7SAq8ej3wNDbc4dHLPNADrMH49C' },
+  { username: '', displayName: 'Exchange (…V9Nj)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLiuhqCJajHG5C3iM4kuqD1tzecVFpyDLC9wisiHwAVYXH5xV9Nj' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {

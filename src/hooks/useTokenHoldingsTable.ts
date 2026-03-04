@@ -12,6 +12,7 @@ import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
+import { useStakedDesoData } from './useStakedDesoData';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'No Source/Core' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others';
 
@@ -81,6 +82,18 @@ export function useTokenHoldingsTable(): {
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
   const { holderMap: openfundFocusByPk, isLoading: openfundFocusLoading } = useOpenfundFocusHolders();
   const { trackedPks, isLoading: trackedPksLoading } = useTrackedPublicKeys();
+  const { validatorBuckets } = useStakedDesoData();
+
+  /** Exclude from Others: tracked (Exchange, Core, etc.) + Core-related anon (stakers to core validators) */
+  const excludeFromOthersPks = useMemo(() => {
+    const set = new Set(trackedPks);
+    for (const b of validatorBuckets) {
+      if (b.validatorType === 'core') {
+        for (const r of [...b.foundation, ...b.community]) set.add(r.stakerPk);
+      }
+    }
+    return set;
+  }, [trackedPks, validatorBuckets]);
 
   const prices = useMemo(
     () => ({
@@ -217,8 +230,8 @@ export function useTokenHoldingsTable(): {
     }
 
     // Top 100 free-float accounts (from Free Float table) as individual rows under Others
-    // Exclude Foundation/AMM/Core/DeSo Bulls to avoid double-counting (e.g. Focus_Floor_Bid)
-    const freeFloatFiltered = freeFloatTop100.filter((w) => !trackedPks.has(w.pk));
+    // Exclude tracked (Foundation/AMM/Core/Exchange/DeSo Bulls) and Core-related anon stakers
+    const freeFloatFiltered = freeFloatTop100.filter((w) => !excludeFromOthersPks.has(w.pk));
     const ffPks = new Set(freeFloatFiltered.map((w) => w.pk));
     for (const w of freeFloatFiltered) {
       const deso = w.staked + w.unstaked;
@@ -250,8 +263,8 @@ export function useTokenHoldingsTable(): {
       });
     }
     // desoBalances top holders not already in free-float list (by public key)
-    // Exclude Foundation/AMM/Core/DeSo Bulls to avoid double-counting
-    const desoBalancesFiltered = desoBalancesHolders.filter((h) => !trackedPks.has(h.pk));
+    // Exclude tracked and Core-related anon stakers
+    const desoBalancesFiltered = desoBalancesHolders.filter((h) => !excludeFromOthersPks.has(h.pk));
     const extraFromDesoBalances = desoBalancesFiltered.filter((h) => !ffPks.has(h.pk));
     for (const w of extraFromDesoBalances) {
       const deso = w.staked + w.unstaked;
@@ -415,7 +428,7 @@ export function useTokenHoldingsTable(): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk, trackedPks]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, openfundFocusByPk, excludeFromOthersPks]);
 
   return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || openfundFocusLoading || trackedPksLoading };
 }
