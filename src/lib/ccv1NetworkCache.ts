@@ -46,3 +46,12 @@ export function setCCv1NetworkCache(deso: number): void {
     // localStorage may be full or disabled
   }
 }
+
+/** Clear the CCv1 network total cache. Forces a fresh fetch on next use. */
+export function clearCCv1NetworkCache(): void {
+  try {
+    localStorage.removeItem(CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}

@@ -2,7 +2,7 @@
 
 export interface WalletData {
   name: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
   balances: Record<string, number>;
   usdValue: number;
   /** DESO staked (when known). Total DESO = desoStaked + desoUnstaked. */
@@ -251,6 +251,50 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'PaulyHart', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Mher', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'vampirecampfire', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+];
+
+/** No Source/Core – accounts with no known Foundation/Core affiliation. */
+export const NO_SOURCE_WALLETS: WalletData[] = [
+  { name: 'No Source (…fJ9)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…KeBo)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…BHFF)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…1weS)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…aWbs)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…umt3n)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…nfhL)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'Da5id', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…JKo6)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+  { name: 'No Source (…oEkb)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+];
+
+/** Core Affiliated – accounts affiliated with core team. */
+export const CORE_AFFILIATED_WALLETS: WalletData[] = [
+  { name: 'Core Affiliated (…AqLQ)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…QMP)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…rDbi)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…ujne)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…jNKJ)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…uP4n)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…CYKc)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…8u5UD)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…2nX4)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…3rQq)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…smAT7)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…ib9b2)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…eTXb)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'Core Affiliated (…W3Av)', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: '2times', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+  { name: 'tickerpump', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
+];
+
+/** Exchange Accounts. */
+export const EXCHANGE_WALLETS: WalletData[] = [
+  { name: 'Exchange (…9zN)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…Dbh)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…Stn)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…Mdd)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…a583)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
 ];
 
 /** Validator usernames considered "Core" (foundation-run). */

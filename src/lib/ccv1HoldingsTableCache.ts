@@ -116,3 +116,13 @@ export function subscribeCCv1HoldingsTableCache(callback: () => void): () => voi
   listeners.add(callback);
   return () => listeners.delete(callback);
 }
+
+/** Clear the CCv1 Holdings table cache. Forces a fresh fetch on next load. */
+export function clearCCv1HoldingsTableCache(): void {
+  try {
+    localStorage.removeItem(CACHE_KEY);
+    notifyListeners();
+  } catch {
+    // ignore
+  }
+}

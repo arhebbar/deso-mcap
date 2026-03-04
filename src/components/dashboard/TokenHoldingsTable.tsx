@@ -7,7 +7,7 @@
 
 import { useMemo, useState, useEffect, Fragment, useCallback } from 'react';
 import { useTokenHoldingsTable, type TokenHoldingsRow, type HoldingsCategory } from '@/hooks/useTokenHoldingsTable';
-import { useCCv1NetworkTotal } from '@/hooks/useCCv1NetworkTotal';
+import { useCCv1HoldingsTable } from '@/hooks/useCCv1HoldingsTable';
 import { formatUsd, formatNumberShort } from '@/lib/formatters';
 import { Plus, Minus, Copy } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -22,14 +22,24 @@ const SECTION_FILTER_TO_CATEGORY: Record<NonNullable<SectionFilter>, HoldingsCat
   OTHERS: 'Others',
 };
 
-const CATEGORY_ORDER: HoldingsCategory[] = ['Foundation', 'AMM', 'Core Team', 'DeSo Bulls', 'Others'];
+const CATEGORY_ORDER: HoldingsCategory[] = [
+  'Foundation',
+  'AMM',
+  'Core Team',
+  'No Source/Core',
+  'Core Affiliated',
+  'Exchange Accounts',
+  'DeSo Bulls',
+  'Others',
+];
 
 /** Display name for Others category in Token Holdings */
 const FREE_FLOAT_LABEL = 'Free Float';
 const FREE_FLOAT_TOOLTIP = 'FREE FLOAT excluding Core, Foundation and DeSo Bulls Community';
 
 function categoryDisplayName(cat: HoldingsCategory): string {
-  return cat === 'Others' ? FREE_FLOAT_LABEL : cat;
+  if (cat === 'Others') return FREE_FLOAT_LABEL;
+  return cat;
 }
 
 function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {
@@ -113,7 +123,7 @@ type ValueMode = 'usd' | 'deso' | 'tokens';
 
 export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHoldingsTableProps = {}) {
   const { rows, prices, isLoading } = useTokenHoldingsTable();
-  const { ccv1NetworkTotalDeso } = useCCv1NetworkTotal();
+  const { totalDesoLocked: ccv1TableTotalDeso } = useCCv1HoldingsTable();
   const [valueMode, setValueMode] = useState<ValueMode>('usd'); // Value in US$ | Value in DESOs | # of Tokens
   const [unstakedExpanded, setUnstakedExpanded] = useState(false);
   const [sortCol, setSortCol] = useState<TokenCol | 'category' | 'account' | 'total' | 'defaultOrder' | null>(null);
@@ -152,12 +162,12 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   const getTotalForDisplay = useCallback(
     (row: TokenHoldingsRow): number | null | undefined => {
       const staked = row.DESOStaked ?? 0;
-      const ccv1 = row.type === 'issued' ? (ccv1NetworkTotalDeso ?? 0) : (row.CCv1 ?? 0);
+      const ccv1 = row.type === 'issued' ? (ccv1TableTotalDeso ?? 0) : (row.CCv1 ?? 0);
       const unstakedUsd = getUnstakedUsd(row);
       const unstakedDeso = prices.deso > 0 ? unstakedUsd / prices.deso : 0;
       return (staked + ccv1 + unstakedDeso) * prices.deso;
     },
-    [prices.deso, ccv1NetworkTotalDeso, getUnstakedUsd]
+    [prices.deso, ccv1TableTotalDeso, getUnstakedUsd]
   );
 
   const [openSections, setOpenSections] = useState<Record<HoldingsCategory, boolean>>(() =>
@@ -297,7 +307,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     // Issued row: CCv1 uses network total from CC Locked
     const v =
       row.type === 'issued' && col === 'CCv1'
-        ? (ccv1NetworkTotalDeso ?? row.CCv1 ?? 0)
+        ? (ccv1TableTotalDeso ?? row.CCv1 ?? 0)
         : row[col as keyof TokenHoldingsRow];
 
     // Issued row: show as # (B/M/K, no $)

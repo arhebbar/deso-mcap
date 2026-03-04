@@ -2,9 +2,25 @@ import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalletBalances } from '@/api/walletApi';
 import { getWalletCache, setWalletCache, type CachedWalletEntry } from '@/lib/walletCache';
-import { AMM_WALLETS, FOUNDATION_WALLETS, FOUNDER_WALLETS, DESO_BULL_WALLETS } from '@/data/desoData';
+import {
+  AMM_WALLETS,
+  FOUNDATION_WALLETS,
+  FOUNDER_WALLETS,
+  DESO_BULL_WALLETS,
+  NO_SOURCE_WALLETS,
+  CORE_AFFILIATED_WALLETS,
+  EXCHANGE_WALLETS,
+} from '@/data/desoData';
 
-const STATIC_WALLETS = [...FOUNDATION_WALLETS, ...AMM_WALLETS, ...FOUNDER_WALLETS, ...DESO_BULL_WALLETS];
+const STATIC_WALLETS = [
+  ...FOUNDATION_WALLETS,
+  ...AMM_WALLETS,
+  ...FOUNDER_WALLETS,
+  ...DESO_BULL_WALLETS,
+  ...NO_SOURCE_WALLETS,
+  ...CORE_AFFILIATED_WALLETS,
+  ...EXCHANGE_WALLETS,
+];
 
 type DataSource = 'live' | 'cached' | 'static';
 
@@ -148,8 +164,11 @@ export function useWalletData() {
   const ammWallets = useMemo(() => wallets.filter((w) => w.classification === 'AMM'), [wallets]);
   const foundationWallets = useMemo(() => wallets.filter((w) => w.classification === 'FOUNDATION'), [wallets]);
   const desoBullsWallets = useMemo(() => wallets.filter((w) => w.classification === 'DESO_BULL'), [wallets]);
+  const noSourceWallets = useMemo(() => wallets.filter((w) => w.classification === 'NO_SOURCE'), [wallets]);
+  const coreAffiliatedWallets = useMemo(() => wallets.filter((w) => w.classification === 'CORE_AFFILIATED'), [wallets]);
+  const exchangeWallets = useMemo(() => wallets.filter((w) => w.classification === 'EXCHANGE'), [wallets]);
 
-  const { ammDeso, foundationDeso, founderDeso, ammDesoUnstaked, foundationDesoUnstaked, founderDesoUnstaked, desoBullsDeso, foundationDusdc, ccv1TotalDeso } = useMemo(() => {
+  const { ammDeso, foundationDeso, founderDeso, ammDesoUnstaked, foundationDesoUnstaked, founderDesoUnstaked, desoBullsDeso, noSourceDeso, coreAffiliatedDeso, exchangeDeso, foundationDusdc, ccv1TotalDeso } = useMemo(() => {
     /** Unstaked DESO only (avoids double-counting with network staked in free-float). */
     const unstakedDeso = (w: { balances: Record<string, number>; desoUnstaked?: number; desoStaked?: number }) => {
       if (w.desoUnstaked != null && w.desoUnstaked >= 0) return w.desoUnstaked;
@@ -164,6 +183,9 @@ export function useWalletData() {
     const foundationUnstaked = foundationWallets.reduce((sum, w) => sum + unstakedDeso(w), 0);
     const founderUnstaked = wallets.filter((w) => w.classification === 'FOUNDER').reduce((sum, w) => sum + unstakedDeso(w), 0);
     const bulls = desoBullsWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const noSource = noSourceWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const coreAffiliated = coreAffiliatedWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
+    const exchange = exchangeWallets.reduce((sum, w) => sum + (w.balances.DESO || 0), 0);
     const dusdc = foundationWallets.length > 0 ? foundationWallets[0].balances.dUSDC ?? 0 : 0;
     const ccv1 = wallets.reduce((sum, w) => sum + (w.ccv1ValueDeso ?? 0), 0);
     return {
@@ -174,16 +196,22 @@ export function useWalletData() {
       foundationDesoUnstaked: foundationUnstaked,
       founderDesoUnstaked: founderUnstaked,
       desoBullsDeso: bulls,
+      noSourceDeso: noSource,
+      coreAffiliatedDeso: coreAffiliated,
+      exchangeDeso: exchange,
       foundationDusdc: dusdc,
       ccv1TotalDeso: ccv1,
     };
-  }, [wallets, ammWallets, foundationWallets, desoBullsWallets]);
+  }, [wallets, ammWallets, foundationWallets, desoBullsWallets, noSourceWallets, coreAffiliatedWallets, exchangeWallets]);
 
   return {
     wallets,
     ammWallets,
     foundationWallets,
     desoBullsWallets,
+    noSourceWallets,
+    coreAffiliatedWallets,
+    exchangeWallets,
     ammDeso,
     foundationDeso,
     founderDeso,
@@ -191,6 +219,9 @@ export function useWalletData() {
     foundationDesoUnstaked,
     founderDesoUnstaked,
     desoBullsDeso,
+    noSourceDeso,
+    coreAffiliatedDeso,
+    exchangeDeso,
     foundationDusdc,
     ccv1TotalDeso,
     isLoading: query.isLoading,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
@@ -14,8 +14,19 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useCirculationTable } from '@/hooks/useCirculationTable';
 import { formatUsd, formatRatio, formatPercent } from '@/lib/formatters';
+import { clearCCv1HoldingsTableCache } from '@/lib/ccv1HoldingsTableCache';
+import { clearCCv1NetworkCache } from '@/lib/ccv1NetworkCache';
 
 const Index = () => {
+  // Force refresh: clear CCv1 caches once per session so data is fetched fresh
+  useEffect(() => {
+    const key = 'deso-ccv1-refreshed';
+    if (!sessionStorage.getItem(key)) {
+      clearCCv1HoldingsTableCache();
+      clearCCv1NetworkCache();
+      sessionStorage.setItem(key, '1');
+    }
+  }, []);
   const {
     marketData,
     marketCap,

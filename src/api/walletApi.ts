@@ -44,7 +44,7 @@ const NANOS_PER_DAO_COIN = 1e18;
 export interface WalletConfig {
   username: string;
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
   /** When set, multiple configs with same mergeKey are combined into one entry */
   mergeKey?: string;
   /** When set, use this public key directly instead of looking up by username (for accounts with no username) */
@@ -61,7 +61,7 @@ export interface WalletData {
   name: string;
   /** When set, used as canonical label (e.g. "Beyside (AMM)"); strip " (AMM)" for API username where needed */
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
   balances: Record<string, number>;
   usdValue: number;
   desoStaked?: number;
@@ -302,6 +302,43 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'PaulyHart', classification: 'DESO_BULL' },
   { username: 'Mher', classification: 'DESO_BULL' },
   { username: 'vampirecampfire', classification: 'DESO_BULL' },
+  // ykshine and shine2445 (DeSo Bulls)
+  { username: 'ykshine', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
+  { username: 'shine2445', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
+  // No Source/Core
+  { username: '', displayName: 'No Source (…fJ9)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },
+  { username: '', displayName: 'No Source (…KeBo)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLjAkTwNw5AKy1TCHT8qjZjmdEojvtNpB7wgFdguZ78scMu3KeBo' },
+  { username: '', displayName: 'No Source (…BHFF)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLhFidFPHVcNGq674VgQxjJgzsjgZZDCiZdTnyHGFzgc34BCBHFF' },
+  { username: '', displayName: 'No Source (…1weS)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLhnXnSKcM4pYxwU3a24bigPJx9LL2gjrmj6mPfv5c771w5B1weS' },
+  { username: '', displayName: 'No Source (…aWbs)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLffz4MC2HZzZdgCahbcBac8Vrsr6mUEDEMrGEkaFr2ux9UqaWbs' },
+  { username: '', displayName: 'No Source (…umt3n)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLirfuVnByxfQk5kwNKyk13oa28mDxb42Uiw9My9LrhMgTkumt3n' },
+  { username: '', displayName: 'No Source (…nfhL)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLiYxGdXeuPc3QMzgBv26EwfxrpwemdGxGZAZbh5qXgf7DennfhL' },
+  { username: 'Da5id', classification: 'NO_SOURCE' },
+  { username: '', displayName: 'No Source (…JKo6)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLiBj1K5DwKKVTYPHzHTPYBaNPDv678PN7kKHwRqjH91KgDKJKo6' },
+  { username: '', displayName: 'No Source (…oEkb)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLfnQurEcFMCaPsmgtnzjDSzNCSCjYYvVLyvWvmYL6nnfrFHoEkb' },
+  // Core Affiliated
+  { username: '', displayName: 'Core Affiliated (…AqLQ)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgfGoeE5U7REoLFFzKYS6nGUFZ1rfP2KJmr6BCr8iMEaNU6AqLQ' },
+  { username: '', displayName: 'Core Affiliated (…QMP)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjHNE39QZ8fSPevE6FU99VuyFepe6AswhvFJiu2bqQ4PX3nFQMP' },
+  { username: '', displayName: 'Core Affiliated (…rDbi)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLh4eK3VuiorNyU1izDNcearJUXPLuTsA9pUndaceZmeAo7jrDbi' },
+  { username: '', displayName: 'Core Affiliated (…ujne)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhWPt6nGTLmsNkbGFHfspcfnRgaEVEbNygVty22oTVF3a1zujne' },
+  { username: '', displayName: 'Core Affiliated (…jNKJ)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLg4J5Nf1cEL38LSChFRjd9Ez54wSdk4KCEqD3aMjzSBhMPejNKJ' },
+  { username: '', displayName: 'Core Affiliated (…uP4n)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLfj5eLLgiBNDh4f9oq2gUozB77rNefyvknKL1rpujFsAgfAuP4n' },
+  { username: '', displayName: 'Core Affiliated (…CYKc)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjMAwU3dA7SRhHZycb6LkP9q9qES7sy5GzR1NF2f2GtSjuvCYKc' },
+  { username: '', displayName: 'Core Affiliated (…8u5UD)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiRK7iBoQN2W8nfwX7ysW1ush4PCdJQBFADm45BLHCBoxk8u5UD' },
+  { username: '', displayName: 'Core Affiliated (…2nX4)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhvDos1L72JBxvGPDz95m86Yz2NEg6CzCZE89Fooac5pTSP2nX4' },
+  { username: '', displayName: 'Core Affiliated (…3rQq)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLh1ciH11ueQLuyyEfQTku7Rcpnzr2f28eTpDATqADJmdeUQ3rQq' },
+  { username: '', displayName: 'Core Affiliated (…smAT7)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgrgVmRGp1SyqCBMKGUTP8mrnA5qEW2TFADEsads9y2Q3wsmAT7' },
+  { username: '', displayName: 'Core Affiliated (…ib9b2)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLihPpDbdKYhzUWBqiD12mXGbQnUehhGo9JpxRjmNdTVuaSwi9b2' },
+  { username: '', displayName: 'Core Affiliated (…eTXb)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLj797rLyQJPxEPvWBy9iM5mpCTSdfsXb2LmSAa3TRcLEoTWeTXb' },
+  { username: '', displayName: 'Core Affiliated (…W3Av)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgyjPzY82hWq2yuBsPPf5cyg9MsGfJqbFfED1GfEKgJDW9eW3Av' },
+  { username: '2times', classification: 'CORE_AFFILIATED' },
+  { username: 'tickerpump', classification: 'CORE_AFFILIATED' },
+  // Exchange Accounts
+  { username: '', displayName: 'Exchange (…9zN)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLg37J6koL3xDwUbQMphtf7Hd7xdktNWmiyifi7uZooaMr6N69zN' },
+  { username: '', displayName: 'Exchange (…Dbh)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLigdNktFqD2LrK2cAAdm2JkPhs8qJ3RJrC3erhRAU5FcaSntDbh' },
+  { username: '', displayName: 'Exchange (…Stn)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLfki5fnATeRysFiWZ9BfkSoL9iCxNa43FzCeBL4Tcmj6fXiNStn' },
+  { username: '', displayName: 'Exchange (…Mdd)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLjU48gkK9cbA8h613zcWiDpsnuhsL3jGQ4sNtwnNRvjhWUS5Mdd' },
+  { username: '', displayName: 'Exchange (…a583)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {
@@ -880,7 +917,8 @@ export interface AllStakedDesoRow {
   stakerName: string;
   /** True if staker has a username (tracked or from chain); false if public key only */
   hasUsername: boolean;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'COMMUNITY';
+  /** NO_SOURCE, CORE_AFFILIATED, EXCHANGE are grouped with community in StakedDesoTable */
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'COMMUNITY';
   amount: number;
   validatorPk: string;
   validatorName?: string;

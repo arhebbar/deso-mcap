@@ -24,14 +24,19 @@ interface AssetsBreakdownBarProps {
 
 export default function AssetsBreakdownBar({ selectedSection, onSectionClick }: AssetsBreakdownBarProps) {
   const { marketData } = useLiveData();
-  const { ammDeso, foundationDeso, founderDeso, desoBullsDeso } = useWalletData();
+  const { ammDeso, foundationDeso, founderDeso, desoBullsDeso, noSourceDeso, coreAffiliatedDeso, exchangeDeso } = useWalletData();
 
   const foundationUsd = foundationDeso * marketData.desoPrice;
   const ammUsd = ammDeso * marketData.desoPrice;
   const founderUsd = founderDeso * marketData.desoPrice;
   const desoBullsUsd = desoBullsDeso * marketData.desoPrice;
-  const totalTracked = foundationUsd + ammUsd + founderUsd + desoBullsUsd;
-  const freeFloatUsd = Math.max(0, (marketData.desoTotalSupply - marketData.desoStaked - foundationDeso - ammDeso - founderDeso - desoBullsDeso) * marketData.desoPrice);
+  const totalTracked =
+    foundationUsd + ammUsd + founderUsd + desoBullsUsd +
+    (noSourceDeso + coreAffiliatedDeso + exchangeDeso) * marketData.desoPrice;
+  const freeFloatUsd = Math.max(
+    0,
+    (marketData.desoTotalSupply - marketData.desoStaked - foundationDeso - ammDeso - founderDeso - desoBullsDeso - noSourceDeso - coreAffiliatedDeso - exchangeDeso) * marketData.desoPrice
+  );
   const othersUsd = freeFloatUsd;
 
   const values: Record<string, number> = {
