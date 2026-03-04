@@ -177,6 +177,7 @@ export function useTokenHoldingsTable(): {
     });
 
     // Account rows from wallets (Foundation, AMM, Core Team, DeSo Bulls) with defaultOrder for default sort
+    // Skip wallets with 0 in all columns
     for (const w of wallets) {
       const cat = CATEGORY_BY_CLASS[w.classification];
       if (!cat) continue;
@@ -203,12 +204,13 @@ export function useTokenHoldingsTable(): {
         dsol * p.sol +
         ccv1 * p.deso +
         ccv2Usd;
+      if (totalUsd === 0) continue;
       out.push({
         id: `account-${w.name}`,
         type: 'account',
         category: cat,
         defaultOrder: DEFAULT_CATEGORY_ORDER[cat],
-        account: (w as { publicKey?: string }).publicKey ? (w as { publicKey?: string }).publicKey : w.name,
+        account: w.name,
         publicKey: (w as { publicKey?: string }).publicKey,
         DESO: deso,
         DESOStaked: staked,
@@ -239,6 +241,7 @@ export function useTokenHoldingsTable(): {
       const focus = of?.Focus ?? 0;
       const totalUsd =
         w.totalUsd + openfund * p.openfund + focus * p.focus;
+      if (totalUsd === 0) continue;
       out.push({
         id: `account-freefloat-${w.pk}`,
         type: 'account',
@@ -272,6 +275,7 @@ export function useTokenHoldingsTable(): {
       const focus = of?.Focus ?? 0;
       const totalUsd =
         w.totalUsd + openfund * p.openfund + focus * p.focus;
+      if (totalUsd === 0) continue;
       out.push({
         id: `account-desobalances-${w.pk}`,
         type: 'account',

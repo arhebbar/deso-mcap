@@ -253,7 +253,6 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'DCNY', classification: 'DESO_BULL' },
   { username: 'NathanHeffelman', classification: 'DESO_BULL' },
   { username: 'loveneeshmalik', classification: 'DESO_BULL' },
-  { username: 'DeSo Bulls', classification: 'DESO_BULL' },
   { username: 'arturopops', classification: 'DESO_BULL' },
   { username: 'Stevonagy', classification: 'DESO_BULL' },
   { username: 'dennishlewis', displayName: 'dennishlewis (incl. desonocode)', classification: 'DESO_BULL', mergeKey: 'dennishlewis' },

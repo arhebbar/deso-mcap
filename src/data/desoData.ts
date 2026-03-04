@@ -150,7 +150,7 @@ export const FOUNDER_WALLETS: WalletData[] = [
 /** DeSo Bulls - community holders. No static fallback; API/cache only. */
 export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Randhir (Me)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator, jacksonlintz)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'HighKey / JordanLintz / LukeLintz (incl. HighKeyValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'DesocialWorld (incl. DeSocialWorldValidator, Edokoevoet)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Gabrielist (incl. gabrielvault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -194,7 +194,6 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'DCNY', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'NathanHeffelman', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'loveneeshmalik', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'DeSo Bulls', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'arturopops', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Stevonagy', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'dennishlewis (incl. desonocode)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },

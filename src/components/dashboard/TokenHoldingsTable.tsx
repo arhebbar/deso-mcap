@@ -44,7 +44,9 @@ function categoryDisplayName(cat: HoldingsCategory): string {
 function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {
   const pk = row.publicKey;
   const account = displayOverride ?? row.account ?? '–';
-  const display = pk ? `${pk.slice(0, 8)}…${pk.slice(-6)}` : account;
+  const truncatedPk = pk ? `${pk.slice(0, 8)}…${pk.slice(-6)}` : '';
+  /** When public key is shown: prefer username/account if available (e.g. Richwolfru007) over truncated pk */
+  const display = pk ? (account && account !== truncatedPk ? account : truncatedPk) : account;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
