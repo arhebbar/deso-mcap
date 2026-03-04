@@ -16,7 +16,6 @@ const BADGE_LABELS: Record<string, string> = {
   AMM: 'AMM+Holding Accounts',
   FOUNDER: 'Team',
   DESO_BULL: 'DeSo Bull',
-  NO_SOURCE: 'No Source/Core',
   CORE_AFFILIATED: 'Core Affiliated',
   EXCHANGE: 'Exchange',
   COMMUNITY: 'Community',
@@ -27,7 +26,7 @@ function ClassBadge({ classification }: { classification: string }) {
     classification === 'FOUNDATION' ? 'badge-foundation'
     : classification === 'AMM' ? 'badge-amm'
     : classification === 'FOUNDER' ? 'badge-founder'
-    : 'badge-bull'; // DESO_BULL, NO_SOURCE, CORE_AFFILIATED, EXCHANGE, COMMUNITY
+    : 'badge-bull'; // DESO_BULL, CORE_AFFILIATED, EXCHANGE, COMMUNITY
   return <span className={cls}>{BADGE_LABELS[classification] ?? classification}</span>;
 }
 

@@ -14,21 +14,20 @@ import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
 
-export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'No Source/Core' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others';
+export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others';
 
 /** Future use: tokens backed by certain wallets (yellow/orange/green highlights) */
 export type TokenHighlight = 'yellow' | 'orange' | 'green';
 
-/** Default sort order: Foundation, AMM, Core Team, No Source/Core, Core Affiliated, Exchange Accounts, DeSo Bulls, Others */
+/** Default sort order: Foundation, AMM, Core Team, Core Affiliated, Exchange Accounts, DeSo Bulls, Others */
 export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
   Foundation: 0,
   AMM: 1,
   'Core Team': 2,
-  'No Source/Core': 3,
-  'Core Affiliated': 4,
-  'Exchange Accounts': 5,
-  'DeSo Bulls': 6,
-  Others: 7,
+  'Core Affiliated': 3,
+  'Exchange Accounts': 4,
+  'DeSo Bulls': 5,
+  Others: 6,
 };
 
 export interface TokenHoldingsRow {
@@ -65,7 +64,6 @@ const CATEGORY_BY_CLASS: Record<string, HoldingsCategory> = {
   FOUNDATION: 'Foundation',
   AMM: 'AMM',
   FOUNDER: 'Core Team',
-  NO_SOURCE: 'No Source/Core',
   CORE_AFFILIATED: 'Core Affiliated',
   EXCHANGE: 'Exchange Accounts',
   DESO_BULL: 'DeSo Bulls',
@@ -210,7 +208,8 @@ export function useTokenHoldingsTable(): {
         type: 'account',
         category: cat,
         defaultOrder: DEFAULT_CATEGORY_ORDER[cat],
-        account: w.name,
+        account: (w as { publicKey?: string }).publicKey ? (w as { publicKey?: string }).publicKey : w.name,
+        publicKey: (w as { publicKey?: string }).publicKey,
         DESO: deso,
         DESOStaked: staked,
         DESOUnstaked: unstaked,

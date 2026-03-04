@@ -2,9 +2,11 @@
 
 export interface WalletData {
   name: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'CORE_AFFILIATED' | 'EXCHANGE';
   balances: Record<string, number>;
   usdValue: number;
+  /** Public key (base58) for explorer link and copy */
+  publicKey?: string;
   /** DESO staked (when known). Total DESO = desoStaked + desoUnstaked. */
   desoStaked?: number;
   /** DESO unstaked (when known). Total DESO = desoStaked + desoUnstaked. */
@@ -229,7 +231,7 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'fllwthrvr', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'PremierNS', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
-  { name: 'dharmesh', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'dharmesh (incl. linked)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'hubspot', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'Stantontv', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'MayumiJapan', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
@@ -254,18 +256,18 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
 ];
 
-/** No Source/Core – accounts with no known Foundation/Core affiliation. */
-export const NO_SOURCE_WALLETS: WalletData[] = [
-  { name: 'No Source (…fJ9)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…KeBo)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…BHFF)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…1weS)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…aWbs)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…umt3n)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…nfhL)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'Da5id', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…JKo6)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
-  { name: 'No Source (…oEkb)', classification: 'NO_SOURCE', balances: {}, usdValue: 0 },
+/** No Source/Core merged into Foundation – public-key Foundation accounts. */
+export const FOUNDATION_PK_WALLETS: WalletData[] = [
+  { name: 'Foundation (…fJ9)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…KeBo)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…BHFF)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…1weS)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…aWbs)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…umt3n)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…nfhL)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Da5id', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…JKo6)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Foundation (…oEkb)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
 
 /** Core Affiliated – accounts affiliated with core team. */
@@ -295,6 +297,9 @@ export const EXCHANGE_WALLETS: WalletData[] = [
   { name: 'Exchange (…NrY7)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
   { name: 'Exchange (…H49C)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
   { name: 'Exchange (…V9Nj)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…a583)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…9zN)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
+  { name: 'Exchange (…Mdd)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
 ];
 
 /** Validator usernames considered "Core" (foundation-run). */

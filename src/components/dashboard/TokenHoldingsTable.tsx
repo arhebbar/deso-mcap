@@ -26,7 +26,6 @@ const CATEGORY_ORDER: HoldingsCategory[] = [
   'Foundation',
   'AMM',
   'Core Team',
-  'No Source/Core',
   'Core Affiliated',
   'Exchange Accounts',
   'DeSo Bulls',
@@ -43,8 +42,9 @@ function categoryDisplayName(cat: HoldingsCategory): string {
 }
 
 function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {
-  const account = displayOverride ?? row.account ?? '–';
   const pk = row.publicKey;
+  const account = displayOverride ?? row.account ?? '–';
+  const display = pk ? `${pk.slice(0, 8)}…${pk.slice(-6)}` : account;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,7 +62,7 @@ function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayO
             rel="noopener noreferrer"
             className="text-primary hover:underline font-mono truncate"
           >
-            {account}
+            {display}
           </a>
           <button
             type="button"
@@ -594,21 +594,6 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                             </td>
                           </tr>
                         ))}
-                      {open && sub && (
-                        <tr key={`sub-${cat}`} className="border-b border-border bg-muted/30 font-medium">
-                          <td className="py-1.5 px-3" />
-                          <td className="py-1.5 px-3" />
-                          <AccountCell row={sub} />
-                          {displayCols.map((col) => (
-                            <td key={col} className="text-right py-1.5 px-3">
-                              {renderCell(sub, col)}
-                            </td>
-                          ))}
-                          <td className="text-right py-1.5 px-3">
-                            {formatTotal(getTotalForDisplay(sub))}
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })

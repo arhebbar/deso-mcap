@@ -24,7 +24,7 @@ interface AssetsBreakdownBarProps {
 
 export default function AssetsBreakdownBar({ selectedSection, onSectionClick }: AssetsBreakdownBarProps) {
   const { marketData } = useLiveData();
-  const { ammDeso, foundationDeso, founderDeso, desoBullsDeso, noSourceDeso, coreAffiliatedDeso, exchangeDeso } = useWalletData();
+  const { ammDeso, foundationDeso, founderDeso, desoBullsDeso, coreAffiliatedDeso, exchangeDeso } = useWalletData();
 
   const foundationUsd = foundationDeso * marketData.desoPrice;
   const ammUsd = ammDeso * marketData.desoPrice;
@@ -32,10 +32,10 @@ export default function AssetsBreakdownBar({ selectedSection, onSectionClick }: 
   const desoBullsUsd = desoBullsDeso * marketData.desoPrice;
   const totalTracked =
     foundationUsd + ammUsd + founderUsd + desoBullsUsd +
-    (noSourceDeso + coreAffiliatedDeso + exchangeDeso) * marketData.desoPrice;
+    (coreAffiliatedDeso + exchangeDeso) * marketData.desoPrice;
   const freeFloatUsd = Math.max(
     0,
-    (marketData.desoTotalSupply - marketData.desoStaked - foundationDeso - ammDeso - founderDeso - desoBullsDeso - noSourceDeso - coreAffiliatedDeso - exchangeDeso) * marketData.desoPrice
+    (marketData.desoTotalSupply - marketData.desoStaked - foundationDeso - ammDeso - founderDeso - desoBullsDeso - coreAffiliatedDeso - exchangeDeso) * marketData.desoPrice
   );
   const othersUsd = freeFloatUsd;
 

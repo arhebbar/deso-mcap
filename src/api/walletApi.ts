@@ -44,7 +44,7 @@ const NANOS_PER_DAO_COIN = 1e18;
 export interface WalletConfig {
   username: string;
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE';
   /** When set, multiple configs with same mergeKey are combined into one entry */
   mergeKey?: string;
   /** When set, use this public key directly instead of looking up by username (for accounts with no username) */
@@ -61,7 +61,7 @@ export interface WalletData {
   name: string;
   /** When set, used as canonical label (e.g. "Beyside (AMM)"); strip " (AMM)" for API username where needed */
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE';
   balances: Record<string, number>;
   usdValue: number;
   desoStaked?: number;
@@ -72,6 +72,8 @@ export interface WalletData {
   ccv1ValueDeso?: number;
   /** USD value of CCv2 user-token holdings (share of creator-coin AMM pools attributed to this account) */
   ccv2ValueUsd?: number;
+  /** Public key (base58) for explorer link and copy; set for single-pk wallets (Exchange, Core Affiliated, etc.) */
+  publicKey?: string;
 }
 
 const WALLET_CONFIG: WalletConfig[] = [
@@ -187,7 +189,8 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'PremierNS', classification: 'DESO_BULL' },
   { username: 'WhaleDShark', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
   { username: 'WhaleDVault', displayName: 'WhaleDShark (incl. WhaleDVault)', classification: 'DESO_BULL', mergeKey: 'WhaleDShark' },
-  { username: 'dharmesh', displayName: 'dharmesh', classification: 'DESO_BULL' },
+  { username: 'dharmesh', displayName: 'dharmesh (incl. linked)', classification: 'DESO_BULL', mergeKey: 'dharmesh' },
+  { username: 'linked', displayName: 'dharmesh (incl. linked)', classification: 'DESO_BULL', mergeKey: 'dharmesh' },
   { username: 'hubspot', classification: 'DESO_BULL' },
   { username: 'Stantontv', classification: 'DESO_BULL' },
   { username: 'MayumiJapan', classification: 'DESO_BULL' },
@@ -306,16 +309,17 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'ykshine', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
   { username: 'shine2445', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
   // No Source/Core
-  { username: '', displayName: 'No Source (…fJ9)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },
-  { username: '', displayName: 'No Source (…KeBo)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLjAkTwNw5AKy1TCHT8qjZjmdEojvtNpB7wgFdguZ78scMu3KeBo' },
-  { username: '', displayName: 'No Source (…BHFF)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLhFidFPHVcNGq674VgQxjJgzsjgZZDCiZdTnyHGFzgc34BCBHFF' },
-  { username: '', displayName: 'No Source (…1weS)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLhnXnSKcM4pYxwU3a24bigPJx9LL2gjrmj6mPfv5c771w5B1weS' },
-  { username: '', displayName: 'No Source (…aWbs)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLffz4MC2HZzZdgCahbcBac8Vrsr6mUEDEMrGEkaFr2ux9UqaWbs' },
-  { username: '', displayName: 'No Source (…umt3n)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLirfuVnByxfQk5kwNKyk13oa28mDxb42Uiw9My9LrhMgTkumt3n' },
-  { username: '', displayName: 'No Source (…nfhL)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLiYxGdXeuPc3QMzgBv26EwfxrpwemdGxGZAZbh5qXgf7DennfhL' },
-  { username: 'Da5id', classification: 'NO_SOURCE' },
-  { username: '', displayName: 'No Source (…JKo6)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLiBj1K5DwKKVTYPHzHTPYBaNPDv678PN7kKHwRqjH91KgDKJKo6' },
-  { username: '', displayName: 'No Source (…oEkb)', classification: 'NO_SOURCE', publicKeyBase58Check: 'BC1YLfnQurEcFMCaPsmgtnzjDSzNCSCjYYvVLyvWvmYL6nnfrFHoEkb' },
+  // No Source/Core merged into Foundation
+  { username: '', displayName: 'Foundation (…fJ9)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },
+  { username: '', displayName: 'Foundation (…KeBo)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLjAkTwNw5AKy1TCHT8qjZjmdEojvtNpB7wgFdguZ78scMu3KeBo' },
+  { username: '', displayName: 'Foundation (…BHFF)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLhFidFPHVcNGq674VgQxjJgzsjgZZDCiZdTnyHGFzgc34BCBHFF' },
+  { username: '', displayName: 'Foundation (…1weS)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLhnXnSKcM4pYxwU3a24bigPJx9LL2gjrmj6mPfv5c771w5B1weS' },
+  { username: '', displayName: 'Foundation (…aWbs)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLffz4MC2HZzZdgCahbcBac8Vrsr6mUEDEMrGEkaFr2ux9UqaWbs' },
+  { username: '', displayName: 'Foundation (…umt3n)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLirfuVnByxfQk5kwNKyk13oa28mDxb42Uiw9My9LrhMgTkumt3n' },
+  { username: '', displayName: 'Foundation (…nfhL)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLiYxGdXeuPc3QMzgBv26EwfxrpwemdGxGZAZbh5qXgf7DennfhL' },
+  { username: 'Da5id', classification: 'FOUNDATION' },
+  { username: '', displayName: 'Foundation (…JKo6)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLiBj1K5DwKKVTYPHzHTPYBaNPDv678PN7kKHwRqjH91KgDKJKo6' },
+  { username: '', displayName: 'Foundation (…oEkb)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLfnQurEcFMCaPsmgtnzjDSzNCSCjYYvVLyvWvmYL6nnfrFHoEkb' },
   // Core Affiliated
   { username: '', displayName: 'Core Affiliated (…AqLQ)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgfGoeE5U7REoLFFzKYS6nGUFZ1rfP2KJmr6BCr8iMEaNU6AqLQ' },
   { username: '', displayName: 'Core Affiliated (…QMP)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjHNE39QZ8fSPevE6FU99VuyFepe6AswhvFJiu2bqQ4PX3nFQMP' },
@@ -339,6 +343,9 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Exchange (…NrY7)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLi7CWybSunGG2mVCSiHggMqvCKLARiiyqbCBXhKe27iyE42NrY7' },
   { username: '', displayName: 'Exchange (…H49C)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLhVZBgtX7Hmipyxiw1BJWyYK7SAq8ej3wNDbc4dHLPNADrMH49C' },
   { username: '', displayName: 'Exchange (…V9Nj)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLiuhqCJajHG5C3iM4kuqD1tzecVFpyDLC9wisiHwAVYXH5xV9Nj' },
+  { username: '', displayName: 'Exchange (…a583)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583' },
+  { username: '', displayName: 'Exchange (…9zN)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLg37J6koL3xDwUbQMphtf7Hd7xdktNWmiyifi7uZooaMr6N69zN' },
+  { username: '', displayName: 'Exchange (…Mdd)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLjU48gkK9cbA8h613zcWiDpsnuhsL3jGQ4sNtwnNRvjhWUS5Mdd' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {
@@ -917,8 +924,8 @@ export interface AllStakedDesoRow {
   stakerName: string;
   /** True if staker has a username (tracked or from chain); false if public key only */
   hasUsername: boolean;
-  /** NO_SOURCE, CORE_AFFILIATED, EXCHANGE are grouped with community in StakedDesoTable */
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'NO_SOURCE' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'COMMUNITY';
+  /** CORE_AFFILIATED, EXCHANGE are grouped with community in StakedDesoTable */
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'COMMUNITY';
   amount: number;
   validatorPk: string;
   validatorName?: string;
@@ -1443,6 +1450,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       desoUnstaked: totalUnstaked > 0 ? totalUnstaked : undefined,
       stakedByValidator: stakedByValidator.length > 0 ? stakedByValidator : undefined,
       ccv1ValueDeso: ccv1ValueDeso > 0 ? ccv1ValueDeso : undefined,
+      publicKey: pksInGroup.length === 1 ? pksInGroup[0] : undefined,
     });
   }
 
