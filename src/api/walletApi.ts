@@ -308,6 +308,13 @@ const WALLET_CONFIG: WalletConfig[] = [
   // ykshine and shine2445 (DeSo Bulls)
   { username: 'ykshine', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
   { username: 'shine2445', displayName: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', mergeKey: 'ykshine' },
+  { username: 'michelvanlinschooten', classification: 'DESO_BULL' },
+  { username: 'TheLego3072', classification: 'DESO_BULL' },
+  { username: 'BRENDANTADLER', classification: 'DESO_BULL' },
+  { username: 'Moshehogeg', classification: 'DESO_BULL' },
+  { username: 'AltcoinUSA', classification: 'DESO_BULL' },
+  { username: 'Alisuliman', classification: 'DESO_BULL' },
+  { username: 'Dario_Ryu_Alioto', classification: 'DESO_BULL' },
   // No Source/Core
   // No Source/Core merged into Foundation
   { username: '', displayName: 'Foundation (…fJ9)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },

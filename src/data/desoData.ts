@@ -254,6 +254,13 @@ export const DESO_BULL_WALLETS: WalletData[] = [
   { name: 'Mher', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'vampirecampfire', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
   { name: 'ykshine (incl. shine2445)', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'michelvanlinschooten', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'TheLego3072', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'BRENDANTADLER', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Moshehogeg', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'AltcoinUSA', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Alisuliman', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
+  { name: 'Dario_Ryu_Alioto', classification: 'DESO_BULL', balances: {}, usdValue: 0 },
 ];
 
 /** No Source/Core merged into Foundation – public-key Foundation accounts. */
