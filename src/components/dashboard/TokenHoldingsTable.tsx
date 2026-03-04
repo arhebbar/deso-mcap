@@ -161,8 +161,14 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       ? ([...BASE_COLS.slice(0, 2), ...UNSTAKED_SUB_COLS] as const)
       : BASE_COLS;
 
-  const getColLabel = (col: string) =>
-    !desoOnlyView && unstakedExpanded && col === 'DESOUnstaked' ? 'DESO' : (TOKEN_COL_LABELS[col] ?? col);
+  const getColLabel = (col: string) => {
+    const base =
+      !desoOnlyView && unstakedExpanded && col === 'DESOUnstaked' ? 'DESO' : (TOKEN_COL_LABELS[col] ?? col);
+    if ((col === 'DESOStaked' || col === 'DESOUnstaked') && prices.deso > 0) {
+      return `${base} ($${prices.deso.toFixed(2)})`;
+    }
+    return base;
+  };
 
   /** Total = DESO Staked + CCv1 + DeSo Unstaked (always) */
   const getTotalForDisplay = useCallback(
@@ -552,7 +558,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
           <tbody>
             {headerRows.map((row, idx) => (
               <tr key={row.id} className="border-b border-border bg-muted/30">
-                <td className="py-1.5 px-3">{idx + 1}</td>
+                <td className="py-1.5 px-3 w-12">{row.type === 'issued' || row.type === 'heldByIssuer' || row.type === 'price' ? '' : idx + 1}</td>
                 <td className="py-1.5 px-3" />
                 <AccountCell row={row} />
                           {displayCols.map((col) => (
@@ -646,21 +652,6 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                     </td>
                   </tr>
                 ))}
-            {footerRows.map((row) => (
-              <tr key={row.id} className="border-b border-border bg-muted/30 font-medium">
-                <td className="py-1.5 px-3" />
-                <td className="py-1.5 px-3" />
-                <AccountCell row={row} />
-                          {displayCols.map((col) => (
-                  <td key={col} className="text-right py-1.5 px-3">
-                    {renderCell(row, col)}
-                  </td>
-                ))}
-                <td className="text-right py-1.5 px-3">
-                  {formatTotalWithPct(getTotalForDisplay(row), true)}
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
