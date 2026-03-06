@@ -10,6 +10,7 @@ import CapitalStructureBreakdownChart from '@/components/dashboard/CapitalStruct
 import TreasuryAddressTable from '@/components/dashboard/TreasuryAddressTable';
 import TokenHoldingsTable from '@/components/dashboard/TokenHoldingsTable';
 import CCv1HoldingsTable from '@/components/dashboard/CCv1HoldingsTable';
+import EarlyBlockRewardeesSection from '@/components/dashboard/EarlyBlockRewardeesSection';
 import { useLiveData } from '@/hooks/useLiveData';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useCirculationTable } from '@/hooks/useCirculationTable';
@@ -124,6 +125,9 @@ const Index = () => {
         <TokenHoldingsTable
           expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter}
         />
+
+        {/* Early Block Rewardees: first 1000 blocks (first week of March 2021) */}
+        <EarlyBlockRewardeesSection />
 
         {/* Historical Trends */}
         <TrendCharts />
