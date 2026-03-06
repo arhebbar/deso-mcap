@@ -38,7 +38,7 @@ export async function fetchEarlyBlockRewardRecipients(): Promise<EarlyBlockRewar
         txnType: { equalTo: 1 },
         blockHeight: { lessThan: EARLY_BLOCK_HEIGHT_MAX },
       },
-      orderBy: 'BLOCK_HEIGHT_ASC',
+      orderBy: ['BLOCK_HEIGHT_ASC', 'TRANSACTION_ID_ASC'],
       first: PAGE_SIZE,
       after,
     };
