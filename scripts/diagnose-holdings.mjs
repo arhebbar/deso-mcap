@@ -29,9 +29,11 @@ const WALLET_CONFIG = [
   { username: 'JordanLintz', displayName: 'HighKey (incl. HighKeyValidator)', mergeKey: 'HighKey' },
   { username: 'LukeLintz', displayName: 'HighKey (incl. HighKeyValidator)', mergeKey: 'HighKey' },
   { username: 'HighKeyValidator', displayName: 'HighKey (incl. HighKeyValidator)', mergeKey: 'HighKey' },
-  { username: 'StarGeezer', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', mergeKey: 'StarGeezer' },
-  { username: 'SG_Vault', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', mergeKey: 'StarGeezer' },
-  { username: 'BeyondSocialValidator', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', mergeKey: 'StarGeezer' },
+  { username: 'StarGeezer', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', mergeKey: 'StarGeezer' },
+  { username: 'SG_Vault', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', mergeKey: 'StarGeezer' },
+  { username: 'BeyondSocialValidator', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', mergeKey: 'StarGeezer' },
+  { username: 'StarGeezerCore', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', mergeKey: 'StarGeezer' },
+  { username: 'BeyondSocial', displayName: 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', mergeKey: 'StarGeezer' },
   { username: 'DesocialWorld', displayName: null },
   { username: 'Edokoevoet', displayName: null },
   { username: 'Gabrielist', displayName: 'Gabrielist (incl. gabrielvault)', mergeKey: 'Gabrielist' },
@@ -52,6 +54,9 @@ const WALLET_CONFIG = [
   { username: 'Arnoud', displayName: null },
   { username: 'TangledBrush918', displayName: 'TangledBrush918 (incl. Tangyshroom)', mergeKey: 'TangledBrush918' },
   { username: 'Tangyshroom', displayName: 'TangledBrush918 (incl. Tangyshroom)', mergeKey: 'TangledBrush918' },
+  { username: 'Moggel', displayName: 'Moggel (incl. BlastingBull67, SinisterSwine666)', mergeKey: 'Moggel' },
+  { username: 'BlastingBull67', displayName: 'Moggel (incl. BlastingBull67, SinisterSwine666)', mergeKey: 'Moggel' },
+  { username: 'SinisterSwine666', displayName: 'Moggel (incl. BlastingBull67, SinisterSwine666)', mergeKey: 'Moggel' },
   { username: 'ReihanRei', displayName: 'ReihanRei (incl. AlecsandrosRei)', mergeKey: 'ReihanRei' },
   { username: 'AlecsandrosRei', displayName: 'ReihanRei (incl. AlecsandrosRei)', mergeKey: 'ReihanRei' },
   { username: 'mcMarsh', displayName: 'mcMarsh (incl. jemarsh)', mergeKey: 'mcMarsh' },
@@ -208,7 +213,7 @@ async function main() {
   }
 
   console.log('\n4. DeSo Bulls specifically:');
-  const desoBulls = ['Randhir (Me)', 'HighKey (incl. HighKeyValidator)', 'StarGeezer (incl. SG_Vault, BeyondSocialValidator)', 'DesocialWorld', 'Edokoevoet', 'Gabrielist (incl. gabrielvault)', 'RobertGraham', '0xAustin', '0xBen_', 'Darian_Parrish (incl. DariansWallet)', 'VishalGulia', 'ZeroToOne', 'anku', 'fllwthrvr', 'PremierNS', 'WhaleDShark', 'Fernando_Pessoa', 'SkhiBridges', 'Arnoud', 'Silto_Nascao', 'mcMarsh (incl. jemarsh)', 'carry2web', 'Kaanha', 'Stevonagy', 'dennishlewis (incl. desonocode)', 'SafetyNet', 'TangledBrush918 (incl. Tangyshroom)', 'ReihanRei (incl. AlecsandrosRei)', 'mgoff', 'Ugottalovit', 'DesoWomenUnite', 'Nordian', 'DOZ', 'markvanzee', 'OliBvault', 'Gjoe', 'Briandrever', 'Pradier', 'StevoNagy', 'erwinwillems', 'Exotica_S', 'JohnDWeb3', 'gawergy', 'nathanwells', 'bkat', 'jodybossert', 'JohnJardin (incl. Capatin)', 'degen_doge', 'Degen_doge', 'kuririn', 'fisnikee', 'GoldBerry (incl. GoldberryWal)', 'ryleesnet (incl. rylee19, ryleesnetvalidator)', 'ChaseSteely', 'CompDec', 'RajLahoti', 'StubbornDad', 'TheBitcloutDog', 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', 'PaulyHart', 'Mher', 'vampirecampfire'];
+  const desoBulls = ['Randhir (Me)', 'HighKey (incl. HighKeyValidator)', 'StarGeezer (incl. SG_Vault, BeyondSocialValidator, StarGeezerCore, BeyondSocial)', 'DesocialWorld', 'Edokoevoet', 'Gabrielist (incl. gabrielvault)', 'RobertGraham', '0xAustin', '0xBen_', 'Darian_Parrish (incl. DariansWallet)', 'VishalGulia', 'ZeroToOne', 'anku', 'fllwthrvr', 'PremierNS', 'WhaleDShark', 'Fernando_Pessoa', 'SkhiBridges', 'Arnoud', 'Silto_Nascao', 'mcMarsh (incl. jemarsh)', 'carry2web', 'Kaanha', 'Stevonagy', 'dennishlewis (incl. desonocode)', 'SafetyNet', 'TangledBrush918 (incl. Tangyshroom)', 'Moggel (incl. BlastingBull67, SinisterSwine666)', 'ReihanRei (incl. AlecsandrosRei)', 'mgoff', 'Ugottalovit', 'DesoWomenUnite', 'Nordian', 'DOZ', 'markvanzee', 'OliBvault', 'Gjoe', 'Briandrever', 'Pradier', 'StevoNagy', 'erwinwillems', 'Exotica_S', 'JohnDWeb3', 'gawergy', 'nathanwells', 'bkat', 'jodybossert', 'JohnJardin (incl. Capatin)', 'degen_doge', 'Degen_doge', 'kuririn', 'fisnikee', 'GoldBerry (incl. GoldberryWal)', 'ryleesnet (incl. rylee19, ryleesnetvalidator)', 'ChaseSteely', 'CompDec', 'RajLahoti', 'StubbornDad', 'TheBitcloutDog', 'SharkGang (incl. Metaphilosopher, SharkToken, SharkBank, SharkCoin)', 'PaulyHart', 'Mher', 'vampirecampfire'];
   for (const name of desoBulls) {
     const pk = usernameToPk.get(name);
     if (!pk) {

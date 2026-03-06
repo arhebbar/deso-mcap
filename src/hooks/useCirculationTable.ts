@@ -18,6 +18,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
   AMM: 'AMM',
   FOUNDER: 'Core Team',
+  CORE_AFFILIATED: 'Core Affiliated',
+  EXCHANGE: 'Exchange Accounts',
   DESO_BULL: 'DeSo Bulls',
   COMMUNITY: 'Others',
 };
@@ -96,17 +98,22 @@ export interface CirculationTableData {
 }
 
 function sumStakesByClassification(buckets: AllStakedDesoBucket[]) {
-  const core = { foundation: 0, coreTeam: 0, desoBulls: 0, others: 0 };
-  const community = { foundation: 0, coreTeam: 0, desoBulls: 0, others: 0 };
+  const core = { foundation: 0, coreTeam: 0, coreAffiliated: 0, exchange: 0, desoBulls: 0, others: 0 };
+  const community = { foundation: 0, coreTeam: 0, coreAffiliated: 0, exchange: 0, desoBulls: 0, others: 0 };
   for (const b of buckets) {
     const target = b.validatorType === 'core' ? core : community;
     for (const r of b.foundation) {
       if (r.classification === 'FOUNDER') target.coreTeam += r.amount;
+      else if (r.classification === 'CORE_AFFILIATED') target.coreAffiliated += r.amount;
+      else if (r.classification === 'EXCHANGE') target.exchange += r.amount;
       else if (r.classification === 'FOUNDATION' || r.classification === 'AMM') target.foundation += r.amount;
+      else if (r.classification === 'DESO_BULL') target.desoBulls += r.amount;
       else target.others += r.amount;
     }
     for (const r of b.community) {
       if (r.classification === 'DESO_BULL') target.desoBulls += r.amount;
+      else if (r.classification === 'CORE_AFFILIATED') target.coreAffiliated += r.amount;
+      else if (r.classification === 'EXCHANGE') target.exchange += r.amount;
       else target.others += r.amount;
     }
   }
@@ -142,8 +149,8 @@ export function useCirculationTable(): CirculationTableData {
 
     const { core: coreStaked, community: communityStaked } = sumStakesByClassification(buckets);
     const totalStaked =
-      coreStaked.foundation + coreStaked.coreTeam + coreStaked.desoBulls + coreStaked.others +
-      communityStaked.foundation + communityStaked.coreTeam + communityStaked.desoBulls + communityStaked.others;
+      coreStaked.foundation + coreStaked.coreTeam + coreStaked.coreAffiliated + coreStaked.exchange + coreStaked.desoBulls + coreStaked.others +
+      communityStaked.foundation + communityStaked.coreTeam + communityStaked.coreAffiliated + communityStaked.exchange + communityStaked.desoBulls + communityStaked.others;
 
     const validators: ValidatorSection[] = buckets.map((b) => {
       const rows = allRowsFromBucket(b);
@@ -199,6 +206,8 @@ export function useCirculationTable(): CirculationTableData {
         Foundation: 0,
         AMM: 0,
         CoreTeam: 0,
+        CoreAffiliated: 0,
+        ExchangeAccounts: 0,
         DeSoBulls: 0,
         Others: 0,
       };
@@ -213,6 +222,8 @@ export function useCirculationTable(): CirculationTableData {
         if (w.classification === 'FOUNDATION') cat = 'Foundation';
         else if (w.classification === 'AMM') cat = 'AMM';
         else if (w.classification === 'FOUNDER') cat = 'CoreTeam';
+        else if (w.classification === 'CORE_AFFILIATED') cat = 'CoreAffiliated';
+        else if (w.classification === 'EXCHANGE') cat = 'ExchangeAccounts';
         else if (w.classification === 'DESO_BULL') cat = 'DeSoBulls';
         else cat = 'Others';
         map[cat] += unstaked;
@@ -229,6 +240,8 @@ export function useCirculationTable(): CirculationTableData {
         { label: 'Foundation', amount: map.Foundation, usdValue: usd(map.Foundation) },
         { label: 'AMM+Holding Accounts', amount: map.AMM, usdValue: usd(map.AMM) },
         { label: 'Core Team', amount: map.CoreTeam, usdValue: usd(map.CoreTeam) },
+        { label: 'Core Affiliated', amount: map.CoreAffiliated, usdValue: usd(map.CoreAffiliated) },
+        { label: 'Exchange Accounts', amount: map.ExchangeAccounts, usdValue: usd(map.ExchangeAccounts) },
         { label: 'DeSo Bulls', amount: map.DeSoBulls, usdValue: usd(map.DeSoBulls) },
         { label: 'Others', amount: map.Others, usdValue: usd(map.Others) },
       ].filter((x) => x.amount > 0);
@@ -409,7 +422,10 @@ export function useCirculationTable(): CirculationTableData {
         : 0;
     const userProjectDeso = openfundCirculationDesoEquiv + focusDesoEquiv + ccv2Deso;
     const trackedUnstakedDeso = nativeDesoByCat
-      .filter((c) => c.label === 'Foundation' || c.label === 'AMM+Holding Accounts' || c.label === 'DeSo Bulls')
+      .filter((c) =>
+        c.label === 'Foundation' || c.label === 'AMM+Holding Accounts' || c.label === 'Core Team' ||
+        c.label === 'Core Affiliated' || c.label === 'Exchange Accounts' || c.label === 'DeSo Bulls'
+      )
       .reduce((s, c) => s + c.amount, 0);
     const othersUnstakedDeso = Math.max(
       0,

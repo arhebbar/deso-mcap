@@ -1,7 +1,17 @@
 /**
- * Early Block Rewardees: recipients of block rewards in the first 1000 blocks.
+ * Early Block Rewardees: recipients of block rewards in the first 10,000 blocks.
  * Public keys are clickable (explorer) and copyable.
  */
+
+function formatBlockDate(iso: string | null): string {
+  if (!iso) return '–';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return '–';
+  }
+}
 
 import { useState } from 'react';
 import { useEarlyBlockRewardRecipients } from '@/hooks/useEarlyBlockRewardRecipients';
@@ -75,7 +85,7 @@ export default function EarlyBlockRewardeesSection() {
         <div>
           <h2 className="text-lg font-semibold">Early Block Rewardees</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Block rewards in first 1000 blocks (first week of March 2021). {list.length} unique recipient{list.length !== 1 ? 's' : ''}, {totalBlocks} blocks total.
+            Block rewards in first 10,000 blocks (early March 2021). {list.length} unique recipient{list.length !== 1 ? 's' : ''}, {totalBlocks} blocks total.
           </p>
         </div>
         <span className="text-sm text-muted-foreground">
@@ -91,7 +101,9 @@ export default function EarlyBlockRewardeesSection() {
                 <th className="text-left py-2 px-3">Public Key</th>
                 <th className="text-right py-2 px-3">Blocks</th>
                 <th className="text-right py-2 px-3">First Block</th>
+                <th className="text-right py-2 px-3">Earliest Date</th>
                 <th className="text-right py-2 px-3">Last Block</th>
+                <th className="text-right py-2 px-3">Latest Date</th>
               </tr>
             </thead>
             <tbody>
@@ -103,7 +115,9 @@ export default function EarlyBlockRewardeesSection() {
                   </td>
                   <td className="py-1.5 px-3 text-right">{r.blockCount.toLocaleString()}</td>
                   <td className="py-1.5 px-3 text-right">{r.firstBlock}</td>
+                  <td className="py-1.5 px-3 text-right text-muted-foreground">{formatBlockDate(r.firstBlockDate)}</td>
                   <td className="py-1.5 px-3 text-right">{r.lastBlock}</td>
+                  <td className="py-1.5 px-3 text-right text-muted-foreground">{formatBlockDate(r.lastBlockDate)}</td>
                 </tr>
               ))}
             </tbody>

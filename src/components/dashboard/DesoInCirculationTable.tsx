@@ -8,8 +8,45 @@
 import React, { useState } from 'react';
 import { useCirculationTable } from '@/hooks/useCirculationTable';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight, ChevronDown, Plus, Minus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Copy } from 'lucide-react';
 import { formatUsd } from '@/lib/formatters';
+
+function AccountCell({ name, publicKey }: { name: string; publicKey?: string }) {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (publicKey) navigator.clipboard?.writeText(publicKey);
+  };
+
+  if (publicKey) {
+    const truncated = `${publicKey.slice(0, 8)}…${publicKey.slice(-6)}`;
+    const display = name && name !== truncated ? name : truncated;
+    return (
+      <span className="inline-flex items-center gap-1.5 min-w-0">
+        <a
+          href={`https://explorer.deso.com/u/${encodeURIComponent(publicKey)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline font-mono truncate"
+          title={publicKey}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {display}
+        </a>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          title="Copy public key"
+          aria-label="Copy public key"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    );
+  }
+  return <>{name}</>;
+}
 
 function fmtDeso(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
@@ -116,10 +153,12 @@ export default function DesoInCirculationTable() {
                         <tr key={`${v.id}-acc-${i}`} className="text-xs">
                           <td className="pl-10" />
                           <td className="pl-4 text-muted-foreground">
-                            <span className="inline-block px-1.5 py-0.5 rounded bg-muted/60 text-[10px] mr-1.5">
-                              {acc.category}
+                            <span className="inline-flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-muted/60 text-[10px] shrink-0">
+                                {acc.category}
+                              </span>
+                              <AccountCell name={acc.name} publicKey={acc.publicKey} />
                             </span>
-                            {acc.name}
                           </td>
                           <td className="text-right font-mono">{fmtDeso(acc.amount)}</td>
                           <td className="text-right text-muted-foreground">—</td>
@@ -259,6 +298,7 @@ export default function DesoInCirculationTable() {
                               <tr key={`${sec.id}-${c.label}`} className="text-xs">
                                 <td className="pl-10" />
                                 <td className="pl-4 text-muted-foreground">{c.label}</td>
+                                <td className="text-muted-foreground">—</td>
                                 <td className="text-right text-muted-foreground">—</td>
                                 <td className="text-right text-muted-foreground">—</td>
                                 <td className="text-right text-muted-foreground">—</td>

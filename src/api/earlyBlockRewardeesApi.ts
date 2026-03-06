@@ -1,85 +1,85 @@
 /**
- * Fetches early Block Reward recipients (block height < 1000).
+ * Fetches early Block Reward recipients (block height < 10000).
  * Used to categorize them as Early Block Rewardees.
  */
 
 import { getGraphqlUrl } from '@/api/graphqlEndpoint';
 
-const EARLY_BLOCK_HEIGHT_MAX = '1000';
+const EARLY_BLOCK_HEIGHT_MAX = '10000';
 
 export interface EarlyBlockRewardRecipient {
   publicKey: string;
   blockCount: number;
   firstBlock: number;
   lastBlock: number;
+  firstBlockDate: string | null;
+  lastBlockDate: string | null;
 }
 
 const EARLY_BLOCK_REWARDS_QUERY = `
-  query EarlyBlockRewards($filter: TransactionFilter, $orderBy: [TransactionsOrderBy!], $first: Int!, $after: Cursor) {
-    transactions(filter: $filter, orderBy: $orderBy, first: $first, after: $after) {
+  query EarlyBlockRewards($filter: TransactionFilter, $orderBy: [TransactionsOrderBy!], $first: Int!) {
+    transactions(filter: $filter, orderBy: $orderBy, first: $first) {
       totalCount
-      pageInfo { hasNextPage endCursor }
       nodes {
         blockHeight
+        timestamp
         outputs
       }
     }
   }
 `;
 
+/** Single fetch, no pagination - avoids cursor uniqueness requirement. */
+const FETCH_ALL_LIMIT = 15000;
+
 export async function fetchEarlyBlockRewardRecipients(): Promise<EarlyBlockRewardRecipient[]> {
-  const recipients = new Map<string, { blocks: number[] }>();
-  let after: string | null = null;
-  const PAGE_SIZE = 500;
+  const variables = {
+    filter: {
+      txnType: { equalTo: 1 },
+      blockHeight: { lessThan: EARLY_BLOCK_HEIGHT_MAX },
+    },
+    orderBy: ['BLOCK_HEIGHT_ASC'],
+    first: FETCH_ALL_LIMIT,
+  };
 
-  do {
-    const variables = {
-      filter: {
-        txnType: { equalTo: 1 },
-        blockHeight: { lessThan: EARLY_BLOCK_HEIGHT_MAX },
-      },
-      orderBy: ['BLOCK_HEIGHT_ASC', 'TRANSACTION_ID_ASC'],
-      first: PAGE_SIZE,
-      after,
-    };
+  const res = await fetch(getGraphqlUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: EARLY_BLOCK_REWARDS_QUERY, variables }),
+  });
+  const data = await res.json();
+  if (data?.errors?.length) {
+    throw new Error(data.errors.map((e: { message?: string }) => e.message).join('; '));
+  }
+  const nodes = data?.data?.transactions?.nodes ?? [];
 
-    const res = await fetch(getGraphqlUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: EARLY_BLOCK_REWARDS_QUERY, variables }),
-    });
-    const data = await res.json();
-    if (data?.errors?.length) {
-      throw new Error(data.errors.map((e: { message?: string }) => e.message).join('; '));
-    }
-    const nodes = data?.data?.transactions?.nodes ?? [];
-    const pageInfo = data?.data?.transactions?.pageInfo;
-
-    for (const n of nodes) {
-      const blockHeight = parseInt(n.blockHeight ?? '0', 10);
-      const outputs = n.outputs ?? [];
-      for (const o of outputs) {
-        const pk = o?.public_key ?? o?.PublicKey;
-        if (pk) {
-          const entry = recipients.get(pk) ?? { blocks: [] };
-          entry.blocks.push(blockHeight);
-          recipients.set(pk, entry);
-        }
+  const recipients = new Map<string, { blocks: Array<{ height: number; timestamp: string | null }> }>();
+  for (const n of nodes) {
+    const blockHeight = parseInt(n.blockHeight ?? '0', 10);
+    const timestamp = n.timestamp ?? null;
+    const outputs = n.outputs ?? [];
+    for (const o of outputs) {
+      const pk = o?.public_key ?? o?.PublicKey;
+      if (pk) {
+        const entry = recipients.get(pk) ?? { blocks: [] };
+        entry.blocks.push({ height: blockHeight, timestamp });
+        recipients.set(pk, entry);
       }
     }
-
-    after = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
-    if (after) await new Promise((r) => setTimeout(r, 50));
-  } while (after);
+  }
 
   return Array.from(recipients.entries())
     .map(([publicKey, { blocks }]) => {
-      const sorted = [...blocks].sort((a, b) => a - b);
+      const sorted = [...blocks].sort((a, b) => a.height - b.height);
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
       return {
         publicKey,
         blockCount: blocks.length,
-        firstBlock: sorted[0] ?? 0,
-        lastBlock: sorted[sorted.length - 1] ?? 0,
+        firstBlock: first?.height ?? 0,
+        lastBlock: last?.height ?? 0,
+        firstBlockDate: first?.timestamp ?? null,
+        lastBlockDate: last?.timestamp ?? null,
       };
     })
     .sort((a, b) => a.firstBlock - b.firstBlock);
