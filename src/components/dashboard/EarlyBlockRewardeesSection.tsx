@@ -23,6 +23,8 @@ function CategoryBadge({ classification }: { classification: string }) {
     classification === 'FOUNDATION' ? 'badge-foundation'
     : classification === 'AMM' ? 'badge-amm'
     : classification === 'FOUNDER' ? 'badge-founder'
+    : classification === 'CORE_AFFILIATED' ? 'badge-core-affiliated'
+    : classification === 'EXCHANGE' ? 'badge-exchange'
     : 'badge-bull';
   return <span className={cls}>{CATEGORY_LABELS[classification] ?? classification}</span>;
 }
