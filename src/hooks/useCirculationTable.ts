@@ -163,6 +163,7 @@ export function useCirculationTable(): CirculationTableData {
         category: classificationToLabel(r.classification),
         amount: r.amount,
         usdValue: r.amount * desoPrice,
+        publicKey: r.stakerPk,
       }));
       return {
         id: b.validatorKey,
