@@ -14,8 +14,8 @@ import {
   fetchUsernamesForPks,
 } from '@/api/walletApi';
 
-const FIRST = 500;
-const MIN_BALANCE_NANOS = 250_000_000; // ~0.25 DESO / ~$1
+const FIRST = 1500;
+const MIN_BALANCE_NANOS = 1_000_000_000_000; // 1K DESO – capture majority of large holders
 
 export interface DesoBalanceHolder {
   name: string;

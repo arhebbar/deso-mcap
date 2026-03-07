@@ -326,6 +326,9 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'AltcoinUSA', classification: 'DESO_BULL' },
   { username: 'Alisuliman', classification: 'DESO_BULL' },
   { username: 'Dario_Ryu_Alioto', classification: 'DESO_BULL' },
+  { username: '', displayName: 'DeSo Bull (…eg4es)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiRhbpc7aypyVxtsxaNWiB3yyP6f9wxsz2px2cHTs55VT7eg4es' },
+  { username: '', displayName: 'DeSo Bull (…gvPi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgwopktaB5AFqR5dc3So288vZNhtKi4zp1QGLJmXGXYX5mfgvPi' },
+  { username: '', displayName: 'DeSo Bull (…n2ZY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgQkyaEw1Y4mSY2xe88FfAhEkg9wHbnZq1vU72QV1foP3J7n2ZY' },
   // No Source/Core
   // No Source/Core merged into Foundation
   { username: '', displayName: 'Foundation (…fJ9)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },
@@ -1370,6 +1373,48 @@ function parseDaoBalance(entry: { BalanceNanos?: number; BalanceNanosUint256?: s
 export interface OpenfundFocusByPk {
   Openfund: number;
   Focus: number;
+}
+
+/**
+ * Fetch Openfund/Focus holder rows (pk, Openfund, Focus, staked, unstaked, name) for holders not in excludePks.
+ * Used to add Openfund/Focus holders as Others rows and reduce Unaccounted.
+ */
+const OPENFUND_FOCUS_HOLDER_ROWS_LIMIT = 1000;
+
+export async function fetchOpenfundFocusHolderRows(
+  excludePks: Set<string>
+): Promise<Array<{ pk: string; name: string; staked: number; unstaked: number; Openfund: number; Focus: number; isNamed: boolean }>> {
+  const map = await fetchOpenfundFocusHolderMap();
+  const pks = Array.from(map.keys())
+    .filter((pk) => !excludePks.has(pk))
+    .sort((a, b) => {
+      const va = (map.get(a)!.Openfund ?? 0) * 0.087 + (map.get(a)!.Focus ?? 0) * 0.00034;
+      const vb = (map.get(b)!.Openfund ?? 0) * 0.087 + (map.get(b)!.Focus ?? 0) * 0.00034;
+      return vb - va;
+    })
+    .slice(0, OPENFUND_FOCUS_HOLDER_ROWS_LIMIT);
+  if (pks.length === 0) return [];
+  const [balanceByPk, stakedByPk, usernameByPk] = await Promise.all([
+    fetchBalancesForPublicKeys(pks),
+    getStakedTotalByPublicKeys(pks),
+    fetchUsernamesForPks(pks),
+  ]);
+  return pks.map((pk) => {
+    const of = map.get(pk)!;
+    const totalDeso = balanceByPk.get(pk) ?? 0;
+    const staked = stakedByPk.get(pk) ?? 0;
+    const unstaked = Math.max(0, totalDeso - staked);
+    const username = usernameByPk.get(pk);
+    return {
+      pk,
+      name: username ?? `${pk.slice(0, 8)}…`,
+      staked,
+      unstaked,
+      Openfund: of.Openfund,
+      Focus: of.Focus,
+      isNamed: !!username,
+    };
+  });
 }
 
 /**
