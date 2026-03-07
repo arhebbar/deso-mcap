@@ -3,6 +3,30 @@
  * Public keys are clickable (explorer) and copyable.
  */
 
+import { useState } from 'react';
+import { useEarlyBlockRewardRecipients } from '@/hooks/useEarlyBlockRewardRecipients';
+import { useTrackedClassifications } from '@/hooks/useTrackedClassifications';
+import { Copy } from 'lucide-react';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  FOUNDATION: 'Foundation',
+  AMM: 'AMM',
+  FOUNDER: 'Team',
+  DESO_BULL: 'DeSo Bull',
+  CORE_AFFILIATED: 'Core Affiliated',
+  EXCHANGE: 'Exchange',
+  COMMUNITY: 'Community',
+};
+
+function CategoryBadge({ classification }: { classification: string }) {
+  const cls =
+    classification === 'FOUNDATION' ? 'badge-foundation'
+    : classification === 'AMM' ? 'badge-amm'
+    : classification === 'FOUNDER' ? 'badge-founder'
+    : 'badge-bull';
+  return <span className={cls}>{CATEGORY_LABELS[classification] ?? classification}</span>;
+}
+
 function formatBlockDate(iso: string | null): string {
   if (!iso) return '–';
   try {
@@ -12,10 +36,6 @@ function formatBlockDate(iso: string | null): string {
     return '–';
   }
 }
-
-import { useState } from 'react';
-import { useEarlyBlockRewardRecipients } from '@/hooks/useEarlyBlockRewardRecipients';
-import { Copy } from 'lucide-react';
 
 function PublicKeyCell({ publicKey }: { publicKey: string }) {
   const truncated = `${publicKey.slice(0, 8)}…${publicKey.slice(-6)}`;
@@ -53,6 +73,7 @@ function PublicKeyCell({ publicKey }: { publicKey: string }) {
 export default function EarlyBlockRewardeesSection() {
   const [expanded, setExpanded] = useState(false);
   const { data: recipients, isLoading, error } = useEarlyBlockRewardRecipients();
+  const { classifications, isLoading: classificationsLoading } = useTrackedClassifications();
 
   if (isLoading) {
     return (
@@ -97,6 +118,7 @@ export default function EarlyBlockRewardeesSection() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="text-left py-2 px-3">Category</th>
                 <th className="text-left py-2 px-3 w-12">#</th>
                 <th className="text-left py-2 px-3">Public Key</th>
                 <th className="text-right py-2 px-3">Blocks</th>
@@ -109,6 +131,13 @@ export default function EarlyBlockRewardeesSection() {
             <tbody>
               {list.map((r, idx) => (
                 <tr key={r.publicKey} className="border-b border-border hover:bg-muted/20">
+                  <td className="py-1.5 px-3">
+                    {classificationsLoading ? (
+                      <span className="text-muted-foreground">–</span>
+                    ) : (
+                      <CategoryBadge classification={classifications.get(r.publicKey) ?? 'COMMUNITY'} />
+                    )}
+                  </td>
                   <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
                   <td className="py-1.5 px-3 font-medium">
                     <PublicKeyCell publicKey={r.publicKey} />

@@ -347,6 +347,34 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Core Affiliated (…ib9b2)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLihPpDbdKYhzUWBqiD12mXGbQnUehhGo9JpxRjmNdTVuaSwi9b2' },
   { username: '', displayName: 'Core Affiliated (…eTXb)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLj797rLyQJPxEPvWBy9iM5mpCTSdfsXb2LmSAa3TRcLEoTWeTXb' },
   { username: '', displayName: 'Core Affiliated (…W3Av)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgyjPzY82hWq2yuBsPPf5cyg9MsGfJqbFfED1GfEKgJDW9eW3Av' },
+  // Core stakers >10K DESO (added via find-core-stakers-untagged script)
+  { username: '', displayName: 'Core Affiliated (…WGJcRB)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLfy71NgUsFxfJasAG9LRMvoQNETUzGN8pTL1JTbx9V9ZKWGJcRB' },
+  { username: '', displayName: 'Core Affiliated (…q8Rk6e)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLicgJDPWpdrDqraBFY88KVT5hhR5mNQyp91UxcHZaiNZTq8Rk6e' },
+  { username: '', displayName: 'Core Affiliated (…j6KtKT)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjUMZKY7EhmprWrwGGzheWDYmycsi7fscEv5fDhPUoPkQj6KtKT' },
+  { username: '', displayName: 'Core Affiliated (…zdEDLh)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiVa1mw8cdybukppFQ1BZNFTAguXxMdSEPAPMhphaxzYnzdEDLh' },
+  { username: '', displayName: 'Core Affiliated (…MGqGwi)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiVBmAgha4QTS6Zuozh2KSpZroj5GMFuxDqGkd6GKX81hMGqGwi' },
+  { username: '', displayName: 'Core Affiliated (…iPw7xK)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLizmu5H9EuXDWQ64RoGqtxtbvfG8PGyU9UGa3byoDv8LYiPw7xK' },
+  { username: '', displayName: 'Core Affiliated (…GccU5z)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhreWZ8Uz96MQ6Pb1zRRJWqG4LJTpRoM4eYZSaT9ocDQvGccU5z' },
+  { username: '', displayName: 'Core Affiliated (…iYoViU)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhbFgnXoM9sRWGtGZrsNFDGBwuyzzZ6KRpJqaNr8JAreciYoViU' },
+  { username: '', displayName: 'Core Affiliated (…GfjYYY)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLfizappwz4xGZrkiTrZqq1xbEyMLbx5V8nsPar7sUYHGJGfjYYY' },
+  { username: '', displayName: 'Core Affiliated (…AQhWca)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiQ4yBcdQzHN6P72Cs2pziiErgDqBgixwoXoMw59ruxriAQhWca' },
+  { username: '', displayName: 'Core Affiliated (…PfhKS1)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjEEGH72UpVX3XxiHfEVFDAiwftDyneRXVeMMCjUAhxatPfhKS1' },
+  { username: '', displayName: 'Core Affiliated (…aQzcdw)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgJr3H33D6rBh5gLCfK2qEnfZarEAKUdKKpa8LE6WzvtcaQzcdw' },
+  { username: '', displayName: 'Core Affiliated (…eeEfJW)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLi1bwfdVbLF765aYCRjhZwSvgW8C4QG2sRKSjB7wkzxYReeEfJW' },
+  { username: '', displayName: 'Core Affiliated (…oRpZW3)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhRNeYCE75nvpovXGvd9thK8n1YpMKPwbadNcaF7kDF7poRpZW3' },
+  { username: '', displayName: 'Core Affiliated (…og4FaX)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLim1fAGRStqBC1eGxVJcmR9ciq4gaQwyicVt6BQ2xC9Loog4FaX' },
+  { username: '', displayName: 'Core Affiliated (…4nEgcf)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjPSrko4HN9FwCLNVA6hZDzi8tJ9BM56L1tdqX56Zfpoi4nEgcf' },
+  { username: '', displayName: 'Core Affiliated (…D6PZuu)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgX4nVQajeupsPm8XnKqNUsW7q5HrCkXBpyAKgdT2bi3LD6PZuu' },
+  { username: '', displayName: 'Core Affiliated (…3513Mv)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLicyGzKNk7huWXVTrb3q2JENZJuhsMMtYS6hesSdKqz5v3513Mv' },
+  { username: '', displayName: 'Core Affiliated (…Krw3tU)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLh3bTY5rn7WgomThT8RboXhAtiFHUeHwqNrmVdbrWeD9cKrw3tU' },
+  { username: '', displayName: 'Core Affiliated (…jCRNX5)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhtNrkv3eLUkpf8dP9sSz2d2gcnSMVkKFG38sA9Zgg5BUjCRNX5' },
+  { username: '', displayName: 'Core Affiliated (…8a57fY)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiYcyX9XdaXz3EFChhd4gEfREaiUtskTrpxsj8zcAeTVr8a57fY' },
+  { username: '', displayName: 'Core Affiliated (…gPcYis)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLftXh9jWVn5fitUvniY83AcN7kG4Pem54db2CzqT2jaHsgPcYis' },
+  { username: '', displayName: 'Core Affiliated (…rV8BjX)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhB5AuAMND47kWXDRUQ4u5PGNDhCbA7Tky1d6ZDGY7iiWrV8BjX' },
+  { username: '', displayName: 'Core Affiliated (…7MiKMt)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhnTZLR8NLcFwSXzjQ5bhYL1HT4FhJNpdKM5LW3bFME2g7MiKMt' },
+  { username: '', displayName: 'Core Affiliated (…QqjVHm)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLiFHzcDSe4YNTcyGwF1vudZeb5dpFEDcKxywZzVRWUGwwQqjVHm' },
+  { username: '', displayName: 'Core Affiliated (…dzXG2X)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgSpbC7ZpJXRX6iz1Kevg2RNQ6DgF7MptgeM7ScnWp38XdzXG2X' },
+  { username: '', displayName: 'Core Affiliated (…MWFhnc)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgFqmEQVbTz123GHExc2empfbEtbWDbdqgrxz3uqbwte6MWFhnc' },
   { username: '2times', classification: 'CORE_AFFILIATED' },
   { username: 'tickerpump', classification: 'CORE_AFFILIATED' },
   // Exchange Accounts (excluded from Others)
@@ -395,6 +423,32 @@ export async function fetchTrackedPublicKeys(): Promise<Set<string>> {
     if (r?.pk) pks.add(r.pk);
   }
   return pks;
+}
+
+/** Map of publicKey -> classification for all tracked accounts. Used for Early Block Rewardees Category column. */
+export async function fetchTrackedClassifications(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const c of WALLET_CONFIG) {
+    if (c.publicKeyBase58Check) {
+      map.set(c.publicKeyBase58Check, c.classification);
+    }
+  }
+  const usernameConfigs = WALLET_CONFIG.filter((c) => !c.publicKeyBase58Check);
+  const results = await runBatched(usernameConfigs, 5, async (config) => {
+    try {
+      const res = (await desoPost('/get-single-profile', {
+        Username: config.username,
+      })) as { Profile?: { PublicKeyBase58Check?: string } };
+      const pk = res.Profile?.PublicKeyBase58Check;
+      return pk ? { pk, classification: config.classification } : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  for (const r of results.values()) {
+    if (r?.pk && r?.classification) map.set(r.pk, r.classification);
+  }
+  return map;
 }
 
 const STAKE_ENTRIES_QUERY = `
