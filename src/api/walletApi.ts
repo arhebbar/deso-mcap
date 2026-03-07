@@ -134,7 +134,9 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'Wintercounter', classification: 'FOUNDER' },
   { username: 'maebeam', classification: 'FOUNDER' },
   { username: 'redpartyhat', classification: 'FOUNDER' },
-  { username: 'bluepartyhat', classification: 'FOUNDER' },
+  { username: 'bluepartyhat', displayName: 'bluepartyhat (incl. …bNLy, …j5kp)', classification: 'FOUNDER', mergeKey: 'bluepartyhat' },
+  { username: '', displayName: 'bluepartyhat (incl. …bNLy, …j5kp)', classification: 'FOUNDER', mergeKey: 'bluepartyhat', publicKeyBase58Check: 'BC1YLfgco8qmMEzdgqZV97ZMsdcETHUVTMShtHaUkwLfcoUG6ThbNLy' },
+  { username: '', displayName: 'bluepartyhat (incl. …bNLy, …j5kp)', classification: 'FOUNDER', mergeKey: 'bluepartyhat', publicKeyBase58Check: 'BC1YLiAGWgtWVVHEaUACsWWRZBvCZbsDHw4wkvSGnEYhS2H5WZjj5kp' },
   { username: 'FastFreddie', classification: 'FOUNDER' },
   { username: 'JacksonDean', classification: 'FOUNDER' },
   { username: 'TyFischer', classification: 'FOUNDER' },
@@ -356,6 +358,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Exchange (…a583)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583' },
   { username: '', displayName: 'Exchange (…9zN)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLg37J6koL3xDwUbQMphtf7Hd7xdktNWmiyifi7uZooaMr6N69zN' },
   { username: '', displayName: 'Exchange (…Mdd)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLjU48gkK9cbA8h613zcWiDpsnuhsL3jGQ4sNtwnNRvjhWUS5Mdd' },
+  { username: '', displayName: 'Exchange (…K4No)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLgdwUHnGuzbNRJhZsNLQbhzqLdgbfkCKtTnWTq3ZKPy7FtnK4No' },
 ];
 
 async function desoPost(endpoint: string, body: object): Promise<unknown> {
