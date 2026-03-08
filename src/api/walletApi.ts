@@ -7,6 +7,7 @@
  */
 
 import { CORE_VALIDATOR_USERNAMES, COMMUNITY_VALIDATOR_USERNAMES, getCCv2UserTokenAmms } from '@/data/desoData';
+import { getClassificationOverrides } from '@/lib/classificationOverrides';
 
 import { getGraphqlUrl } from '@/api/graphqlEndpoint';
 
@@ -44,7 +45,7 @@ const NANOS_PER_DAO_COIN = 1e18;
 export interface WalletConfig {
   username: string;
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS';
   /** When set, multiple configs with same mergeKey are combined into one entry */
   mergeKey?: string;
   /** When set, use this public key directly instead of looking up by username (for accounts with no username) */
@@ -61,7 +62,7 @@ export interface WalletData {
   name: string;
   /** When set, used as canonical label (e.g. "Beyside (AMM)"); strip " (AMM)" for API username where needed */
   displayName?: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS';
   balances: Record<string, number>;
   usdValue: number;
   desoStaked?: number;
@@ -85,6 +86,12 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'deso10Mdaubet', classification: 'FOUNDATION' },
   { username: 'DaoDaoDistributions', classification: 'FOUNDATION' },
   { username: 'merlin', classification: 'FOUNDATION' },
+  { username: '', displayName: 'Foundation (…Zuft3)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLfhawT8GPqoYjzVJFb8phcwoFoc1QHopgF6AK8n87vDXPvZuft3' },
+  { username: '', displayName: 'Foundation (…SPKmoP)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLiu9FBbriyHYeaDnoVLWTBuHVNpPhWYuL9N6nFjNSzGgnSPKmoP' },
+  { username: '', displayName: 'Foundation (…cdfr2mg)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLhV41GmELfh6zJiMmoozC6q2kvvuFdgUXnCR5Z9RV2ppcdfr2mg' },
+  { username: '', displayName: 'Foundation (…DoZpa1)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLieLTWRbP196ZGbVPWLGza4ZiNbYnBmbfnDSigbrzVmSLDoZpa1' },
+  { username: '', displayName: 'Foundation (…Fdq31p)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLgKZyfgyNntCMXAZYExM8JooYqrYvVsrR8d8XVxorDruYFdq31p' },
+  { username: '', displayName: 'Foundation (…VFT9h)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLg6DARtEsgXXF7GjVXtxVsLo9zCk4fJ7HMQS3wTwmH5xpxVFT9h' },
   // AMM + Holding Accounts (includes FOCUS cold and floor bid)
   { username: 'FOCUS_COLD_000', classification: 'AMM' },
   { username: 'FOCUS_COLD_001', classification: 'AMM' },
@@ -326,210 +333,209 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'AltcoinUSA', classification: 'DESO_BULL' },
   { username: 'Alisuliman', classification: 'DESO_BULL' },
   { username: 'Dario_Ryu_Alioto', classification: 'DESO_BULL' },
-  { username: '', displayName: 'DeSo Bull (…eg4es)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiRhbpc7aypyVxtsxaNWiB3yyP6f9wxsz2px2cHTs55VT7eg4es' },
-  { username: '', displayName: 'DeSo Bull (…fgvPi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgwopktaB5AFqR5dc3So288vZNhtKi4zp1QGLJmXGXYX5mfgvPi' },
-  { username: '', displayName: 'DeSo Bull (…n2ZY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgQkyaEw1Y4mSY2xe88FfAhEkg9wHbnZq1vU72QV1foP3J7n2ZY' },
+  { username: '', displayName: 'Others (…eg4es)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiRhbpc7aypyVxtsxaNWiB3yyP6f9wxsz2px2cHTs55VT7eg4es' },
+  { username: '', displayName: 'Others (…fgvPi)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgwopktaB5AFqR5dc3So288vZNhtKi4zp1QGLJmXGXYX5mfgvPi' },
+  { username: '', displayName: 'Others (…n2ZY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgQkyaEw1Y4mSY2xe88FfAhEkg9wHbnZq1vU72QV1foP3J7n2ZY' },
   // Focus/Openfund holders + top DESO (find-holders-to-add script)
-  { username: '', displayName: 'DeSo Bull (…4b7kXY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLixWsyuiEsT6ozD2H3eupsWPhw4zYPynPfD1hVuKbV4Xp4b7kXY' },
-  { username: '', displayName: 'DeSo Bull (…Ga8gkG)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiy4PJSw18A1Re2eBJAATrVErWDBGC5jpfszzDBKorb6zGa8gkG' },
-  { username: '', displayName: 'DeSo Bull (…8zoNYY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfn4nKxmifZPXrJydNzjBZTm4aSorE8obPGnemJtwBuSh8zoNYY' },
-  { username: '', displayName: 'DeSo Bull (…hvvw6v)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLghNWoR9G81AvT5vZSa1zi9U8vbmL7L5xA5QTFz4HhAZ3hvvw6v' },
-  { username: '', displayName: 'DeSo Bull (…XQk7T8)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh3Q8aspGuSqeh7ph7w8JaATUy5xEDsWkRetxR1BQV3KzXQk7T8' },
-  { username: '', displayName: 'DeSo Bull (…65BTQR)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgmCsnSpkm4UmzTz5M6mrLRXidD43cv8NCbPybXp1dbpL65BTQR' },
-  { username: '', displayName: 'DeSo Bull (…hNip9i)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhAAi6DP8QU9QWu6JdxUNk76gqNePDu6JWeDEanr3STp7hNip9i' },
-  { username: '', displayName: 'DeSo Bull (…pU5isw)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLidpWYwa6uUszuUD4ZLN9JnxEvVa2K7yD4Dn5bMV54u2YpU5isw' },
-  { username: '', displayName: 'DeSo Bull (…fRg9P1)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhV5AT5QBRMxTWYaQRXsoGXYpz4fG9sKGwxLPhgci2pKwfRg9P1' },
-  { username: '', displayName: 'DeSo Bull (…PdwLtx)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfzVgSjZ25Jzaw5y8qY4JpFS4aPZA12WLSf1KtFK35vXPPdwLtx' },
-  { username: '', displayName: 'DeSo Bull (…3Tk7XB)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgdp7sJujbGs5VGHjjqVKjhe1He9xFiSiT2aDUVHMWv9i3Tk7XB' },
-  { username: '', displayName: 'DeSo Bull (…7mBMW7)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj9Ld8sppWu58oMFEGdAx6CDAeC8mzwKfWfzpjwxAyUjr7mBMW7' },
-  { username: '', displayName: 'DeSo Bull (…QZM1SJ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh5xALAdWoS7qcMu2fYGAyYWz2odfnLR68ugCPXDVuT5YQZM1SJ' },
-  { username: '', displayName: 'DeSo Bull (…ZMuckn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi5TAuKMdcbCxMjn6BqysV1wMhRsTY2oph7gyiNGAfrNgZMuckn' },
-  { username: '', displayName: 'DeSo Bull (…ZSD8Uh)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhqykp8AsDdchQ3xr8ySk6E81fGeZGSxwdioTaMdhyzt3ZSD8Uh' },
-  { username: '', displayName: 'DeSo Bull (…XzUt34)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgBpWd9WbuAEJP8hqJuCboJGKymEyYMgKNpVpVLCMqmwrXzUt34' },
-  { username: '', displayName: 'DeSo Bull (…vZuft3)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfhawT8GPqoYjzVJFb8phcwoFoc1QHopgF6AK8n87vDXPvZuft3' },
-  { username: '', displayName: 'DeSo Bull (…peN7u8)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfmSHs7GSJ4uBJ8eM9AF5aqCkdQgNojrTKmrAhSRrwR3XpeN7u8' },
-  { username: '', displayName: 'DeSo Bull (…7cnJYn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjKa4vaZiarKPxNFor1Lfm8VoNxWZxyrqLh4pcuYj2BEo7cnJYn' },
-  { username: '', displayName: 'DeSo Bull (…3CjwoS)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgUU57aMVyfmrprFZicifoaH5QD8WdBWxtw5PWusD4Spe3CjwoS' },
-  { username: '', displayName: 'DeSo Bull (…RLCUht)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi88dDt3FqZTr1v8VL1fnwTuKCDcYCQW5wYAdN6z2HKAhRLCUht' },
-  { username: '', displayName: 'DeSo Bull (…6ysWBy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfoBazPJCiMJyMLwE8uTnQ8JbYoHuHaAvhwzxms3nmHnM6ysWBy' },
-  { username: '', displayName: 'DeSo Bull (…jNCscP)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfjjbrCBVffurMp2Tdgtxq5na1rijkTam8FDaGXh4sGqMjNCscP' },
-  { username: '', displayName: 'DeSo Bull (…rBcJzs)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfmFnjX9D4Hy4a3uETXHm5LH3VCpda32GRPf7cfHpycVYrBcJzs' },
-  { username: '', displayName: 'DeSo Bull (…XxA4Ev)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfitC55Fvy2ru24w1F4h9FYvL5CwqghJJeP43qhxiMiQMXxA4Ev' },
-  { username: '', displayName: 'DeSo Bull (…vQ1G91)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiTNp84xUmaDBxtEMoc7H45QKu3d775pMa2bT2qHBiqmRvQ1G91' },
-  { username: '', displayName: 'DeSo Bull (…HECbPi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgoaDz1CtGVtxDRAHE5bfyPXNNJAdRnzbXapigsVVxRK5HECbPi' },
-  { username: '', displayName: 'DeSo Bull (…gnaabr)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhDodML1kSrTkG5yCHm2Bvg1Yq3FDHLB97YASf9hP4P7Kgnaabr' },
-  { username: '', displayName: 'DeSo Bull (…wQUXbL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgU4kGEkj4QepnZ5tTBrAfbGVkvpiUPVkcZUARsn4MQ4xwQUXbL' },
-  { username: '', displayName: 'DeSo Bull (…BoBRgQ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLixSUwAzHobC2nqgtWkXUroLHPVRnpSt19oaKPSJuWG47BoBRgQ' },
-  { username: '', displayName: 'DeSo Bull (…QbsKgH)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgWo2Qk7FWyci97xL3qXriMD1sTaV2kLabHDX6s1xNupBQbsKgH' },
-  { username: '', displayName: 'DeSo Bull (…Rp6t2x)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLihEmEZdLv8ph2SKyHVdYqpSJcWmYJwKikfvBiFr5mBHaRp6t2x' },
-  { username: '', displayName: 'DeSo Bull (…4MYfFx)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgraviZ8dMTTu9DUihTQwbBu4n3JqbTvLTkiYfLEUEGZC4MYfFx' },
-  { username: '', displayName: 'DeSo Bull (…hH7bMY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgs6uEeLu1M2T124SspqV44MM9TtFaC8sqPp2Ro5vyQzQhH7bMY' },
-  { username: '', displayName: 'DeSo Bull (…2ZT4pr)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhCT9baFRz4gVTgAzJhG5eFqQPj5Z1hMT9WUkwQtsLm2p2ZT4pr' },
-  { username: '', displayName: 'DeSo Bull (…vmfbYJ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjDWtYvZBTMXieQxjbScG2nmzHKYUaVkTHgXdHPA2Ls1yvmfbYJ' },
-  { username: '', displayName: 'DeSo Bull (…vu2uvW)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhyqeXE8R1rhB1gfwTM77Z4ypJWpuSGkyNh3Z4DSXgNHUvu2uvW' },
-  { username: '', displayName: 'DeSo Bull (…5ZrcvU)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh12La3Je4RmYCW14SbvhNN1Mdv15MyhZXMJBD31DKpvk5ZrcvU' },
-  { username: '', displayName: 'DeSo Bull (…bmuUpY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhuSy7JJ65DEnqU13PVBNhQyRE3Zv1FpxnzKWFnMAT8HBbmuUpY' },
-  { username: '', displayName: 'DeSo Bull (…bc5k4Q)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhLktWeqhgwHavzFkCMnCSBXdTeTDKUBZQMXBiGb9TTU6bc5k4Q' },
-  { username: '', displayName: 'DeSo Bull (…BVxjB4)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg5G6X79ZTPvjSsYrMP5VCN2yYJgDLPEqYw2e7TkgmG1iBVxjB4' },
-  { username: '', displayName: 'DeSo Bull (…n8N3Me)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiwpvaCF2PjNNATdxPUcxsxfMhCCX6TEpBsHGaURqVWazn8N3Me' },
-  { username: '', displayName: 'DeSo Bull (…Y8MUvp)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiAmQZNR2t9jrivs4XAmnywrovPBWaRFnRBvhESw7G6GJY8MUvp' },
-  { username: '', displayName: 'DeSo Bull (…3SRBEz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgzjXwiMni2GHxpKeAg4C51r8mD8UVkqC3f818vTcoizM3SRBEz' },
-  { username: '', displayName: 'DeSo Bull (…V89jyN)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLibhMd5eoEuf5MQa8Sz8TPkkQk42TJXZBSPybRTXg2ViPV89jyN' },
-  { username: '', displayName: 'DeSo Bull (…T5SLvf)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLggR5rQxJrFS1v7s4wTYh9MsuB5vjZvM2884SMYgkm5x8T5SLvf' },
-  { username: '', displayName: 'DeSo Bull (…iLV5oC)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh59ALyiWiPbFk3dKQnF1L6jUE1veSVppb4Fx9CyMWbZfiLV5oC' },
-  { username: '', displayName: 'DeSo Bull (…rzsvvk)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj8TZmYShY9wuXAbxyeWdYsrQ4xc8MXf4twS1WW8tuqMjrzsvvk' },
-  { username: '', displayName: 'DeSo Bull (…Xdv8HM)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhrtXCwbVbE8tE6kZQprxcQiK2ovYjthtb44Y4jPKDK51Xdv8HM' },
-  { username: '', displayName: 'DeSo Bull (…m3SNCg)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiaKo7QgQwWTw3i9XJiyknpzHjp423m1HWCzYyTTn9FQ6m3SNCg' },
-  { username: '', displayName: 'DeSo Bull (…wv6BFS)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhbaQsorsut5cCtZQ5dyzWc7Nkce6tVk2vT28SoHm4qonwv6BFS' },
-  { username: '', displayName: 'DeSo Bull (…raJpRr)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLixHLxJght9VPiT4HPJ32WunsnxeFBTA21r9V46hWExdPraJpRr' },
-  { username: '', displayName: 'DeSo Bull (…weW2PB)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg6UoMoVFTmHar6Z92GBaxJA5ehoppQ8SbyA3Ztcak8PaweW2PB' },
-  { username: '', displayName: 'DeSo Bull (…VXZXZe)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiVB6hdAiHqUvR5j3hmyR4c5yj7tetPzG3DYCzH7VYtXBVXZXZe' },
-  { username: '', displayName: 'DeSo Bull (…3mn1VC)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg4ehgvLC8YzYmzRnf2ocED5XtZwfNkDtYN8WUm3TxTqg3mn1VC' },
-  { username: '', displayName: 'DeSo Bull (…fZ7dKC)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLie8bqKw3zAUt9hgGTaG5PGgKVCkr4Yjum3XDBMgLyR1EfZ7dKC' },
-  { username: '', displayName: 'DeSo Bull (…kJ3uMz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgKxXszRSqMWYfcwB8HkDyUDiCGMc53uoJAS3VPn4cFkukJ3uMz' },
-  { username: '', displayName: 'DeSo Bull (…TcoEKj)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhnfAQiPTZj6kVLfD7Fe3KMofsa1sFMmsY5SAzC3ZCARsTcoEKj' },
-  { username: '', displayName: 'DeSo Bull (…nu2wkZ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhf6AfUEqqyKv7VTUbhs1Ee6db37mLPkWieJgQRCbXfzDnu2wkZ' },
-  { username: '', displayName: 'DeSo Bull (…Bohqc4)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgdg8vnLaSnorX3x1KQuJtmKndC4mAVFJXWtmHsU7QvtgBohqc4' },
-  { username: '', displayName: 'DeSo Bull (…g7DAjh)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjDtP2MMmvAHofbGzWbZYtABTtT2hvqy9kjK35UPtHfn9g7DAjh' },
-  { username: '', displayName: 'DeSo Bull (…vnkKuN)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjR8Q5t9XWWFq2QQQpSqSrSxUgA2WxCuBK9t8vEj4U7jUvnkKuN' },
-  { username: '', displayName: 'DeSo Bull (…xArMPj)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiKB9mLBnKPvj1eAjWRRZAi1t7P6LrcnAS5gVKV619qhXxArMPj' },
-  { username: '', displayName: 'DeSo Bull (…LD14Ag)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj382oHt8B54TeMbegvHH7jpxoP7ocALYCPTgMncS4KuPLD14Ag' },
-  { username: '', displayName: 'DeSo Bull (…3M7BUd)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiruv4iWRofZm5np6RjiMHmDHDaEuiALisswvGZcez9Pq3M7BUd' },
-  { username: '', displayName: 'DeSo Bull (…1XRvjU)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgDFFwKVw1HFmTukvCUVFvGHsW9aSXPywRWs3R8BLzN5S1XRvjU' },
-  { username: '', displayName: 'DeSo Bull (…BVRETu)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgY8i74RUoQ9cBkX8TucHEANvPkUJCpoTPmf5ryA3X7tzBVRETu' },
-  { username: '', displayName: 'DeSo Bull (…YDV9HJ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfk4E66W1NBsga7qzYXXJrUmatrzbDziVHpGq4k9tApnQYDV9HJ' },
-  { username: '', displayName: 'DeSo Bull (…BNefS3)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgDyD5vPD6tDv1Mw8L7AZsWfewhsn58ai53DRLDVWjpuMBNefS3' },
-  { username: '', displayName: 'DeSo Bull (…3kcoRz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhcRwjrEaVoKCfoxgViAC8fRQb9WBirQDrTmpUfE3238q3kcoRz' },
-  { username: '', displayName: 'DeSo Bull (…xRT4VB)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgNWe2ZjwpzZqgPg2TF6vwq3PiNwMTaQi8xiwJJi4CvABxRT4VB' },
-  { username: '', displayName: 'DeSo Bull (…MwNea6)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhEURgy8ZFC1aRVnBiwGMnvke4tUefsRQxUy4ymk4N2PfMwNea6' },
-  { username: '', displayName: 'DeSo Bull (…ohvwd4)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgyqGFS197gdBinchomd9pEyny6yQMpvYHWxU6CCet8yFohvwd4' },
-  { username: '', displayName: 'DeSo Bull (…vtMT6x)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgEy5MMb7K9Gn4zeT5TRwsu3GoYcrZmWSRB3kEDbBrXT2vtMT6x' },
-  { username: '', displayName: 'DeSo Bull (…Xzw3Yz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhAJb2hZbn2z6rnwrAPGeUUmxpooNKasiRNVizN9MkytTXzw3Yz' },
-  { username: '', displayName: 'DeSo Bull (…JTqCoL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgVaB79kqJKQukL1ugw39bHf19FoC5MNoXVhMMXCbAWAKJTqCoL' },
-  { username: '', displayName: 'DeSo Bull (…YHg54r)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhfWRwgrPmVLPgAcTPxnWwXkvS3cJXDdrAoT5A6qP2kuRYHg54r' },
-  { username: '', displayName: 'DeSo Bull (…Hz4MrL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj4qjR6aKt1UpSq8HxtSJ8ETwCwWujDCn8pnFBRHcyrjBHz4MrL' },
-  { username: '', displayName: 'DeSo Bull (…8gpSiy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhv2fpxorLvQNkLUxsswDEjKfDNMYJM18YcdDUGn33DDr8gpSiy' },
-  { username: '', displayName: 'DeSo Bull (…e1xVHw)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiVng85x776Z8vPGY3JgCZyHhUHNyqFfVfaWG7TMi6hfte1xVHw' },
-  { username: '', displayName: 'DeSo Bull (…A2FfC6)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi9cT8dedvSVfSgKzEipx2fuX4ruXW3aun8PsQY2RkWkyA2FfC6' },
-  { username: '', displayName: 'DeSo Bull (…cwk8Ct)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgg5JivWUUGuvZwMdCrtmic9YgmC7S6XXnwwtwzVZAbrrcwk8Ct' },
-  { username: '', displayName: 'DeSo Bull (…HiWpUA)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj3GWwGoPyWQiW7ffFGZxX8BkJYt8DMq5YPBzh9VDFXEwHiWpUA' },
-  { username: '', displayName: 'DeSo Bull (…vYXqJX)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi8k9v1EaX4h8aFi41972FX6ZZdDM33RM4jciFtSJRhKKvYXqJX' },
-  { username: '', displayName: 'DeSo Bull (…ajForU)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfy8eHpAXpMxd5GKwwWvhjjkq8TANAYVey2bS3eRbCL1KajForU' },
-  { username: '', displayName: 'DeSo Bull (…fb7jCr)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgRJGZPQ4HPoJiX4vpoMscaFuRVzz1758qvdeNPcs1ofDfb7jCr' },
-  { username: '', displayName: 'DeSo Bull (…FLjWVo)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj6XW6hPa6J8xuU7sCFdhoZKGV6VcGt4HSpxHMzr4rSG6FLjWVo' },
-  { username: '', displayName: 'DeSo Bull (…YrXQSu)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiVgoBZn8Ucpo7boQH8vQC3HMzs5biGP8ZS9giiQMfRgDYrXQSu' },
-  { username: '', displayName: 'DeSo Bull (…cpLzjs)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLifjX9TaE5AP5dVzoaGdZsczDvFwTvAyF48nWFo3mBumCcpLzjs' },
-  { username: '', displayName: 'DeSo Bull (…dZtccg)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjRM6hFpJVQpTHKw3NYje1V7vvdLRP18f8hbL1mBEAgSSdZtccg' },
-  { username: '', displayName: 'DeSo Bull (…aX399p)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhykva17HtDJ15GTNGrog5UDuDTuVDuhGXuBLbETxMh5LaX399p' },
-  { username: '', displayName: 'DeSo Bull (…M8Vgjh)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjQqWmRDdtjmZ5Sbp4cB28zGT5G6qwxXH4X9TrxacS3uaM8Vgjh' },
-  { username: '', displayName: 'DeSo Bull (…nEMbzt)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgmiGAhD3x9y9m5FFGS6kyi7gS8CY9TdoaCpwBxtT2G7CnEMbzt' },
-  { username: '', displayName: 'DeSo Bull (…F3Wjr1)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjEwDgw6qrndpfKSrahRe1ewCnj6BynKPgogzCNHjnWeyF3Wjr1' },
-  { username: '', displayName: 'DeSo Bull (…1LLSUp)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhqEhWvNnwW9TBqXURFqwkdpUYKrMVgTHQzopF5rRBDcD1LLSUp' },
-  { username: '', displayName: 'DeSo Bull (…5tasHb)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiKj43v3otS45EMrTBTRJdUcjtneNMjReXnqbMAshrvi45tasHb' },
-  { username: '', displayName: 'DeSo Bull (…c9dPxW)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgLu3J4EUf7xXZ2KmT332tLboPxXZS8cE4wJY7ifx8Ccsc9dPxW' },
-  { username: '', displayName: 'DeSo Bull (…znmLgX)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgVcU5orfchdvtaz2CgJYwPtH19VA2T2MDRk2x5dqpuKPznmLgX' },
-  { username: '', displayName: 'DeSo Bull (…Ga7YBH)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgNvixqVFnbQY8wTqybaPvYkWYbTEwXciNkYHwsWP53f7Ga7YBH' },
-  { username: '', displayName: 'DeSo Bull (…88JdHs)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhTjjL7DKgd5PgW3f9dy1PUAC246VUYab9kBB2MiFTDnF88JdHs' },
-  { username: '', displayName: 'DeSo Bull (…jUSQfn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLipmeBoK6ypq55e9RFSQ4bUEVcQ3GM1PE2j75oCdS1NcEjUSQfn' },
-  { username: '', displayName: 'DeSo Bull (…FaqLTy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhbqSLuMcw7E9TSUE9YLfMFJaaETosbqN67xSB9h4EC9sFaqLTy' },
-  { username: '', displayName: 'DeSo Bull (…mrpe4k)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLibYeYowUaxW7QimDbW7Xh9F4nc5GdrfXDLxkLS26ctdYmrpe4k' },
-  { username: '', displayName: 'DeSo Bull (…qnuGeP)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiQr188QqaSpywf6rm8X2hxv3j2B5FskmmLtvuRaFKgqSqnuGeP' },
-  { username: '', displayName: 'DeSo Bull (…PYehuz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLixi9S66cD2sBq8MUHj1SCo8Yr5cDqHPtCBz7CYungDsvPYehuz' },
-  { username: '', displayName: 'DeSo Bull (…DM8vJC)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj8uJoDGwqHNwWdE53BxsUB3RG5mdtwXVw9FQQNxt67RvDM8vJC' },
-  { username: '', displayName: 'DeSo Bull (…t1Kyj3)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLguEz51K1FuvqTu31LCN28exyxVx98obF2bzrqrpmh4dTt1Kyj3' },
-  { username: '', displayName: 'DeSo Bull (…uaaNGG)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj3KV6rV5MjELkvekwQ6YZHuzbxSe5xsNzD9h1sxxhG7guaaNGG' },
-  { username: '', displayName: 'DeSo Bull (…ovyzzk)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj6s1yTKhVQDYigZP5rLVCPw65zD5MSPuTq8LD53nKsMXovyzzk' },
-  { username: '', displayName: 'DeSo Bull (…Mq4Ybz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfyT6fz6QTaNhVBMzTPNXWBaVfEJonPawRFoShCEtGyzwMq4Ybz' },
-  { username: '', displayName: 'DeSo Bull (…mTsk4h)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhqEdfGgPTrq7VFboLgdkfZEb85MmBkqzrLtnHfbCU67MmTsk4h' },
-  { username: '', displayName: 'DeSo Bull (…ka5N5S)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj2aZQSpi3dMXeK6km8mmzmWmYSV7ayYabBEiLHTvo264ka5N5S' },
-  { username: '', displayName: 'DeSo Bull (…AAEYSE)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhX2eV7DXn21v8GGseK49An24GoSeHghmDrPGGAQ2HKzFAAEYSE' },
-  { username: '', displayName: 'DeSo Bull (…Q1jZFL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjLVj2jCbqsi1LTC7cpwdrnSZcpxgQhKquL77Sgk1kavVQ1jZFL' },
-  { username: '', displayName: 'DeSo Bull (…1YG17F)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgDizzX9H4MQL2DiyRfLqyWd2bFqzCZwbgUtBqSjaCRb51YG17F' },
-  { username: '', displayName: 'DeSo Bull (…JqT3KC)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjAcG6LKPXZ8xXkXGYVnxHpdfDHYwtA4aW7ArZ9FrhjtCJqT3KC' },
-  { username: '', displayName: 'DeSo Bull (…JgwbdY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhNWAziM3JhvYWiPypeJ9ndNAwugKf3yAL9AjovkHBtbSJgwbdY' },
-  { username: '', displayName: 'DeSo Bull (…JRJzmy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjVVDGqjkAg7ZrzonH8tBk1LHKSfaUtpxbSUVa9ttToM8JRJzmy' },
-  { username: '', displayName: 'DeSo Bull (…H71mgy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh1jMBkPvP51n2pnmeruLysQ8Ymaant6jt8smJeJtiYBkH71mgy' },
-  { username: '', displayName: 'DeSo Bull (…HCCG8k)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhSJ3nAw4SwBL3rJDPPJtW9YWsEsGDj9FrDD2ac75UsaiHCCG8k' },
-  { username: '', displayName: 'DeSo Bull (…b3n19P)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfsLrGtUnXTqxk2ks4yryeBad2GhfiHeRgKbapxZquQmLb3n19P' },
-  { username: '', displayName: 'DeSo Bull (…ZXiSSk)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjFQPYMyd2XmdJ4WLAuawNWmMYCYv65dwGVpsJjfXjcTsZXiSSk' },
-  { username: '', displayName: 'DeSo Bull (…XErdEc)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgVLn4Kp9uJUvMtp79LVxWd5qdnk8tRoZdiSv1WmkDefdXErdEc' },
-  { username: '', displayName: 'DeSo Bull (…eBtzva)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhBw4SV2kU8cjLPW2cJBcdwV3oXwVSScAWK5js3uFiedneBtzva' },
-  { username: '', displayName: 'DeSo Bull (…g1KsPn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfrc9NF5qM1WNqUVFgr6RnEAVkdn9X899KcFNZxozv5pag1KsPn' },
-  { username: '', displayName: 'DeSo Bull (…y1yXDg)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfg6RFHGXsKzZFyEKUmJ869eBeXMKH2xiuxrPw1ZuBxVRy1yXDg' },
-  { username: '', displayName: 'DeSo Bull (…TxJ8XW)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh9DrmDqjcB7UtCp4HMt1wmFzKJ1rsX6SWWZFndx9gTE1TxJ8XW' },
-  { username: '', displayName: 'DeSo Bull (…8heUMd)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiN1oAE5YZDon92eW3kFmWMQFAowJ9TtJXzk5B8S67vAa8heUMd' },
-  { username: '', displayName: 'DeSo Bull (…JvYfGM)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi2SU6w44dvzhhxjQowXpym4FdQdBkPYCkLBswgw98NQoJvYfGM' },
-  { username: '', displayName: 'DeSo Bull (…AebSfi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLihgBZXYhtjpJNY1xkMejWwx1NpuMr592in6V6dquMtepAebSfi' },
-  { username: '', displayName: 'DeSo Bull (…7RdfYT)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfniDiewVaiL3vbQgRETdZ5Xhy6QtgweHoa9FM7Ruu4Jb7RdfYT' },
-  { username: '', displayName: 'DeSo Bull (…Qzu49C)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhSGcUPXnhLawyi7PANgwsm5vqdVFwt5sKgvvMSq3YWgzQzu49C' },
-  { username: '', displayName: 'DeSo Bull (…ddxF2m)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLisiNqujHABnWiwjPD9JsmVUB52H4zS4PSRK77QEH6bEaddxF2m' },
-  { username: '', displayName: 'DeSo Bull (…LQg9Av)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfrxZj223fTJkmT59w7rWPJbFdE6SVkFdVRHkYUa1B1fgLQg9Av' },
-  { username: '', displayName: 'DeSo Bull (…4wCTK4)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjGLTPvptakKEWJKDcTobg1tgD1n59Zj1swNyftv2Bhwc4wCTK4' },
-  { username: '', displayName: 'DeSo Bull (…P6hr11)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgMkCdp3FChP9FGdXf8PYi1iDv3vK4qQAVUQvoVRAGkssP6hr11' },
-  { username: '', displayName: 'DeSo Bull (…c8EKdD)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgN1HbVtznBNWaBQD3iqgmTXM8m4MGvHUiatSxEZEWmAkc8EKdD' },
-  { username: '', displayName: 'DeSo Bull (…uUhwv2)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLifrrLC6W4YSZvoeFyG9G2W2yMYz2ikqUYN8RVebSK3mxuUhwv2' },
-  { username: '', displayName: 'DeSo Bull (…y3kZJ7)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfnKZY4czGrS3z3z6zZFaFuDNKwZvaNhTZpFXhCRXs2guy3kZJ7' },
-  { username: '', displayName: 'DeSo Bull (…mLtLi1)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg7X9nX9w57dMEcGWc5X5A24Ncxsc4QqYpB42SMHNyTfomLtLi1' },
-  { username: '', displayName: 'DeSo Bull (…w5HaXy)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgr8TrZf5Vh9yN1AnYssd5JzZLxKZA5fWjXbxjFApNs8Ww5HaXy' },
-  { username: '', displayName: 'DeSo Bull (…Ko7Lac)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiytMB8KraJA5y1jbeai4xgGLjAPGvYDSqDYNCygaQsuEKo7Lac' },
-  { username: '', displayName: 'DeSo Bull (…3HYUJJ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhbk2WcmrzYoYn7XcPAnWsyhhMKiGC8MS4CrRdbbHTaWB3HYUJJ' },
-  { username: '', displayName: 'DeSo Bull (…N66GYT)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh5rFQqfjmANKdqwc6eCJk82BeHiwQSy8D18tLwgCPrV3N66GYT' },
-  { username: '', displayName: 'DeSo Bull (…Jdo3Dz)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjKF8ryyYFPP8bL9mkcyDrt44ZC6ZmfPrRPE4MXnzpx3BJdo3Dz' },
-  { username: '', displayName: 'DeSo Bull (…Vf1LTp)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhZKyAuwkejVNB1UrUuKm8S92os8UMEB6MgYhoQv1PkvtVf1LTp' },
-  { username: '', displayName: 'DeSo Bull (…B4MxyQ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLftSqcG2MNZuTyMPCEJneCU6LCZp3EFYdukEX8ZKF6MCGB4MxyQ' },
-  { username: '', displayName: 'DeSo Bull (…rfZSXG)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgP8qJrZjBCT28tBhAZAVnNDTYBqpUJmyYxsCNbaaTnuTrfZSXG' },
-  { username: '', displayName: 'DeSo Bull (…cdWrgR)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgvThCj852wvHcUQuxujnWeAtonVw1G1VFPJQz54E5Q6hcdWrgR' },
-  { username: '', displayName: 'DeSo Bull (…gEWDrR)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLicpkYLaBoEc9n8tBsaTRqxKXfo2PdA3yh3ktET13Y4RogEWDrR' },
-  { username: '', displayName: 'DeSo Bull (…FChgUj)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhn2SUj4e8Ufffmku6rexstQQuVw3ugY4jVc847SnkCNtFChgUj' },
-  { username: '', displayName: 'DeSo Bull (…vj3kFv)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhAocefc6rZyNwbfCKMK6buATMrhGiAUxjy9K4Y1c5SY2vj3kFv' },
-  { username: '', displayName: 'DeSo Bull (…nyqbE5)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfwApmP4GdSUZt4wbsbzuWffHBTWqkB65ACEoNWw77D1RnyqbE5' },
-  { username: '', displayName: 'DeSo Bull (…1ewyEi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj583NHVhqvqH8cNnKnSh3wzbMZHASuf8WW5pB1G5i3Ws1ewyEi' },
-  { username: '', displayName: 'DeSo Bull (…wp6nPX)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh2Uhnq6b5QmKgeRmamF3nF35skHm22vTWz2XB6uSejgywp6nPX' },
-  { username: '', displayName: 'DeSo Bull (…FbsYpv)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfuzBNyWS5TdUg9JgB17djDXK6obkC93VxozhMF5zQEzxFbsYpv' },
-  { username: '', displayName: 'DeSo Bull (…Y2GeAn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiWcmcndy2mCUsp4JVnpdmJKpf19DmjdhJp6y4Y3gZyAoY2GeAn' },
-  { username: '', displayName: 'DeSo Bull (…JRy4d9)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgL84SmvzQdx9kUW4VFHrUn4BRUqYXWoQwDhMDuSTi4RpJRy4d9' },
-  { username: '', displayName: 'DeSo Bull (…47deyJ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhytCgKtup3N2QYuufPeAdzNQvERyPngm8rZLWk4NKK2o47deyJ' },
-  { username: '', displayName: 'DeSo Bull (…pzYQwR)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiq8rdCqX7AAaTVAUJ7m8H9QKKtAvDBwPNa5RqWPrNWBtpzYQwR' },
-  { username: '', displayName: 'DeSo Bull (…caYuCf)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiiq45Xv4m4r1YuRJErd4ezQ4PoNpwoFfhKa2sLKFZB3ccaYuCf' },
-  { username: '', displayName: 'DeSo Bull (…QmwyPb)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLh9TGvv2a7ehw3Q1kuR7B934z4QyJEn3GuvzndGYLNyHAQmwyPb' },
-  { username: '', displayName: 'DeSo Bull (…Xt5ruw)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhbZo1LdV26CX6t37SC7VGwtDfNQT99mxzHgyzWcaAJbtXt5ruw' },
-  { username: '', displayName: 'DeSo Bull (…JJzi9e)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgF9Tt85ADrL4QiyX6xSGwGrqFWnLr9b5Mt8hfdk54Tg1JJzi9e' },
-  { username: '', displayName: 'DeSo Bull (…z9jgNM)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg4qFM5bGPhZdvPE6g2xc5dNtXgJAJwJi1NQEYbqtxqi9z9jgNM' },
-  { username: '', displayName: 'DeSo Bull (…e723C5)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhaPxuMkDVvfjKgJQtQrd3ee3CBZteoJuSkZQmFtqSgnNe723C5' },
-  { username: '', displayName: 'DeSo Bull (…LXvMjp)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhTA7JD7uMtBY4iPYMKUhkJ3LeicscPKhoA1dt98cdpoYLXvMjp' },
-  { username: '', displayName: 'DeSo Bull (…gjq8eV)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhHDsy6ncZck8zmoAFJq45hYNn6W3baRk7u2uCLaFk12Ggjq8eV' },
-  { username: '', displayName: 'DeSo Bull (…KGg6kH)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj4Bpa1LYQp366z5CsQdJ9MBSiiepSaaY9AhP5URE4MYzKGg6kH' },
-  { username: '', displayName: 'DeSo Bull (…SWBcxD)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiydcQFSQ9r1EHg2JZ2Dz6nxTUerds2NeVevAGq7xeXmLSWBcxD' },
-  { username: '', displayName: 'DeSo Bull (…B8wBMm)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhwfRR19w1w4iqNfBKTuc2iHTtyy9oYWxVEqJBTnChMfCB8wBMm' },
-  { username: '', displayName: 'DeSo Bull (…jrqNBL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhyZoc6hVsKZb7F8c8vJ6zNG8hqJ5BDNq2pNaRaL4HLufjrqNBL' },
-  { username: '', displayName: 'DeSo Bull (…KFzrfd)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhXuVkAYSNAS2XY8AMos2QxpXwnTUxWUp3mfnJbeSKX5CKFzrfd' },
-  { username: '', displayName: 'DeSo Bull (…S6T6o6)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiqiEwzKMzf9qUDSFfgBuhCoKGN36fD3odHpY16etfvBaS6T6o6' },
-  { username: '', displayName: 'DeSo Bull (…CQUAgv)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgVZUkfG29UDuZQH2zBZQPF7zWXtDMDfNke6ZKw438KGeCQUAgv' },
-  { username: '', displayName: 'DeSo Bull (…QqoR3k)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj3WqzHvV7mYdMKQxSgV2m5fAsN1VnzXAx4T6wxZx8eqoQqoR3k' },
-  { username: '', displayName: 'DeSo Bull (…X3H3tH)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLickbhdFWkKcZPpJw1C7ysMJt4KgqrzRUXUzzC21xYwoUX3H3tH' },
-  { username: '', displayName: 'DeSo Bull (…V7WzV1)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhzsh1dMu8JDmZGs6CFgAHBxiq5QycF9UVdYh7oXbmnUxV7WzV1' },
-  { username: '', displayName: 'DeSo Bull (…Mw9RVY)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiUt3iQG4QY8KHLPXP8LznyFp3k9vFTg2mhhu76d1Uu2WMw9RVY' },
-  { username: '', displayName: 'DeSo Bull (…6Av44x)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLg5EH9cGVZqmk2Zia6y5fukMr7sFZY1pRdcdh7jtUThwM6Av44x' },
-  { username: '', displayName: 'DeSo Bull (…dTEexU)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhebEdoBiDLXd8pyWNdmabq6DbyVo7KpwufWKmfcTyyigdTEexU' },
-  { username: '', displayName: 'DeSo Bull (…KEHWDg)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfwprzwzL8HRhPZSTMtPPCQFb5yxHGg2AssRu6fBgmraGKEHWDg' },
-  { username: '', displayName: 'DeSo Bull (…8qwWUU)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgSFCenPtDrKVi6ritNJ8ayfbECS6JppBuA97Ba86vJuB8qwWUU' },
-  { username: '', displayName: 'DeSo Bull (…GYtAbT)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiJZbfwkYfMxH57kWxXupSYvKvig3C11dgLwCFdZiLut5GYtAbT' },
-  { username: '', displayName: 'DeSo Bull (…YJ7q9Q)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiAfXkEEzYUQPvwASUvSLPHEW3PuEhRQLSmmVmMcDwU5QYJ7q9Q' },
-  { username: '', displayName: 'DeSo Bull (…wTodrT)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLjRZ5z7jqwQ43c8G36zbiJZ6MALSYvvbDEetve9BCytJtwTodrT' },
-  { username: '', displayName: 'DeSo Bull (…mCwhLc)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLi42YhykckXwLBJDGfCXX3mjhfSxEGRkWcnaAjNk9sbFgmCwhLc' },
-  { username: '', displayName: 'DeSo Bull (…9XnJdp)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfknrAC4mCptj9vdknrKDPLmWLJNsaQK4rzAywwDoLoT89XnJdp' },
-  { username: '', displayName: 'DeSo Bull (…cG5g2n)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLfnZduHdmABv6n8SMXt16LNRCrUP31bSjwCQ7ys5q6UHkcG5g2n' },
-  { username: '', displayName: 'DeSo Bull (…ERr1fn)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLgx99hmEufkjAFWR5FKYmWTZL8xCRwxUNFiSsCQxL42UKERr1fn' },
-  { username: '', displayName: 'DeSo Bull (…ouZBsL)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhkxA1CQ2o1qw593yzfcA9DbvciUMABggHUa4NFvKcageouZBsL' },
-  { username: '', displayName: 'DeSo Bull (…qtQmEi)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhdU7jXd2cKQA5bVqobuDpGrcqYox526VZnUQEBFJ8k2QqtQmEi' },
-  { username: '', displayName: 'DeSo Bull (…MH4QzD)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLghdy8ZXfbaAAKoHXBjsexYRR5WnJbg67quuWK5NsYPXdMH4QzD' },
-  { username: '', displayName: 'DeSo Bull (…iDSGkV)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhuysV2Rw6uevVxtYn96fDPGsqs3vFGfz9qFX466TU5ngiDSGkV' },
-  { username: '', displayName: 'DeSo Bull (…7UfhaQ)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLj9yE1ehqZfVRtyfHjQKeK252RGtkrGvukQEHwW4Ecs3y7UfhaQ' },
-  { username: '', displayName: 'DeSo Bull (…rWBzxV)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiiq21kx1RMpYVdxGNYrMcXeJXQZsHJYDoP5ZmnDzV3D4rWBzxV' },
-  { username: '', displayName: 'DeSo Bull (…LT8tLW)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLhUb7WUeebZNhPxmoRXg4dFdFV4DpJe7mtRP3VWqs19RALT8tLW' },
-  { username: '', displayName: 'DeSo Bull (…7ossbw)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiR6pmSk5X14BpZ7sT4Ar3xJobjWLWXFYHVkkfkcodk4N7ossbw' },
-  { username: '', displayName: 'DeSo Bull (…3hagvP)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiMqfCKAjceXa6JU1JtncvoyhNBMs5LYqEWzJp2ARpNnT3hagvP' },
-  { username: '', displayName: 'DeSo Bull (…3TwHEF)', classification: 'DESO_BULL', publicKeyBase58Check: 'BC1YLiuuDXrgiCehor1TdT2A1zQfmBnLRgVAnDUxrnBtxEdHr3TwHEF' },
+  { username: '', displayName: 'Others (…4b7kXY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLixWsyuiEsT6ozD2H3eupsWPhw4zYPynPfD1hVuKbV4Xp4b7kXY' },
+  { username: '', displayName: 'Foundation (…Ga8gkG)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLiy4PJSw18A1Re2eBJAATrVErWDBGC5jpfszzDBKorb6zGa8gkG' },
+  { username: '', displayName: 'Others (…8zoNYY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfn4nKxmifZPXrJydNzjBZTm4aSorE8obPGnemJtwBuSh8zoNYY' },
+  { username: '', displayName: 'Others (…hvvw6v)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLghNWoR9G81AvT5vZSa1zi9U8vbmL7L5xA5QTFz4HhAZ3hvvw6v' },
+  { username: '', displayName: 'Others (…XQk7T8)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh3Q8aspGuSqeh7ph7w8JaATUy5xEDsWkRetxR1BQV3KzXQk7T8' },
+  { username: '', displayName: 'Others (…65BTQR)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgmCsnSpkm4UmzTz5M6mrLRXidD43cv8NCbPybXp1dbpL65BTQR' },
+  { username: 'EnergeticEmu39', classification: 'DESO_BULL' },
+  { username: '', displayName: 'Others (…pU5isw)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLidpWYwa6uUszuUD4ZLN9JnxEvVa2K7yD4Dn5bMV54u2YpU5isw' },
+  { username: '', displayName: 'Others (…fRg9P1)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhV5AT5QBRMxTWYaQRXsoGXYpz4fG9sKGwxLPhgci2pKwfRg9P1' },
+  { username: '', displayName: 'Others (…PdwLtx)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfzVgSjZ25Jzaw5y8qY4JpFS4aPZA12WLSf1KtFK35vXPPdwLtx' },
+  { username: '', displayName: 'Others (…3Tk7XB)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgdp7sJujbGs5VGHjjqVKjhe1He9xFiSiT2aDUVHMWv9i3Tk7XB' },
+  { username: '', displayName: 'Others (…7mBMW7)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj9Ld8sppWu58oMFEGdAx6CDAeC8mzwKfWfzpjwxAyUjr7mBMW7' },
+  { username: '', displayName: 'Others (…QZM1SJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh5xALAdWoS7qcMu2fYGAyYWz2odfnLR68ugCPXDVuT5YQZM1SJ' },
+  { username: '', displayName: 'Others (…ZMuckn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi5TAuKMdcbCxMjn6BqysV1wMhRsTY2oph7gyiNGAfrNgZMuckn' },
+  { username: '', displayName: 'Others (…ZSD8Uh)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhqykp8AsDdchQ3xr8ySk6E81fGeZGSxwdioTaMdhyzt3ZSD8Uh' },
+  { username: '', displayName: 'Others (…XzUt34)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgBpWd9WbuAEJP8hqJuCboJGKymEyYMgKNpVpVLCMqmwrXzUt34' },
+  { username: '', displayName: 'Others (…peN7u8)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfmSHs7GSJ4uBJ8eM9AF5aqCkdQgNojrTKmrAhSRrwR3XpeN7u8' },
+  { username: '', displayName: 'Others (…7cnJYn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjKa4vaZiarKPxNFor1Lfm8VoNxWZxyrqLh4pcuYj2BEo7cnJYn' },
+  { username: '', displayName: 'Others (…3CjwoS)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgUU57aMVyfmrprFZicifoaH5QD8WdBWxtw5PWusD4Spe3CjwoS' },
+  { username: '', displayName: 'Others (…RLCUht)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi88dDt3FqZTr1v8VL1fnwTuKCDcYCQW5wYAdN6z2HKAhRLCUht' },
+  { username: '', displayName: 'Others (…6ysWBy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfoBazPJCiMJyMLwE8uTnQ8JbYoHuHaAvhwzxms3nmHnM6ysWBy' },
+  { username: '', displayName: 'Others (…jNCscP)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfjjbrCBVffurMp2Tdgtxq5na1rijkTam8FDaGXh4sGqMjNCscP' },
+  { username: '', displayName: 'Others (…rBcJzs)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfmFnjX9D4Hy4a3uETXHm5LH3VCpda32GRPf7cfHpycVYrBcJzs' },
+  { username: '', displayName: 'Others (…XxA4Ev)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfitC55Fvy2ru24w1F4h9FYvL5CwqghJJeP43qhxiMiQMXxA4Ev' },
+  { username: '', displayName: 'Others (…vQ1G91)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiTNp84xUmaDBxtEMoc7H45QKu3d775pMa2bT2qHBiqmRvQ1G91' },
+  { username: '', displayName: 'Others (…HECbPi)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgoaDz1CtGVtxDRAHE5bfyPXNNJAdRnzbXapigsVVxRK5HECbPi' },
+  { username: '', displayName: 'Others (…gnaabr)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhDodML1kSrTkG5yCHm2Bvg1Yq3FDHLB97YASf9hP4P7Kgnaabr' },
+  { username: '', displayName: 'Others (…wQUXbL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgU4kGEkj4QepnZ5tTBrAfbGVkvpiUPVkcZUARsn4MQ4xwQUXbL' },
+  { username: '', displayName: 'Others (…BoBRgQ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLixSUwAzHobC2nqgtWkXUroLHPVRnpSt19oaKPSJuWG47BoBRgQ' },
+  { username: '', displayName: 'Others (…QbsKgH)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgWo2Qk7FWyci97xL3qXriMD1sTaV2kLabHDX6s1xNupBQbsKgH' },
+  { username: '', displayName: 'Others (…Rp6t2x)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLihEmEZdLv8ph2SKyHVdYqpSJcWmYJwKikfvBiFr5mBHaRp6t2x' },
+  { username: '', displayName: 'Others (…4MYfFx)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgraviZ8dMTTu9DUihTQwbBu4n3JqbTvLTkiYfLEUEGZC4MYfFx' },
+  { username: '', displayName: 'Others (…hH7bMY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgs6uEeLu1M2T124SspqV44MM9TtFaC8sqPp2Ro5vyQzQhH7bMY' },
+  { username: '', displayName: 'Others (…2ZT4pr)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhCT9baFRz4gVTgAzJhG5eFqQPj5Z1hMT9WUkwQtsLm2p2ZT4pr' },
+  { username: '', displayName: 'Others (…vmfbYJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjDWtYvZBTMXieQxjbScG2nmzHKYUaVkTHgXdHPA2Ls1yvmfbYJ' },
+  { username: '', displayName: 'Others (…vu2uvW)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhyqeXE8R1rhB1gfwTM77Z4ypJWpuSGkyNh3Z4DSXgNHUvu2uvW' },
+  { username: '', displayName: 'Others (…5ZrcvU)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh12La3Je4RmYCW14SbvhNN1Mdv15MyhZXMJBD31DKpvk5ZrcvU' },
+  { username: '', displayName: 'Others (…bmuUpY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhuSy7JJ65DEnqU13PVBNhQyRE3Zv1FpxnzKWFnMAT8HBbmuUpY' },
+  { username: '', displayName: 'Others (…bc5k4Q)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhLktWeqhgwHavzFkCMnCSBXdTeTDKUBZQMXBiGb9TTU6bc5k4Q' },
+  { username: '', displayName: 'Others (…BVxjB4)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg5G6X79ZTPvjSsYrMP5VCN2yYJgDLPEqYw2e7TkgmG1iBVxjB4' },
+  { username: '', displayName: 'Others (…n8N3Me)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiwpvaCF2PjNNATdxPUcxsxfMhCCX6TEpBsHGaURqVWazn8N3Me' },
+  { username: '', displayName: 'Others (…Y8MUvp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiAmQZNR2t9jrivs4XAmnywrovPBWaRFnRBvhESw7G6GJY8MUvp' },
+  { username: '', displayName: 'Others (…3SRBEz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgzjXwiMni2GHxpKeAg4C51r8mD8UVkqC3f818vTcoizM3SRBEz' },
+  { username: '', displayName: 'Others (…V89jyN)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLibhMd5eoEuf5MQa8Sz8TPkkQk42TJXZBSPybRTXg2ViPV89jyN' },
+  { username: '', displayName: 'Others (…T5SLvf)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLggR5rQxJrFS1v7s4wTYh9MsuB5vjZvM2884SMYgkm5x8T5SLvf' },
+  { username: '', displayName: 'Others (…iLV5oC)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh59ALyiWiPbFk3dKQnF1L6jUE1veSVppb4Fx9CyMWbZfiLV5oC' },
+  { username: '', displayName: 'Others (…rzsvvk)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj8TZmYShY9wuXAbxyeWdYsrQ4xc8MXf4twS1WW8tuqMjrzsvvk' },
+  { username: '', displayName: 'Others (…Xdv8HM)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhrtXCwbVbE8tE6kZQprxcQiK2ovYjthtb44Y4jPKDK51Xdv8HM' },
+  { username: '', displayName: 'Others (…m3SNCg)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiaKo7QgQwWTw3i9XJiyknpzHjp423m1HWCzYyTTn9FQ6m3SNCg' },
+  { username: '', displayName: 'Others (…wv6BFS)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhbaQsorsut5cCtZQ5dyzWc7Nkce6tVk2vT28SoHm4qonwv6BFS' },
+  { username: '', displayName: 'Others (…raJpRr)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLixHLxJght9VPiT4HPJ32WunsnxeFBTA21r9V46hWExdPraJpRr' },
+  { username: '', displayName: 'Others (…weW2PB)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg6UoMoVFTmHar6Z92GBaxJA5ehoppQ8SbyA3Ztcak8PaweW2PB' },
+  { username: '', displayName: 'Others (…VXZXZe)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiVB6hdAiHqUvR5j3hmyR4c5yj7tetPzG3DYCzH7VYtXBVXZXZe' },
+  { username: '', displayName: 'Others (…3mn1VC)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg4ehgvLC8YzYmzRnf2ocED5XtZwfNkDtYN8WUm3TxTqg3mn1VC' },
+  { username: '', displayName: 'Others (…fZ7dKC)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLie8bqKw3zAUt9hgGTaG5PGgKVCkr4Yjum3XDBMgLyR1EfZ7dKC' },
+  { username: '', displayName: 'Others (…kJ3uMz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgKxXszRSqMWYfcwB8HkDyUDiCGMc53uoJAS3VPn4cFkukJ3uMz' },
+  { username: '', displayName: 'Others (…TcoEKj)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhnfAQiPTZj6kVLfD7Fe3KMofsa1sFMmsY5SAzC3ZCARsTcoEKj' },
+  { username: '', displayName: 'Others (…nu2wkZ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhf6AfUEqqyKv7VTUbhs1Ee6db37mLPkWieJgQRCbXfzDnu2wkZ' },
+  { username: '', displayName: 'Others (…Bohqc4)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgdg8vnLaSnorX3x1KQuJtmKndC4mAVFJXWtmHsU7QvtgBohqc4' },
+  { username: '', displayName: 'Others (…g7DAjh)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjDtP2MMmvAHofbGzWbZYtABTtT2hvqy9kjK35UPtHfn9g7DAjh' },
+  { username: '', displayName: 'Others (…vnkKuN)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjR8Q5t9XWWFq2QQQpSqSrSxUgA2WxCuBK9t8vEj4U7jUvnkKuN' },
+  { username: '', displayName: 'Others (…xArMPj)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiKB9mLBnKPvj1eAjWRRZAi1t7P6LrcnAS5gVKV619qhXxArMPj' },
+  { username: '', displayName: 'Others (…LD14Ag)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj382oHt8B54TeMbegvHH7jpxoP7ocALYCPTgMncS4KuPLD14Ag' },
+  { username: '', displayName: 'Others (…3M7BUd)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiruv4iWRofZm5np6RjiMHmDHDaEuiALisswvGZcez9Pq3M7BUd' },
+  { username: '', displayName: 'Others (…1XRvjU)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgDFFwKVw1HFmTukvCUVFvGHsW9aSXPywRWs3R8BLzN5S1XRvjU' },
+  { username: '', displayName: 'Others (…BVRETu)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgY8i74RUoQ9cBkX8TucHEANvPkUJCpoTPmf5ryA3X7tzBVRETu' },
+  { username: '', displayName: 'Others (…YDV9HJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfk4E66W1NBsga7qzYXXJrUmatrzbDziVHpGq4k9tApnQYDV9HJ' },
+  { username: '', displayName: 'Others (…BNefS3)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgDyD5vPD6tDv1Mw8L7AZsWfewhsn58ai53DRLDVWjpuMBNefS3' },
+  { username: '', displayName: 'Others (…3kcoRz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhcRwjrEaVoKCfoxgViAC8fRQb9WBirQDrTmpUfE3238q3kcoRz' },
+  { username: '', displayName: 'Others (…xRT4VB)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgNWe2ZjwpzZqgPg2TF6vwq3PiNwMTaQi8xiwJJi4CvABxRT4VB' },
+  { username: '', displayName: 'Others (…MwNea6)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhEURgy8ZFC1aRVnBiwGMnvke4tUefsRQxUy4ymk4N2PfMwNea6' },
+  { username: '', displayName: 'Others (…ohvwd4)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgyqGFS197gdBinchomd9pEyny6yQMpvYHWxU6CCet8yFohvwd4' },
+  { username: '', displayName: 'Others (…vtMT6x)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgEy5MMb7K9Gn4zeT5TRwsu3GoYcrZmWSRB3kEDbBrXT2vtMT6x' },
+  { username: '', displayName: 'Others (…Xzw3Yz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhAJb2hZbn2z6rnwrAPGeUUmxpooNKasiRNVizN9MkytTXzw3Yz' },
+  { username: '', displayName: 'Others (…JTqCoL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgVaB79kqJKQukL1ugw39bHf19FoC5MNoXVhMMXCbAWAKJTqCoL' },
+  { username: '', displayName: 'Others (…YHg54r)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhfWRwgrPmVLPgAcTPxnWwXkvS3cJXDdrAoT5A6qP2kuRYHg54r' },
+  { username: '', displayName: 'Others (…Hz4MrL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj4qjR6aKt1UpSq8HxtSJ8ETwCwWujDCn8pnFBRHcyrjBHz4MrL' },
+  { username: '', displayName: 'Others (…8gpSiy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhv2fpxorLvQNkLUxsswDEjKfDNMYJM18YcdDUGn33DDr8gpSiy' },
+  { username: '', displayName: 'Others (…e1xVHw)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiVng85x776Z8vPGY3JgCZyHhUHNyqFfVfaWG7TMi6hfte1xVHw' },
+  { username: '', displayName: 'Others (…A2FfC6)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi9cT8dedvSVfSgKzEipx2fuX4ruXW3aun8PsQY2RkWkyA2FfC6' },
+  { username: '', displayName: 'Others (…cwk8Ct)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgg5JivWUUGuvZwMdCrtmic9YgmC7S6XXnwwtwzVZAbrrcwk8Ct' },
+  { username: '', displayName: 'Others (…HiWpUA)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj3GWwGoPyWQiW7ffFGZxX8BkJYt8DMq5YPBzh9VDFXEwHiWpUA' },
+  { username: '', displayName: 'Others (…vYXqJX)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi8k9v1EaX4h8aFi41972FX6ZZdDM33RM4jciFtSJRhKKvYXqJX' },
+  { username: '', displayName: 'Others (…ajForU)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfy8eHpAXpMxd5GKwwWvhjjkq8TANAYVey2bS3eRbCL1KajForU' },
+  { username: '', displayName: 'Others (…fb7jCr)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgRJGZPQ4HPoJiX4vpoMscaFuRVzz1758qvdeNPcs1ofDfb7jCr' },
+  { username: '', displayName: 'Others (…FLjWVo)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj6XW6hPa6J8xuU7sCFdhoZKGV6VcGt4HSpxHMzr4rSG6FLjWVo' },
+  { username: '', displayName: 'Others (…YrXQSu)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiVgoBZn8Ucpo7boQH8vQC3HMzs5biGP8ZS9giiQMfRgDYrXQSu' },
+  { username: '', displayName: 'Others (…cpLzjs)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLifjX9TaE5AP5dVzoaGdZsczDvFwTvAyF48nWFo3mBumCcpLzjs' },
+  { username: '', displayName: 'Others (…dZtccg)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjRM6hFpJVQpTHKw3NYje1V7vvdLRP18f8hbL1mBEAgSSdZtccg' },
+  { username: '', displayName: 'Others (…aX399p)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhykva17HtDJ15GTNGrog5UDuDTuVDuhGXuBLbETxMh5LaX399p' },
+  { username: '', displayName: 'Others (…M8Vgjh)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjQqWmRDdtjmZ5Sbp4cB28zGT5G6qwxXH4X9TrxacS3uaM8Vgjh' },
+  { username: '', displayName: 'Others (…nEMbzt)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgmiGAhD3x9y9m5FFGS6kyi7gS8CY9TdoaCpwBxtT2G7CnEMbzt' },
+  { username: '', displayName: 'Others (…F3Wjr1)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjEwDgw6qrndpfKSrahRe1ewCnj6BynKPgogzCNHjnWeyF3Wjr1' },
+  { username: '', displayName: 'Others (…1LLSUp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhqEhWvNnwW9TBqXURFqwkdpUYKrMVgTHQzopF5rRBDcD1LLSUp' },
+  { username: '', displayName: 'Others (…5tasHb)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiKj43v3otS45EMrTBTRJdUcjtneNMjReXnqbMAshrvi45tasHb' },
+  { username: '', displayName: 'Others (…c9dPxW)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgLu3J4EUf7xXZ2KmT332tLboPxXZS8cE4wJY7ifx8Ccsc9dPxW' },
+  { username: '', displayName: 'Others (…znmLgX)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgVcU5orfchdvtaz2CgJYwPtH19VA2T2MDRk2x5dqpuKPznmLgX' },
+  { username: '', displayName: 'Others (…Ga7YBH)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgNvixqVFnbQY8wTqybaPvYkWYbTEwXciNkYHwsWP53f7Ga7YBH' },
+  { username: '', displayName: 'Others (…88JdHs)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhTjjL7DKgd5PgW3f9dy1PUAC246VUYab9kBB2MiFTDnF88JdHs' },
+  { username: '', displayName: 'Others (…jUSQfn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLipmeBoK6ypq55e9RFSQ4bUEVcQ3GM1PE2j75oCdS1NcEjUSQfn' },
+  { username: '', displayName: 'Others (…FaqLTy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhbqSLuMcw7E9TSUE9YLfMFJaaETosbqN67xSB9h4EC9sFaqLTy' },
+  { username: '', displayName: 'Others (…mrpe4k)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLibYeYowUaxW7QimDbW7Xh9F4nc5GdrfXDLxkLS26ctdYmrpe4k' },
+  { username: '', displayName: 'Others (…qnuGeP)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiQr188QqaSpywf6rm8X2hxv3j2B5FskmmLtvuRaFKgqSqnuGeP' },
+  { username: '', displayName: 'Others (…PYehuz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLixi9S66cD2sBq8MUHj1SCo8Yr5cDqHPtCBz7CYungDsvPYehuz' },
+  { username: '', displayName: 'Others (…DM8vJC)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj8uJoDGwqHNwWdE53BxsUB3RG5mdtwXVw9FQQNxt67RvDM8vJC' },
+  { username: '', displayName: 'Others (…t1Kyj3)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLguEz51K1FuvqTu31LCN28exyxVx98obF2bzrqrpmh4dTt1Kyj3' },
+  { username: '', displayName: 'Others (…uaaNGG)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj3KV6rV5MjELkvekwQ6YZHuzbxSe5xsNzD9h1sxxhG7guaaNGG' },
+  { username: '', displayName: 'Others (…ovyzzk)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj6s1yTKhVQDYigZP5rLVCPw65zD5MSPuTq8LD53nKsMXovyzzk' },
+  { username: '', displayName: 'Others (…Mq4Ybz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfyT6fz6QTaNhVBMzTPNXWBaVfEJonPawRFoShCEtGyzwMq4Ybz' },
+  { username: '', displayName: 'Others (…mTsk4h)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhqEdfGgPTrq7VFboLgdkfZEb85MmBkqzrLtnHfbCU67MmTsk4h' },
+  { username: '', displayName: 'Others (…ka5N5S)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj2aZQSpi3dMXeK6km8mmzmWmYSV7ayYabBEiLHTvo264ka5N5S' },
+  { username: '', displayName: 'Others (…AAEYSE)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhX2eV7DXn21v8GGseK49An24GoSeHghmDrPGGAQ2HKzFAAEYSE' },
+  { username: '', displayName: 'Others (…Q1jZFL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjLVj2jCbqsi1LTC7cpwdrnSZcpxgQhKquL77Sgk1kavVQ1jZFL' },
+  { username: '', displayName: 'Others (…1YG17F)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgDizzX9H4MQL2DiyRfLqyWd2bFqzCZwbgUtBqSjaCRb51YG17F' },
+  { username: '', displayName: 'Others (…JqT3KC)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjAcG6LKPXZ8xXkXGYVnxHpdfDHYwtA4aW7ArZ9FrhjtCJqT3KC' },
+  { username: '', displayName: 'Others (…JgwbdY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhNWAziM3JhvYWiPypeJ9ndNAwugKf3yAL9AjovkHBtbSJgwbdY' },
+  { username: '', displayName: 'Others (…JRJzmy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjVVDGqjkAg7ZrzonH8tBk1LHKSfaUtpxbSUVa9ttToM8JRJzmy' },
+  { username: '', displayName: 'Others (…H71mgy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh1jMBkPvP51n2pnmeruLysQ8Ymaant6jt8smJeJtiYBkH71mgy' },
+  { username: '', displayName: 'Others (…HCCG8k)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhSJ3nAw4SwBL3rJDPPJtW9YWsEsGDj9FrDD2ac75UsaiHCCG8k' },
+  { username: '', displayName: 'Others (…b3n19P)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfsLrGtUnXTqxk2ks4yryeBad2GhfiHeRgKbapxZquQmLb3n19P' },
+  { username: '', displayName: 'Others (…ZXiSSk)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjFQPYMyd2XmdJ4WLAuawNWmMYCYv65dwGVpsJjfXjcTsZXiSSk' },
+  { username: '', displayName: 'Others (…XErdEc)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgVLn4Kp9uJUvMtp79LVxWd5qdnk8tRoZdiSv1WmkDefdXErdEc' },
+  { username: '', displayName: 'Others (…eBtzva)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhBw4SV2kU8cjLPW2cJBcdwV3oXwVSScAWK5js3uFiedneBtzva' },
+  { username: '', displayName: 'Others (…g1KsPn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfrc9NF5qM1WNqUVFgr6RnEAVkdn9X899KcFNZxozv5pag1KsPn' },
+  { username: '', displayName: 'Others (…y1yXDg)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfg6RFHGXsKzZFyEKUmJ869eBeXMKH2xiuxrPw1ZuBxVRy1yXDg' },
+  { username: '', displayName: 'Others (…TxJ8XW)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh9DrmDqjcB7UtCp4HMt1wmFzKJ1rsX6SWWZFndx9gTE1TxJ8XW' },
+  { username: '', displayName: 'Others (…8heUMd)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiN1oAE5YZDon92eW3kFmWMQFAowJ9TtJXzk5B8S67vAa8heUMd' },
+  { username: '', displayName: 'Others (…JvYfGM)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi2SU6w44dvzhhxjQowXpym4FdQdBkPYCkLBswgw98NQoJvYfGM' },
+  { username: '', displayName: 'Others (…AebSfi)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLihgBZXYhtjpJNY1xkMejWwx1NpuMr592in6V6dquMtepAebSfi' },
+  { username: '', displayName: 'Others (…7RdfYT)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfniDiewVaiL3vbQgRETdZ5Xhy6QtgweHoa9FM7Ruu4Jb7RdfYT' },
+  { username: '', displayName: 'Others (…Qzu49C)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhSGcUPXnhLawyi7PANgwsm5vqdVFwt5sKgvvMSq3YWgzQzu49C' },
+  { username: '', displayName: 'Others (…ddxF2m)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLisiNqujHABnWiwjPD9JsmVUB52H4zS4PSRK77QEH6bEaddxF2m' },
+  { username: '', displayName: 'Others (…LQg9Av)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfrxZj223fTJkmT59w7rWPJbFdE6SVkFdVRHkYUa1B1fgLQg9Av' },
+  { username: '', displayName: 'Others (…4wCTK4)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjGLTPvptakKEWJKDcTobg1tgD1n59Zj1swNyftv2Bhwc4wCTK4' },
+  { username: '', displayName: 'Others (…P6hr11)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgMkCdp3FChP9FGdXf8PYi1iDv3vK4qQAVUQvoVRAGkssP6hr11' },
+  { username: '', displayName: 'Others (…c8EKdD)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgN1HbVtznBNWaBQD3iqgmTXM8m4MGvHUiatSxEZEWmAkc8EKdD' },
+  { username: '', displayName: 'Others (…uUhwv2)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLifrrLC6W4YSZvoeFyG9G2W2yMYz2ikqUYN8RVebSK3mxuUhwv2' },
+  { username: '', displayName: 'Others (…y3kZJ7)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfnKZY4czGrS3z3z6zZFaFuDNKwZvaNhTZpFXhCRXs2guy3kZJ7' },
+  { username: '', displayName: 'Others (…mLtLi1)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg7X9nX9w57dMEcGWc5X5A24Ncxsc4QqYpB42SMHNyTfomLtLi1' },
+  { username: '', displayName: 'Others (…w5HaXy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgr8TrZf5Vh9yN1AnYssd5JzZLxKZA5fWjXbxjFApNs8Ww5HaXy' },
+  { username: '', displayName: 'Others (…Ko7Lac)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiytMB8KraJA5y1jbeai4xgGLjAPGvYDSqDYNCygaQsuEKo7Lac' },
+  { username: '', displayName: 'Others (…3HYUJJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhbk2WcmrzYoYn7XcPAnWsyhhMKiGC8MS4CrRdbbHTaWB3HYUJJ' },
+  { username: '', displayName: 'Others (…N66GYT)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh5rFQqfjmANKdqwc6eCJk82BeHiwQSy8D18tLwgCPrV3N66GYT' },
+  { username: '', displayName: 'Others (…Jdo3Dz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjKF8ryyYFPP8bL9mkcyDrt44ZC6ZmfPrRPE4MXnzpx3BJdo3Dz' },
+  { username: '', displayName: 'Others (…Vf1LTp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhZKyAuwkejVNB1UrUuKm8S92os8UMEB6MgYhoQv1PkvtVf1LTp' },
+  { username: '', displayName: 'Others (…B4MxyQ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLftSqcG2MNZuTyMPCEJneCU6LCZp3EFYdukEX8ZKF6MCGB4MxyQ' },
+  { username: '', displayName: 'Others (…rfZSXG)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgP8qJrZjBCT28tBhAZAVnNDTYBqpUJmyYxsCNbaaTnuTrfZSXG' },
+  { username: '', displayName: 'Others (…cdWrgR)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgvThCj852wvHcUQuxujnWeAtonVw1G1VFPJQz54E5Q6hcdWrgR' },
+  { username: '', displayName: 'Others (…gEWDrR)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLicpkYLaBoEc9n8tBsaTRqxKXfo2PdA3yh3ktET13Y4RogEWDrR' },
+  { username: '', displayName: 'Others (…FChgUj)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhn2SUj4e8Ufffmku6rexstQQuVw3ugY4jVc847SnkCNtFChgUj' },
+  { username: '', displayName: 'Others (…vj3kFv)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhAocefc6rZyNwbfCKMK6buATMrhGiAUxjy9K4Y1c5SY2vj3kFv' },
+  { username: '', displayName: 'Others (…nyqbE5)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfwApmP4GdSUZt4wbsbzuWffHBTWqkB65ACEoNWw77D1RnyqbE5' },
+  { username: '', displayName: 'Others (…1ewyEi)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj583NHVhqvqH8cNnKnSh3wzbMZHASuf8WW5pB1G5i3Ws1ewyEi' },
+  { username: '', displayName: 'Others (…wp6nPX)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh2Uhnq6b5QmKgeRmamF3nF35skHm22vTWz2XB6uSejgywp6nPX' },
+  { username: '', displayName: 'Others (…FbsYpv)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfuzBNyWS5TdUg9JgB17djDXK6obkC93VxozhMF5zQEzxFbsYpv' },
+  { username: '', displayName: 'Others (…Y2GeAn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiWcmcndy2mCUsp4JVnpdmJKpf19DmjdhJp6y4Y3gZyAoY2GeAn' },
+  { username: '', displayName: 'Others (…JRy4d9)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgL84SmvzQdx9kUW4VFHrUn4BRUqYXWoQwDhMDuSTi4RpJRy4d9' },
+  { username: '', displayName: 'Others (…47deyJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhytCgKtup3N2QYuufPeAdzNQvERyPngm8rZLWk4NKK2o47deyJ' },
+  { username: '', displayName: 'Others (…pzYQwR)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiq8rdCqX7AAaTVAUJ7m8H9QKKtAvDBwPNa5RqWPrNWBtpzYQwR' },
+  { username: '', displayName: 'Others (…caYuCf)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiiq45Xv4m4r1YuRJErd4ezQ4PoNpwoFfhKa2sLKFZB3ccaYuCf' },
+  { username: '', displayName: 'Others (…QmwyPb)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh9TGvv2a7ehw3Q1kuR7B934z4QyJEn3GuvzndGYLNyHAQmwyPb' },
+  { username: '', displayName: 'Others (…Xt5ruw)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhbZo1LdV26CX6t37SC7VGwtDfNQT99mxzHgyzWcaAJbtXt5ruw' },
+  { username: '', displayName: 'Others (…JJzi9e)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgF9Tt85ADrL4QiyX6xSGwGrqFWnLr9b5Mt8hfdk54Tg1JJzi9e' },
+  { username: '', displayName: 'Others (…z9jgNM)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg4qFM5bGPhZdvPE6g2xc5dNtXgJAJwJi1NQEYbqtxqi9z9jgNM' },
+  { username: '', displayName: 'Others (…e723C5)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhaPxuMkDVvfjKgJQtQrd3ee3CBZteoJuSkZQmFtqSgnNe723C5' },
+  { username: '', displayName: 'Others (…LXvMjp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhTA7JD7uMtBY4iPYMKUhkJ3LeicscPKhoA1dt98cdpoYLXvMjp' },
+  { username: '', displayName: 'Others (…gjq8eV)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhHDsy6ncZck8zmoAFJq45hYNn6W3baRk7u2uCLaFk12Ggjq8eV' },
+  { username: '', displayName: 'Others (…KGg6kH)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj4Bpa1LYQp366z5CsQdJ9MBSiiepSaaY9AhP5URE4MYzKGg6kH' },
+  { username: '', displayName: 'Others (…SWBcxD)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiydcQFSQ9r1EHg2JZ2Dz6nxTUerds2NeVevAGq7xeXmLSWBcxD' },
+  { username: '', displayName: 'Others (…B8wBMm)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhwfRR19w1w4iqNfBKTuc2iHTtyy9oYWxVEqJBTnChMfCB8wBMm' },
+  { username: '', displayName: 'Others (…jrqNBL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhyZoc6hVsKZb7F8c8vJ6zNG8hqJ5BDNq2pNaRaL4HLufjrqNBL' },
+  { username: '', displayName: 'Others (…KFzrfd)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhXuVkAYSNAS2XY8AMos2QxpXwnTUxWUp3mfnJbeSKX5CKFzrfd' },
+  { username: '', displayName: 'Others (…S6T6o6)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiqiEwzKMzf9qUDSFfgBuhCoKGN36fD3odHpY16etfvBaS6T6o6' },
+  { username: '', displayName: 'Others (…CQUAgv)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgVZUkfG29UDuZQH2zBZQPF7zWXtDMDfNke6ZKw438KGeCQUAgv' },
+  { username: '', displayName: 'Others (…QqoR3k)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj3WqzHvV7mYdMKQxSgV2m5fAsN1VnzXAx4T6wxZx8eqoQqoR3k' },
+  { username: '', displayName: 'Others (…X3H3tH)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLickbhdFWkKcZPpJw1C7ysMJt4KgqrzRUXUzzC21xYwoUX3H3tH' },
+  { username: '', displayName: 'Others (…V7WzV1)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhzsh1dMu8JDmZGs6CFgAHBxiq5QycF9UVdYh7oXbmnUxV7WzV1' },
+  { username: '', displayName: 'Others (…Mw9RVY)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiUt3iQG4QY8KHLPXP8LznyFp3k9vFTg2mhhu76d1Uu2WMw9RVY' },
+  { username: '', displayName: 'Others (…6Av44x)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLg5EH9cGVZqmk2Zia6y5fukMr7sFZY1pRdcdh7jtUThwM6Av44x' },
+  { username: '', displayName: 'Others (…dTEexU)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhebEdoBiDLXd8pyWNdmabq6DbyVo7KpwufWKmfcTyyigdTEexU' },
+  { username: '', displayName: 'Others (…KEHWDg)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfwprzwzL8HRhPZSTMtPPCQFb5yxHGg2AssRu6fBgmraGKEHWDg' },
+  { username: '', displayName: 'Others (…8qwWUU)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgSFCenPtDrKVi6ritNJ8ayfbECS6JppBuA97Ba86vJuB8qwWUU' },
+  { username: '', displayName: 'Others (…GYtAbT)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiJZbfwkYfMxH57kWxXupSYvKvig3C11dgLwCFdZiLut5GYtAbT' },
+  { username: '', displayName: 'Others (…YJ7q9Q)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiAfXkEEzYUQPvwASUvSLPHEW3PuEhRQLSmmVmMcDwU5QYJ7q9Q' },
+  { username: '', displayName: 'Others (…wTodrT)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjRZ5z7jqwQ43c8G36zbiJZ6MALSYvvbDEetve9BCytJtwTodrT' },
+  { username: '', displayName: 'Others (…mCwhLc)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi42YhykckXwLBJDGfCXX3mjhfSxEGRkWcnaAjNk9sbFgmCwhLc' },
+  { username: '', displayName: 'Others (…9XnJdp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfknrAC4mCptj9vdknrKDPLmWLJNsaQK4rzAywwDoLoT89XnJdp' },
+  { username: '', displayName: 'Others (…cG5g2n)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfnZduHdmABv6n8SMXt16LNRCrUP31bSjwCQ7ys5q6UHkcG5g2n' },
+  { username: '', displayName: 'Others (…ERr1fn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgx99hmEufkjAFWR5FKYmWTZL8xCRwxUNFiSsCQxL42UKERr1fn' },
+  { username: '', displayName: 'Others (…ouZBsL)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhkxA1CQ2o1qw593yzfcA9DbvciUMABggHUa4NFvKcageouZBsL' },
+  { username: '', displayName: 'Others (…qtQmEi)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhdU7jXd2cKQA5bVqobuDpGrcqYox526VZnUQEBFJ8k2QqtQmEi' },
+  { username: '', displayName: 'Others (…MH4QzD)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLghdy8ZXfbaAAKoHXBjsexYRR5WnJbg67quuWK5NsYPXdMH4QzD' },
+  { username: '', displayName: 'Others (…iDSGkV)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhuysV2Rw6uevVxtYn96fDPGsqs3vFGfz9qFX466TU5ngiDSGkV' },
+  { username: '', displayName: 'Others (…7UfhaQ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLj9yE1ehqZfVRtyfHjQKeK252RGtkrGvukQEHwW4Ecs3y7UfhaQ' },
+  { username: '', displayName: 'Others (…rWBzxV)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiiq21kx1RMpYVdxGNYrMcXeJXQZsHJYDoP5ZmnDzV3D4rWBzxV' },
+  { username: '', displayName: 'Others (…LT8tLW)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhUb7WUeebZNhPxmoRXg4dFdFV4DpJe7mtRP3VWqs19RALT8tLW' },
+  { username: '', displayName: 'Others (…7ossbw)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiR6pmSk5X14BpZ7sT4Ar3xJobjWLWXFYHVkkfkcodk4N7ossbw' },
+  { username: '', displayName: 'Others (…3hagvP)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiMqfCKAjceXa6JU1JtncvoyhNBMs5LYqEWzJp2ARpNnT3hagvP' },
+  { username: '', displayName: 'Others (…3TwHEF)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiuuDXrgiCehor1TdT2A1zQfmBnLRgVAnDUxrnBtxEdHr3TwHEF' },
   // No Source/Core
   // No Source/Core merged into Foundation
   { username: '', displayName: 'Foundation (…fJ9)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLitz3fid4UWR337TPRerkLaFAx55i8XktzU58idKMReciCBDfJ9' },
@@ -551,7 +557,10 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Foundation (…U6MG1)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLj3NjV2vZt7wUoirjUdKzCvLaBDLotPeymxRZ1Rik2JLyYU6MG1' },
   { username: '', displayName: 'Foundation (…nwP3)', classification: 'FOUNDATION', publicKeyBase58Check: 'BC1YLimRmPcdUK8aZ7KDZQEsk5vbcowGVPeXxa6fV1Lxnr7Pz63nwP3' },
   // Core Affiliated
-  { username: '', displayName: 'Core Affiliated (…AqLQ)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgfGoeE5U7REoLFFzKYS6nGUFZ1rfP2KJmr6BCr8iMEaNU6AqLQ' },
+  { username: 'Hugzo', displayName: 'Hugzo (incl. …ECbPi, …p2yLN)', classification: 'CORE_AFFILIATED', mergeKey: 'Hugzo' },
+  { username: '', displayName: 'Hugzo (incl. …ECbPi, …p2yLN)', classification: 'CORE_AFFILIATED', mergeKey: 'Hugzo', publicKeyBase58Check: 'BC1YLgoaDz1CtGVtxDRAHE5bfyPXNNJAdRnzbXapigsVVxRK5HECbPi' },
+  { username: '', displayName: 'Hugzo (incl. …ECbPi, …p2yLN)', classification: 'CORE_AFFILIATED', mergeKey: 'Hugzo', publicKeyBase58Check: 'BC1YLhS3xZJ7RToJJc49dsmxBfABWkCax4r6eFbe5bSJJ63sH4p2yLN' },
+  { username: '', displayName: 'Others (…AqLQ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgfGoeE5U7REoLFFzKYS6nGUFZ1rfP2KJmr6BCr8iMEaNU6AqLQ' },
   { username: '', displayName: 'Core Affiliated (…QMP)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLjHNE39QZ8fSPevE6FU99VuyFepe6AswhvFJiu2bqQ4PX3nFQMP' },
   { username: '', displayName: 'Core Affiliated (…rDbi)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLh4eK3VuiorNyU1izDNcearJUXPLuTsA9pUndaceZmeAo7jrDbi' },
   { username: '', displayName: 'Core Affiliated (…ujne)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLhWPt6nGTLmsNkbGFHfspcfnRgaEVEbNygVty22oTVF3a1zujne' },
@@ -594,6 +603,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Core Affiliated (…MWFhnc)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgFqmEQVbTz123GHExc2empfbEtbWDbdqgrxz3uqbwte6MWFhnc' },
   { username: '2times', classification: 'CORE_AFFILIATED' },
   { username: 'tickerpump', classification: 'CORE_AFFILIATED' },
+  { username: 'niccage', classification: 'CORE_AFFILIATED' },
   // Exchange Accounts (excluded from Others)
   { username: '', displayName: 'Exchange (…Dbh)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLigdNktFqD2LrK2cAAdm2JkPhs8qJ3RJrC3erhRAU5FcaSntDbh' },
   { username: '', displayName: 'Exchange (…hdgr6)', classification: 'EXCHANGE', publicKeyBase58Check: 'BC1YLipfFtg2FoVPSAYYuMtRYwrLEsnRPfutBmykewh32vLKvPhdgr6' },
@@ -665,6 +675,11 @@ export async function fetchTrackedClassifications(): Promise<Map<string, string>
   });
   for (const r of results.values()) {
     if (r?.pk && r?.classification) map.set(r.pk, r.classification);
+  }
+  // Apply user-defined overrides
+  const overrides = getClassificationOverrides();
+  for (const [pk, override] of overrides) {
+    if (map.get(pk) === 'OTHERS') map.set(pk, override);
   }
   return map;
 }
@@ -1271,7 +1286,7 @@ export interface AllStakedDesoRow {
   /** True if staker has a username (tracked or from chain); false if public key only */
   hasUsername: boolean;
   /** CORE_AFFILIATED, EXCHANGE are grouped with community in StakedDesoTable */
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'COMMUNITY';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS' | 'COMMUNITY';
   amount: number;
   validatorPk: string;
   validatorName?: string;
@@ -1305,6 +1320,7 @@ export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
   const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification']; mergeKey?: string }>();
 
   // Add public-key-only accounts first
+  const pkOnlyPks: string[] = [];
   for (const config of WALLET_CONFIG) {
     if (config.publicKeyBase58Check) {
       trackedByPk.set(config.publicKeyBase58Check, {
@@ -1312,7 +1328,24 @@ export async function fetchAllStakedDeso(): Promise<AllStakedDesoBucket[]> {
         classification: config.classification,
         mergeKey: config.mergeKey,
       });
+      if (!config.username) pkOnlyPks.push(config.publicKeyBase58Check);
     }
+  }
+
+  // Resolve usernames for public-key-only accounts via API
+  if (pkOnlyPks.length > 0) {
+    const usernameMap = await fetchUsernamesForPks(pkOnlyPks);
+    for (const [pk, username] of usernameMap) {
+      const meta = trackedByPk.get(pk);
+      if (meta) meta.displayName = username;
+    }
+  }
+
+  // Apply user-defined overrides (e.g. tag Others as DeSo Bull)
+  const overrides = getClassificationOverrides();
+  for (const [pk, override] of overrides) {
+    const meta = trackedByPk.get(pk);
+    if (meta && meta.classification === 'OTHERS') meta.classification = override;
   }
 
   // Fetch profiles for username-based accounts
@@ -1685,6 +1718,8 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
     DESOBalanceNanos?: number;
     /** Some node builds include locked/staked balance; Staked ≈ Total - Spendable */
     LockedBalanceNanos?: number;
+    ProfileEntryResponse?: { Username?: string };
+    Profile?: { Username?: string };
   };
   let usersList: UserBalance[] = [];
   if (publicKeys.length > 0) {
@@ -1695,6 +1730,16 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
         IncludeBalance: true,
       })) as { UserList?: UserBalance[] };
       usersList = usersRes.UserList ?? [];
+      // Resolve usernames for public-key-only accounts (no username in config)
+      const pkOnlyConfigs = new Set(WALLET_CONFIG.filter((c) => c.publicKeyBase58Check && !c.username).map((c) => c.publicKeyBase58Check!));
+      for (const u of usersList) {
+        const pk = u.PublicKeyBase58Check;
+        const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
+        if (pk && username && pkOnlyConfigs.has(pk)) {
+          const meta = trackedByPk.get(pk);
+          if (meta) meta.displayName = username;
+        }
+      }
     } catch {
       // ignore
     }
@@ -1786,10 +1831,18 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
 
     const ccv1ValueDeso = pksInGroup.reduce((s, pk) => s + (ccv1ByPk.get(pk) ?? 0), 0);
 
+    // Apply user-defined overrides (e.g. tag Others as DeSo Bull)
+    const overrides = getClassificationOverrides();
+    let classification = meta.classification;
+    if (classification === 'OTHERS' && pksInGroup.length === 1) {
+      const override = overrides.get(pksInGroup[0]);
+      if (override) classification = override;
+    }
+
     results.push({
       name: meta.displayName,
       displayName: meta.displayName,
-      classification: meta.classification,
+      classification,
       balances,
       usdValue: 0,
       desoStaked: totalStaked > 0 ? totalStaked : undefined,

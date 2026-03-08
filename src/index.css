@@ -209,6 +209,12 @@
     color: hsl(var(--muted-foreground));
   }
 
+  .badge-others {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--muted-foreground) / 0.15);
+    color: hsl(var(--muted-foreground));
+  }
+
   .section-title {
     @apply text-sm font-semibold uppercase tracking-wider mb-4;
     color: hsl(var(--muted-foreground));

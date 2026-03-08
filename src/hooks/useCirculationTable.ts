@@ -226,6 +226,7 @@ export function useCirculationTable(): CirculationTableData {
         else if (w.classification === 'CORE_AFFILIATED') cat = 'CoreAffiliated';
         else if (w.classification === 'EXCHANGE') cat = 'ExchangeAccounts';
         else if (w.classification === 'DESO_BULL') cat = 'DeSoBulls';
+        else if (w.classification === 'OTHERS') cat = 'Others';
         else cat = 'Others';
         map[cat] += unstaked;
       }

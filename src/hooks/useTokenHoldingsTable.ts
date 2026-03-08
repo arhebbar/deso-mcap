@@ -12,7 +12,6 @@ import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
 import { useStakeEntriesTopStakers } from './useStakeEntriesTopStakers';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
-import { useOpenfundFocusHolderRows } from './useOpenfundFocusHolderRows';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
 
@@ -69,6 +68,7 @@ const CATEGORY_BY_CLASS: Record<string, HoldingsCategory> = {
   CORE_AFFILIATED: 'Core Affiliated',
   EXCHANGE: 'Exchange Accounts',
   DESO_BULL: 'DeSo Bulls',
+  OTHERS: 'Others',
 };
 
 export function useTokenHoldingsTable(desoOnlyView = false): {
@@ -82,7 +82,6 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
   const { topStakers: stakeEntriesStakers, isLoading: stakeEntriesLoading } = useStakeEntriesTopStakers();
   const { holderMap: openfundFocusByPk, isLoading: openfundFocusLoading } = useOpenfundFocusHolders();
-  const { holderRows: openfundFocusHolderRows, isLoading: openfundFocusRowsLoading } = useOpenfundFocusHolderRows();
   const { trackedPks, isLoading: trackedPksLoading } = useTrackedPublicKeys();
   const { validatorBuckets } = useStakedDesoData();
 
@@ -305,7 +304,6 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     // Stake entries top stakers (for review/classification) – exclude already in free float or desoBalances
     const stakeEntriesFiltered = stakeEntriesStakers.filter((h) => !excludeFromOthersPks.has(h.pk));
     const extraFromStakeEntries = stakeEntriesFiltered.filter((h) => !desoBalancesPks.has(h.pk));
-    const stakeEntriesPks = new Set([...desoBalancesPks, ...extraFromStakeEntries.map((h) => h.pk)]);
     for (const w of extraFromStakeEntries) {
       const deso = w.staked + w.unstaked;
       const of = openfundFocusByPk.get(w.pk);
@@ -326,34 +324,6 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         DESOUnstaked: w.unstaked,
         OpenFund: openfund,
         Focus: focus,
-        dUSDC: 0,
-        dBTC: 0,
-        dETH: 0,
-        dSOL: 0,
-        CCv1: 0,
-        CCv2: 0,
-        totalUsd,
-        isNamed: w.isNamed,
-      });
-    }
-    // Openfund/Focus holders not already in free-float, desoBalances, or stake entries
-    const extraFromOpenfundFocus = openfundFocusHolderRows.filter((h) => !stakeEntriesPks.has(h.pk));
-    for (const w of extraFromOpenfundFocus) {
-      const deso = w.staked + w.unstaked;
-      const totalUsd = w.totalUsd;
-      if (totalUsd === 0) continue;
-      out.push({
-        id: `account-openfundfocus-${w.pk}`,
-        type: 'account',
-        category: 'Others',
-        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
-        account: w.name,
-        publicKey: w.pk,
-        DESO: deso,
-        DESOStaked: w.staked,
-        DESOUnstaked: w.unstaked,
-        OpenFund: w.Openfund,
-        Focus: w.Focus,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
@@ -433,27 +403,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     const sumDesoBalancesTotalUsd = extraFromDesoBalances.reduce((s, w) => s + w.totalUsd, 0);
     const sumDesoBalancesStaked = extraFromDesoBalances.reduce((s, w) => s + w.staked, 0);
     const sumDesoBalancesUnstaked = extraFromDesoBalances.reduce((s, w) => s + w.unstaked, 0);
-    const sumStakeEntriesTotalUsd = extraFromStakeEntries.reduce((s, w) => s + w.totalUsd, 0);
-    const sumStakeEntriesStaked = extraFromStakeEntries.reduce((s, w) => s + w.staked, 0);
-    const sumStakeEntriesUnstaked = extraFromStakeEntries.reduce((s, w) => s + w.unstaked, 0);
-    const sumOpenfundFocusTotalUsd = extraFromOpenfundFocus.reduce((s, w) => s + w.totalUsd, 0);
-    const sumOpenfundFocusStaked = extraFromOpenfundFocus.reduce((s, w) => s + w.staked, 0);
-    const sumOpenfundFocusUnstaked = extraFromOpenfundFocus.reduce((s, w) => s + w.unstaked, 0);
     const unaccountedTotalUsd = Math.max(
       0,
-      (hasOthers ? othersTotalUsd : 0) -
-        sumFfTotalUsd -
-        sumDesoBalancesTotalUsd -
-        sumStakeEntriesTotalUsd -
-        sumOpenfundFocusTotalUsd
+      (hasOthers ? othersTotalUsd : 0) - sumFfTotalUsd - sumDesoBalancesTotalUsd
     );
     const unaccountedStaked = Math.max(
       0,
-      (hasOthers ? othersDesoStaked : 0) -
-        sumFfStaked -
-        sumDesoBalancesStaked -
-        sumStakeEntriesStaked -
-        sumOpenfundFocusStaked
+      (hasOthers ? othersDesoStaked : 0) - sumFfStaked - sumDesoBalancesStaked
     );
     // Token columns: Others minus top100 (top100 have 0 for OpenFund, Focus, dUSDC, etc.)
     const unaccountedOpenfund = hasOthers ? othersOpenfund : 0;
@@ -481,7 +437,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
           desoIssued -
             sumTrackedDeso -
             (hasOthers ? othersDesoStaked : 0) -
-            (sumFfUnstaked + sumDesoBalancesUnstaked + sumStakeEntriesUnstaked + sumOpenfundFocusUnstaked)
+            (sumFfUnstaked + sumDesoBalancesUnstaked)
         );
     const unaccountedTotalUsdFinal =
       desoOnlyView
@@ -535,28 +491,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     });
 
     return out;
-  }, [
-    wallets,
-    marketData,
-    prices,
-    freeFloatTop100,
-    desoBalancesHolders,
-    stakeEntriesStakers,
-    openfundFocusHolderRows,
-    openfundFocusByPk,
-    excludeFromOthersPks,
-    desoOnlyView,
-  ]);
+  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
 
-  return {
-    rows,
-    prices,
-    isLoading:
-      walletsLoading ||
-      desoBalancesLoading ||
-      stakeEntriesLoading ||
-      openfundFocusLoading ||
-      openfundFocusRowsLoading ||
-      trackedPksLoading,
-  };
+  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || stakeEntriesLoading || openfundFocusLoading || trackedPksLoading };
 }

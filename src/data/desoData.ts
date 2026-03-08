@@ -2,7 +2,7 @@
 
 export interface WalletData {
   name: string;
-  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'CORE_AFFILIATED' | 'EXCHANGE';
+  classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS';
   balances: Record<string, number>;
   usdValue: number;
   /** Public key (base58) for explorer link and copy */

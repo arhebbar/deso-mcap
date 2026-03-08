@@ -6,10 +6,12 @@
  */
 
 import { useMemo, useState, useEffect, Fragment, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTokenHoldingsTable, type TokenHoldingsRow, type HoldingsCategory } from '@/hooks/useTokenHoldingsTable';
 import { useCCv1HoldingsTable } from '@/hooks/useCCv1HoldingsTable';
 import { formatUsd, formatNumberShort } from '@/lib/formatters';
-import { Plus, Minus, Copy } from 'lucide-react';
+import { Plus, Minus, Copy, UserPlus } from 'lucide-react';
+import { setClassificationOverride } from '@/lib/classificationOverrides';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
@@ -42,16 +44,28 @@ function categoryDisplayName(cat: HoldingsCategory): string {
 }
 
 function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {
+  const queryClient = useQueryClient();
   const pk = row.publicKey;
   const account = displayOverride ?? row.account ?? '–';
   const truncatedPk = pk ? `${pk.slice(0, 8)}…${pk.slice(-6)}` : '';
   /** When public key is shown: prefer username/account if available (e.g. Richwolfru007) over truncated pk */
   const display = pk ? (account && account !== truncatedPk ? account : truncatedPk) : account;
+  const canTagAsDeSoBull = pk && row.category === 'Others' && row.account !== 'Unaccounted';
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (pk) navigator.clipboard?.writeText(pk);
+  };
+
+  const handleTagAsDeSoBull = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (pk) {
+      setClassificationOverride(pk, 'DESO_BULL');
+      queryClient.invalidateQueries({ queryKey: ['wallet-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['all-staked-deso'] });
+    }
   };
 
   if (pk) {
@@ -75,6 +89,17 @@ function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayO
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
+          {canTagAsDeSoBull && (
+            <button
+              type="button"
+              onClick={handleTagAsDeSoBull}
+              className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              title="Tag as DeSo Bull"
+              aria-label="Tag as DeSo Bull"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+            </button>
+          )}
         </span>
       </td>
     );

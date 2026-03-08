@@ -8,14 +8,15 @@ import { useEarlyBlockRewardRecipients } from '@/hooks/useEarlyBlockRewardRecipi
 import { useTrackedClassifications } from '@/hooks/useTrackedClassifications';
 import { Copy } from 'lucide-react';
 
+/** Same category labels as TokenHoldingsTable, WalletTable, etc. */
 const CATEGORY_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
   AMM: 'AMM',
-  FOUNDER: 'Team',
-  DESO_BULL: 'DeSo Bull',
+  FOUNDER: 'Core Team',
+  DESO_BULL: 'DeSo Bulls',
   CORE_AFFILIATED: 'Core Affiliated',
   EXCHANGE: 'Exchange',
-  COMMUNITY: 'Community',
+  OTHERS: 'Others',
 };
 
 function CategoryBadge({ classification }: { classification: string }) {
@@ -25,6 +26,7 @@ function CategoryBadge({ classification }: { classification: string }) {
     : classification === 'FOUNDER' ? 'badge-founder'
     : classification === 'CORE_AFFILIATED' ? 'badge-core-affiliated'
     : classification === 'EXCHANGE' ? 'badge-exchange'
+    : classification === 'OTHERS' ? 'badge-others'
     : 'badge-bull';
   return <span className={cls}>{CATEGORY_LABELS[classification] ?? classification}</span>;
 }
@@ -137,7 +139,7 @@ export default function EarlyBlockRewardeesSection() {
                     {classificationsLoading ? (
                       <span className="text-muted-foreground">–</span>
                     ) : (
-                      <CategoryBadge classification={classifications.get(r.publicKey) ?? 'COMMUNITY'} />
+                      <CategoryBadge classification={classifications.get(r.publicKey) ?? 'OTHERS'} />
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
