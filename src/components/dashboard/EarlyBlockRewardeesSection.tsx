@@ -11,11 +11,11 @@ import { Copy } from 'lucide-react';
 /** Same category labels as TokenHoldingsTable, WalletTable, etc. */
 const CATEGORY_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
-  AMM: 'AMM',
+  AMM: 'AMM Liquidity',
   FOUNDER: 'Core Team',
   DESO_BULL: 'DeSo Bulls',
   CORE_AFFILIATED: 'Core Affiliated',
-  EXCHANGE: 'Exchange',
+  EXCHANGE: 'Exchange Liquidity',
   OTHERS: 'Others',
 };
 

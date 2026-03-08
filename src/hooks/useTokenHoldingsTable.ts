@@ -20,12 +20,12 @@ export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affili
 /** Future use: tokens backed by certain wallets (yellow/orange/green highlights) */
 export type TokenHighlight = 'yellow' | 'orange' | 'green';
 
-/** Default sort order: Foundation, AMM, Core Team, Core Affiliated, Exchange Accounts, DeSo Bulls, Others */
+/** Default sort order: Foundation, Core Team, Core Affiliated, AMM Liquidity, Exchange Liquidity, DeSo Bulls, Others */
 export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
   Foundation: 0,
-  AMM: 1,
-  'Core Team': 2,
-  'Core Affiliated': 3,
+  'Core Team': 1,
+  'Core Affiliated': 2,
+  AMM: 3,
   'Exchange Accounts': 4,
   'DeSo Bulls': 5,
   Others: 6,

@@ -240,10 +240,10 @@ export function useCirculationTable(): CirculationTableData {
       else usd = (v) => v; // dUSDC 1:1
       return [
         { label: 'Foundation', amount: map.Foundation, usdValue: usd(map.Foundation) },
-        { label: 'AMM+Holding Accounts', amount: map.AMM, usdValue: usd(map.AMM) },
+        { label: 'AMM Liquidity', amount: map.AMM, usdValue: usd(map.AMM) },
         { label: 'Core Team', amount: map.CoreTeam, usdValue: usd(map.CoreTeam) },
         { label: 'Core Affiliated', amount: map.CoreAffiliated, usdValue: usd(map.CoreAffiliated) },
-        { label: 'Exchange Accounts', amount: map.ExchangeAccounts, usdValue: usd(map.ExchangeAccounts) },
+        { label: 'Exchange Liquidity', amount: map.ExchangeAccounts, usdValue: usd(map.ExchangeAccounts) },
         { label: 'DeSo Bulls', amount: map.DeSoBulls, usdValue: usd(map.DeSoBulls) },
         { label: 'Others', amount: map.Others, usdValue: usd(map.Others) },
       ].filter((x) => x.amount > 0);
@@ -306,7 +306,7 @@ export function useCirculationTable(): CirculationTableData {
           const deso = desoPrice > 0 ? usdVal / desoPrice : 0;
           return { label: profileName, amount: deso, usdValue: usdVal };
         })
-      : [{ label: 'AMM+Holding Accounts', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
+      : [{ label: 'AMM Liquidity', amount: CCV2_AMM_DESO, usdValue: CCV2_AMM_DESO * desoPrice }];
     const ccv2Deso = ccv2ByCategory.reduce((s, c) => s + c.amount, 0) || (desoPrice > 0 ? (CCV2_AMM_DESO * desoPrice) / desoPrice : CCV2_AMM_DESO);
     const ccv2Usd = ccv2ByCategory.reduce((s, c) => s + c.usdValue, 0) || CCV2_AMM_DESO * desoPrice;
 
@@ -425,8 +425,8 @@ export function useCirculationTable(): CirculationTableData {
     const userProjectDeso = openfundCirculationDesoEquiv + focusDesoEquiv + ccv2Deso;
     const trackedUnstakedDeso = nativeDesoByCat
       .filter((c) =>
-        c.label === 'Foundation' || c.label === 'AMM+Holding Accounts' || c.label === 'Core Team' ||
-        c.label === 'Core Affiliated' || c.label === 'Exchange Accounts' || c.label === 'DeSo Bulls'
+        c.label === 'Foundation' || c.label === 'AMM Liquidity' || c.label === 'Core Team' ||
+        c.label === 'Core Affiliated' || c.label === 'Exchange Liquidity' || c.label === 'DeSo Bulls'
       )
       .reduce((s, c) => s + c.amount, 0);
     const othersUnstakedDeso = Math.max(

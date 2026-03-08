@@ -26,21 +26,31 @@ const SECTION_FILTER_TO_CATEGORY: Record<NonNullable<SectionFilter>, HoldingsCat
 
 const CATEGORY_ORDER: HoldingsCategory[] = [
   'Foundation',
-  'AMM',
   'Core Team',
   'Core Affiliated',
+  'AMM',
   'Exchange Accounts',
   'DeSo Bulls',
   'Others',
 ];
+
+/** Display labels for category column (AMM -> AMM Liquidity, Exchange Accounts -> Exchange Liquidity) */
+const CATEGORY_DISPLAY_LABELS: Record<HoldingsCategory, string> = {
+  Foundation: 'Foundation',
+  AMM: 'AMM Liquidity',
+  'Core Team': 'Core Team',
+  'Core Affiliated': 'Core Affiliated',
+  'Exchange Accounts': 'Exchange Liquidity',
+  'DeSo Bulls': 'DeSo Bulls',
+  Others: 'Free Float',
+};
 
 /** Display name for Others category in Token Holdings */
 const FREE_FLOAT_LABEL = 'Free Float';
 const FREE_FLOAT_TOOLTIP = 'FREE FLOAT excluding Core, Foundation and DeSo Bulls Community';
 
 function categoryDisplayName(cat: HoldingsCategory): string {
-  if (cat === 'Others') return FREE_FLOAT_LABEL;
-  return cat;
+  return CATEGORY_DISPLAY_LABELS[cat] ?? cat;
 }
 
 function AccountCell({ row, displayOverride }: { row: TokenHoldingsRow; displayOverride?: string }) {

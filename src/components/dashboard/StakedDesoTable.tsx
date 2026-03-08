@@ -13,11 +13,11 @@ const NAMED_COMMUNITY_MIN_DESO = 1;
 
 const BADGE_LABELS: Record<string, string> = {
   FOUNDATION: 'Foundation',
-  AMM: 'AMM+Holding Accounts',
+  AMM: 'AMM Liquidity',
   FOUNDER: 'Team',
   DESO_BULL: 'DeSo Bull',
   CORE_AFFILIATED: 'Core Affiliated',
-  EXCHANGE: 'Exchange',
+  EXCHANGE: 'Exchange Liquidity',
   COMMUNITY: 'Community',
 };
 

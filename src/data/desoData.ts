@@ -74,8 +74,8 @@ export const FOUNDATION_WALLETS: WalletData[] = [
 ];
 
 export const AMM_WALLETS: WalletData[] = [
-  { name: 'FOCUS_COLD_000', classification: 'AMM', balances: { DESO: 1_000_000 }, usdValue: 5_780_000, desoStaked: 800_000, desoUnstaked: 200_000 },
-  { name: 'FOCUS_COLD_001', classification: 'AMM', balances: {}, usdValue: 0 },
+  { name: 'FOCUS_COLD_000', classification: 'FOUNDATION', balances: { DESO: 1_000_000 }, usdValue: 5_780_000, desoStaked: 800_000, desoUnstaked: 200_000 },
+  { name: 'FOCUS_COLD_001', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'Focus_Floor_Bid', classification: 'AMM', balances: {}, usdValue: 0 },
   { name: 'AMM_DESO_24_PlAEU', classification: 'AMM', balances: { dUSDC: 1_410_000, DESO: 96_500 }, usdValue: 1_950_000 },
   { name: 'AMM_DESO_23_GrYpe', classification: 'AMM', balances: { DESO: 1_440_000, dUSDC: 3_000 }, usdValue: 8_330_000 },
