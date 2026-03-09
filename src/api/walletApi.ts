@@ -62,6 +62,8 @@ export interface WalletData {
   name: string;
   /** When set, used as canonical label (e.g. "Beyside (AMM)"); strip " (AMM)" for API username where needed */
   displayName?: string;
+  /** True if account has a chain username (not just public-key-only); used for "Named accounts only" filter */
+  isNamed?: boolean;
   classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS';
   balances: Record<string, number>;
   usdValue: number;
@@ -160,6 +162,9 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'yumyumstake', classification: 'FOUNDER' },
   { username: 'DesoSpaceStation', classification: 'FOUNDER' },
   { username: 'SAFU_Stake', classification: 'FOUNDER' },
+  { username: 'King_Clout', classification: 'FOUNDER' },
+  { username: '', displayName: 'Core Team (…N66GYT)', classification: 'FOUNDER', publicKeyBase58Check: 'BC1YLh5rFQqfjmANKdqwc6eCJk82BeHiwQSy8D18tLwgCPrV3N66GYT' },
+  { username: '', displayName: 'Core Team (…j8AkC)', classification: 'FOUNDER', publicKeyBase58Check: 'BC1YLijH993WX8dC3DKera7Cmim1HrBGNNmgwnEMzzCFu6Wmhyj8AkC' },
   // DeSo Bulls (same fetch method as Foundation/Founder)
   { username: 'Randhir', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
   { username: 'RandhirStakingWallet', displayName: 'Randhir (Me)', classification: 'DESO_BULL', mergeKey: 'Randhir' },
@@ -355,7 +360,7 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Others (…QZM1SJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh5xALAdWoS7qcMu2fYGAyYWz2odfnLR68ugCPXDVuT5YQZM1SJ' },
   { username: '', displayName: 'Others (…ZMuckn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLi5TAuKMdcbCxMjn6BqysV1wMhRsTY2oph7gyiNGAfrNgZMuckn' },
   { username: '', displayName: 'Others (…ZSD8Uh)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhqykp8AsDdchQ3xr8ySk6E81fGeZGSxwdioTaMdhyzt3ZSD8Uh' },
-  { username: '', displayName: 'Others (…XzUt34)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgBpWd9WbuAEJP8hqJuCboJGKymEyYMgKNpVpVLCMqmwrXzUt34' },
+  { username: '', displayName: 'Core Affiliated (…XzUt34)', classification: 'CORE_AFFILIATED', publicKeyBase58Check: 'BC1YLgBpWd9WbuAEJP8hqJuCboJGKymEyYMgKNpVpVLCMqmwrXzUt34' },
   { username: '', displayName: 'Others (…peN7u8)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLfmSHs7GSJ4uBJ8eM9AF5aqCkdQgNojrTKmrAhSRrwR3XpeN7u8' },
   { username: '', displayName: 'Others (…7cnJYn)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjKa4vaZiarKPxNFor1Lfm8VoNxWZxyrqLh4pcuYj2BEo7cnJYn' },
   { username: '', displayName: 'Others (…3CjwoS)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgUU57aMVyfmrprFZicifoaH5QD8WdBWxtw5PWusD4Spe3CjwoS' },
@@ -449,6 +454,21 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: 'artz', classification: 'DESO_BULL' },
   { username: 'LeBigMac', classification: 'DESO_BULL' },
   { username: 'IdesOfMarch', classification: 'DESO_BULL' },
+  { username: 'BenGreenfieldLife', displayName: 'BenGreenfieldLife (incl. WaterEarth)', classification: 'DESO_BULL', mergeKey: 'BenGreenfieldLife' },
+  { username: 'WaterEarth', displayName: 'BenGreenfieldLife (incl. WaterEarth)', classification: 'DESO_BULL', mergeKey: 'BenGreenfieldLife' },
+  { username: 'blockchainbrett', classification: 'DESO_BULL' },
+  { username: 'Eric_W', classification: 'DESO_BULL' },
+  { username: 'clouthawk', classification: 'DESO_BULL' },
+  { username: 'BitBoss', classification: 'DESO_BULL' },
+  { username: 'keeners23', classification: 'DESO_BULL' },
+  { username: 'abeshara', classification: 'DESO_BULL' },
+  { username: 'YiLin', classification: 'DESO_BULL' },
+  { username: 'desobtc888', classification: 'DESO_BULL' },
+  { username: 'TheDJL', classification: 'DESO_BULL' },
+  { username: 'CryptoQueen', classification: 'DESO_BULL' },
+  { username: 'cassis', classification: 'DESO_BULL' },
+  { username: 'mubashariqbal', displayName: 'mubashariqbal (incl. sbum)', classification: 'DESO_BULL', mergeKey: 'mubashariqbal' },
+  { username: 'sbum', displayName: 'mubashariqbal (incl. sbum)', classification: 'DESO_BULL', mergeKey: 'mubashariqbal' },
   { username: '', displayName: 'Others (…3kcoRz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhcRwjrEaVoKCfoxgViAC8fRQb9WBirQDrTmpUfE3238q3kcoRz' },
   { username: '', displayName: 'Others (…xRT4VB)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgNWe2ZjwpzZqgPg2TF6vwq3PiNwMTaQi8xiwJJi4CvABxRT4VB' },
   { username: '', displayName: 'Others (…MwNea6)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhEURgy8ZFC1aRVnBiwGMnvke4tUefsRQxUy4ymk4N2PfMwNea6' },
@@ -523,7 +543,6 @@ const WALLET_CONFIG: WalletConfig[] = [
   { username: '', displayName: 'Others (…w5HaXy)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLgr8TrZf5Vh9yN1AnYssd5JzZLxKZA5fWjXbxjFApNs8Ww5HaXy' },
   { username: '', displayName: 'Others (…Ko7Lac)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLiytMB8KraJA5y1jbeai4xgGLjAPGvYDSqDYNCygaQsuEKo7Lac' },
   { username: '', displayName: 'Others (…3HYUJJ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhbk2WcmrzYoYn7XcPAnWsyhhMKiGC8MS4CrRdbbHTaWB3HYUJJ' },
-  { username: '', displayName: 'Others (…N66GYT)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLh5rFQqfjmANKdqwc6eCJk82BeHiwQSy8D18tLwgCPrV3N66GYT' },
   { username: '', displayName: 'Others (…Jdo3Dz)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLjKF8ryyYFPP8bL9mkcyDrt44ZC6ZmfPrRPE4MXnzpx3BJdo3Dz' },
   { username: '', displayName: 'Others (…Vf1LTp)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLhZKyAuwkejVNB1UrUuKm8S92os8UMEB6MgYhoQv1PkvtVf1LTp' },
   { username: '', displayName: 'Others (…B4MxyQ)', classification: 'OTHERS', publicKeyBase58Check: 'BC1YLftSqcG2MNZuTyMPCEJneCU6LCZp3EFYdukEX8ZKF6MCGB4MxyQ' },
@@ -1695,21 +1714,22 @@ async function runBatched<T, R>(
 }
 
 export async function fetchWalletBalances(): Promise<WalletData[]> {
-  // 1. Build tracked users: publicKey -> { displayName, classification, mergeKey? }
-  const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification']; mergeKey?: string }>();
+  // 1. Build tracked users: publicKey -> { displayName, classification, mergeKey?, isNamed }
+  const trackedByPk = new Map<string, { displayName: string; classification: WalletConfig['classification']; mergeKey?: string; isNamed: boolean }>();
 
-  // Add public-key-only accounts first (no username lookup)
+  // Add public-key-only accounts first (no username lookup) – isNamed false until we resolve from chain
   for (const config of WALLET_CONFIG) {
     if (config.publicKeyBase58Check) {
       trackedByPk.set(config.publicKeyBase58Check, {
         displayName: config.displayName ?? (config.username || 'Unknown'),
         classification: config.classification,
         mergeKey: config.mergeKey,
+        isNamed: false,
       });
     }
   }
 
-  // Fetch profiles for username-based accounts (5 at a time)
+  // Fetch profiles for username-based accounts (5 at a time) – these have chain usernames
   const usernameConfigs = WALLET_CONFIG.filter((c) => !c.publicKeyBase58Check);
   const profileResults = await runBatched(usernameConfigs, 5, async (config) => {
     try {
@@ -1729,6 +1749,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
         displayName: config.displayName ?? config.username,
         classification: config.classification,
         mergeKey: config.mergeKey,
+        isNamed: true,
       });
     }
   }
@@ -1779,9 +1800,14 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
       for (const u of usersList) {
         const pk = u.PublicKeyBase58Check;
         const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
-        if (pk && username && pkOnlyConfigs.has(pk)) {
+        if (pk && pkOnlyConfigs.has(pk)) {
           const meta = trackedByPk.get(pk);
-          if (meta) meta.displayName = username;
+          if (meta) {
+            if (username) {
+              meta.displayName = username;
+              meta.isNamed = true;
+            }
+          }
         }
       }
     } catch {
@@ -1834,6 +1860,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
   for (const [groupKey, pksInGroup] of groupKeyToPks) {
     pksPerResult.push(pksInGroup);
     const meta = trackedByPk.get(pksInGroup[0])!;
+    const isNamed = pksInGroup.some((pk) => trackedByPk.get(pk)?.isNamed);
     const balances: Record<string, number> = {};
 
     for (const pk of pksInGroup) {
@@ -1886,6 +1913,7 @@ export async function fetchWalletBalances(): Promise<WalletData[]> {
     results.push({
       name: meta.displayName,
       displayName: meta.displayName,
+      isNamed,
       classification,
       balances,
       usdValue: 0,

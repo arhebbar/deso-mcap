@@ -14,6 +14,7 @@ import { useStakeEntriesTopStakers } from './useStakeEntriesTopStakers';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
+import { getClassificationOverrides } from '@/lib/classificationOverrides';
 
 export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others';
 
@@ -229,12 +230,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         totalUsd,
         backedByWallet: undefined,
         highlight: undefined,
-        isNamed: true,
+        isNamed: (w as { isNamed?: boolean }).isNamed ?? true,
       });
     }
 
     // Top 100 free-float accounts (from Free Float table) as individual rows under Others
     // Exclude tracked (Foundation/AMM/Core/Exchange/DeSo Bulls) and Core-related anon stakers
+    const overrides = getClassificationOverrides();
     const freeFloatFiltered = freeFloatTop100.filter((w) => !excludeFromOthersPks.has(w.pk));
     const ffPks = new Set(freeFloatFiltered.map((w) => w.pk));
     for (const w of freeFloatFiltered) {
@@ -245,11 +247,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const totalUsd =
         w.totalUsd + openfund * p.openfund + focus * p.focus;
       if (totalUsd === 0) continue;
+      const overrideCat = overrides.get(w.pk);
+      const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
       out.push({
         id: `account-freefloat-${w.pk}`,
         type: 'account',
-        category: 'Others',
-        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        category,
+        defaultOrder: DEFAULT_CATEGORY_ORDER[category],
         account: w.name,
         publicKey: w.pk,
         DESO: deso,
@@ -279,11 +283,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const totalUsd =
         w.totalUsd + openfund * p.openfund + focus * p.focus;
       if (totalUsd === 0) continue;
+      const overrideCat = overrides.get(w.pk);
+      const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
       out.push({
         id: `account-desobalances-${w.pk}`,
         type: 'account',
-        category: 'Others',
-        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        category,
+        defaultOrder: DEFAULT_CATEGORY_ORDER[category],
         account: w.name,
         publicKey: w.pk,
         DESO: deso,
@@ -312,11 +318,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const totalUsd =
         w.totalUsd + openfund * p.openfund + focus * p.focus;
       if (totalUsd === 0) continue;
+      const overrideCat = overrides.get(w.pk);
+      const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
       out.push({
         id: `account-stakeentries-${w.pk}`,
         type: 'account',
-        category: 'Others',
-        defaultOrder: DEFAULT_CATEGORY_ORDER['Others'],
+        category,
+        defaultOrder: DEFAULT_CATEGORY_ORDER[category],
         account: w.name,
         publicKey: w.pk,
         DESO: deso,
