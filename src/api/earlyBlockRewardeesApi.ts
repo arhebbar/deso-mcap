@@ -4,11 +4,14 @@
  */
 
 import { getGraphqlUrl } from '@/api/graphqlEndpoint';
+import { fetchUsernamesForPks } from '@/api/walletApi';
 
 const EARLY_BLOCK_HEIGHT_MAX = '10000';
 
 export interface EarlyBlockRewardRecipient {
   publicKey: string;
+  /** Username from chain when available */
+  username?: string;
   blockCount: number;
   firstBlock: number;
   lastBlock: number;
@@ -68,7 +71,7 @@ export async function fetchEarlyBlockRewardRecipients(): Promise<EarlyBlockRewar
     }
   }
 
-  return Array.from(recipients.entries())
+  const list = Array.from(recipients.entries())
     .map(([publicKey, { blocks }]) => {
       const sorted = [...blocks].sort((a, b) => a.height - b.height);
       const first = sorted[0];
@@ -83,4 +86,12 @@ export async function fetchEarlyBlockRewardRecipients(): Promise<EarlyBlockRewar
       };
     })
     .sort((a, b) => a.firstBlock - b.firstBlock);
+
+  const pks = list.map((r) => r.publicKey);
+  const usernameMap = await fetchUsernamesForPks(pks);
+
+  return list.map((r) => ({
+    ...r,
+    username: usernameMap.get(r.publicKey),
+  }));
 }

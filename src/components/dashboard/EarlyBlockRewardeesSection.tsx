@@ -124,6 +124,7 @@ export default function EarlyBlockRewardeesSection() {
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left py-2 px-3">Category</th>
                 <th className="text-left py-2 px-3 w-12">#</th>
+                <th className="text-left py-2 px-3">Username</th>
                 <th className="text-left py-2 px-3">Public Key</th>
                 <th className="text-right py-2 px-3">Blocks</th>
                 <th className="text-right py-2 px-3">First Block</th>
@@ -143,6 +144,20 @@ export default function EarlyBlockRewardeesSection() {
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-muted-foreground">{idx + 1}</td>
+                  <td className="py-1.5 px-3 font-medium">
+                    {r.username ? (
+                      <a
+                        href={`https://explorer.deso.com/u/${encodeURIComponent(r.username)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {r.username}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">–</span>
+                    )}
+                  </td>
                   <td className="py-1.5 px-3 font-medium">
                     <PublicKeyCell publicKey={r.publicKey} />
                   </td>
