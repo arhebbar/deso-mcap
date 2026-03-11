@@ -78,10 +78,23 @@ export interface UnstakedBreakdown {
   nativeDeso: TokenSection;
 }
 
+/** User group breakdown (USD) for Chart 2 – Foundation, AMM/Exchanges, Core+Affiliated, DeSo Bulls, Others */
+export interface UserGroupBreakdown {
+  Foundation: number;
+  AMMExchanges: number;
+  CoreAffiliated: number;
+  DeSoBulls: number;
+  Others: number;
+}
+
 export interface CirculationTableData {
   totalSupply: number;
   desoPrice: number;
   prices: { btc: number; eth: number; sol: number; openfund: number; focus: number };
+  /** Total circulation USD (staked + unstaked) – same total for all 3 charts */
+  totalCirculationUsd: number;
+  /** User-group breakdown by supply segment (Chart 2 filter) */
+  segmentUserGroupBreakdown: Record<string, UserGroupBreakdown>;
   staked: {
     total: number;
     usdValue: number;
@@ -118,6 +131,27 @@ function sumStakesByClassification(buckets: AllStakedDesoBucket[]) {
     }
   }
   return { core, community };
+}
+
+/** Aggregate staked DESO by user group (Foundation, AMM+Exchange, Core+Affiliated, DeSo Bulls, Others) */
+function sumStakedByUserGroup(buckets: AllStakedDesoBucket[]): { foundation: number; ammExchanges: number; coreAffiliated: number; desoBulls: number; others: number } {
+  const out = { foundation: 0, ammExchanges: 0, coreAffiliated: 0, desoBulls: 0, others: 0 };
+  for (const b of buckets) {
+    for (const r of b.foundation) {
+      if (r.classification === 'FOUNDATION') out.foundation += r.amount;
+      else if (r.classification === 'AMM' || r.classification === 'EXCHANGE') out.ammExchanges += r.amount;
+      else if (r.classification === 'FOUNDER' || r.classification === 'CORE_AFFILIATED') out.coreAffiliated += r.amount;
+      else if (r.classification === 'DESO_BULL') out.desoBulls += r.amount;
+      else out.others += r.amount;
+    }
+    for (const r of b.community) {
+      if (r.classification === 'DESO_BULL') out.desoBulls += r.amount;
+      else if (r.classification === 'CORE_AFFILIATED') out.coreAffiliated += r.amount;
+      else if (r.classification === 'EXCHANGE') out.ammExchanges += r.amount;
+      else out.others += r.amount;
+    }
+  }
+  return out;
 }
 
 function allRowsFromBucket(bucket: AllStakedDesoBucket): AllStakedDesoRow[] {
@@ -441,6 +475,85 @@ export function useCirculationTable(): CirculationTableData {
     const nativeDesoTotal = nativeDesoByCatWithOthers.reduce((s, c) => s + c.amount, 0);
     const nativeDesoUsd = nativeDesoByCatWithOthers.reduce((s, c) => s + c.usdValue, 0);
 
+    /** Map byCategory label to UserGroupBreakdown keys and aggregate USD */
+    function aggregateByCategoryToUserGroup(
+      byCategory: { label: string; amount: number; usdValue: number }[]
+    ): UserGroupBreakdown {
+      const out: UserGroupBreakdown = { Foundation: 0, AMMExchanges: 0, CoreAffiliated: 0, DeSoBulls: 0, Others: 0 };
+      for (const c of byCategory) {
+        const usd = c.usdValue;
+        if (c.label === 'Foundation') out.Foundation += usd;
+        else if (c.label === 'AMM Liquidity' || c.label === 'Exchange Liquidity') out.AMMExchanges += usd;
+        else if (c.label === 'Core Team' || c.label === 'Core Affiliated') out.CoreAffiliated += usd;
+        else if (c.label === 'DeSo Bulls') out.DeSoBulls += usd;
+        else out.Others += usd;
+      }
+      return out;
+    }
+
+    const stakedByGroup = sumStakedByUserGroup(buckets);
+    const stakedUsdByGroup: UserGroupBreakdown = {
+      Foundation: stakedByGroup.foundation * desoPrice,
+      AMMExchanges: stakedByGroup.ammExchanges * desoPrice,
+      CoreAffiliated: stakedByGroup.coreAffiliated * desoPrice,
+      DeSoBulls: stakedByGroup.desoBulls * desoPrice,
+      Others: stakedByGroup.others * desoPrice,
+    };
+
+    /** CCv1 by user group from wallets' ccv1ValueDeso */
+    const ccv1ByGroup: UserGroupBreakdown = { Foundation: 0, AMMExchanges: 0, CoreAffiliated: 0, DeSoBulls: 0, Others: 0 };
+    for (const w of wallets) {
+      const usd = (w.ccv1ValueDeso ?? 0) * desoPrice;
+      if (usd <= 0) continue;
+      if (w.classification === 'FOUNDATION') ccv1ByGroup.Foundation += usd;
+      else if (w.classification === 'AMM' || w.classification === 'EXCHANGE') ccv1ByGroup.AMMExchanges += usd;
+      else if (w.classification === 'FOUNDER' || w.classification === 'CORE_AFFILIATED') ccv1ByGroup.CoreAffiliated += usd;
+      else if (w.classification === 'DESO_BULL') ccv1ByGroup.DeSoBulls += usd;
+      else ccv1ByGroup.Others += usd;
+    }
+
+    const userProjectByGroup: UserGroupBreakdown = { Foundation: 0, AMMExchanges: 0, CoreAffiliated: 0, DeSoBulls: 0, Others: 0 };
+    const openfundByCatUsd = openfundByCat.map((c) => ({ ...c, usdValue: c.amount * prices.openfund }));
+    const focusByCatUsd = focusByCat.map((c) => ({ ...c, usdValue: c.amount * prices.focus }));
+    for (const arr of [openfundByCatUsd, focusByCatUsd]) {
+      const mapped = aggregateByCategoryToUserGroup(arr);
+      userProjectByGroup.Foundation += mapped.Foundation;
+      userProjectByGroup.AMMExchanges += mapped.AMMExchanges;
+      userProjectByGroup.CoreAffiliated += mapped.CoreAffiliated;
+      userProjectByGroup.DeSoBulls += mapped.DeSoBulls;
+      userProjectByGroup.Others += mapped.Others;
+    }
+    for (const w of wallets) {
+      const usd = (w as { ccv2ValueUsd?: number }).ccv2ValueUsd ?? 0;
+      if (usd <= 0) continue;
+      if (w.classification === 'FOUNDATION') userProjectByGroup.Foundation += usd;
+      else if (w.classification === 'AMM' || w.classification === 'EXCHANGE') userProjectByGroup.AMMExchanges += usd;
+      else if (w.classification === 'FOUNDER' || w.classification === 'CORE_AFFILIATED') userProjectByGroup.CoreAffiliated += usd;
+      else if (w.classification === 'DESO_BULL') userProjectByGroup.DeSoBulls += usd;
+      else userProjectByGroup.Others += usd;
+    }
+
+    const currencyByGroup: UserGroupBreakdown = { Foundation: 0, AMMExchanges: 0, CoreAffiliated: 0, DeSoBulls: 0, Others: 0 };
+    for (const cat of [dUsdcByCat, dBtcByCat, dEthByCat, dSolByCat]) {
+      const mapped = aggregateByCategoryToUserGroup(cat);
+      currencyByGroup.Foundation += mapped.Foundation;
+      currencyByGroup.AMMExchanges += mapped.AMMExchanges;
+      currencyByGroup.CoreAffiliated += mapped.CoreAffiliated;
+      currencyByGroup.DeSoBulls += mapped.DeSoBulls;
+      currencyByGroup.Others += mapped.Others;
+    }
+
+    const unstakedDesoByGroup = aggregateByCategoryToUserGroup(nativeDesoByCatWithOthers);
+
+    const totalCirculationUsd = totalStaked * desoPrice + unstakedUsd;
+    const segmentUserGroupBreakdown: Record<string, UserGroupBreakdown> = {
+      'Staked DESO': stakedUsdByGroup,
+      'DeSo CCv1 Locked': ccv1ByGroup,
+      'User/Project Tokens': userProjectByGroup,
+      'Currency Tokens': currencyByGroup,
+      'Unstaked DESO': unstakedDesoByGroup,
+    };
+
     const breakdown: UnstakedBreakdown = {
       nativeTokens: {
         openfund: {
@@ -528,6 +641,8 @@ export function useCirculationTable(): CirculationTableData {
       totalSupply,
       desoPrice,
       prices,
+      totalCirculationUsd,
+      segmentUserGroupBreakdown,
       staked: {
         total: totalStaked,
         usdValue: totalStaked * desoPrice,

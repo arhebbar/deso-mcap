@@ -31,23 +31,25 @@ const CATEGORY_ORDER: HoldingsCategory[] = [
   'AMM',
   'Exchange Accounts',
   'DeSo Bulls',
+  'Foundation backing User Tokens',
   'Others',
 ];
 
-/** Display labels for category column (AMM -> AMM Liquidity, Exchange Accounts -> Exchange Liquidity) */
+/** Display labels for category column (AMM/Exchange -> AMM/Exchanges, Others) */
 const CATEGORY_DISPLAY_LABELS: Record<HoldingsCategory, string> = {
   Foundation: 'Foundation',
-  AMM: 'AMM Liquidity',
-  'Core Team': 'Core Team',
-  'Core Affiliated': 'Core Affiliated',
-  'Exchange Accounts': 'Exchange Liquidity',
+  AMM: 'AMM/Exchanges',
+  'Core Team': 'Core+Affiliated',
+  'Core Affiliated': 'Core+Affiliated',
+  'Exchange Accounts': 'AMM/Exchanges',
   'DeSo Bulls': 'DeSo Bulls',
-  Others: 'Free Float',
+  'Foundation backing User Tokens': 'Foundation backing User Tokens',
+  Others: 'Others',
 };
 
 /** Display name for Others category in Token Holdings */
-const FREE_FLOAT_LABEL = 'Free Float';
-const FREE_FLOAT_TOOLTIP = 'FREE FLOAT excluding Core, Foundation and DeSo Bulls Community';
+const FREE_FLOAT_LABEL = 'Others';
+const FREE_FLOAT_TOOLTIP = 'Others excluding Core, Foundation and DeSo Bulls Community';
 
 function categoryDisplayName(cat: HoldingsCategory): string {
   return CATEGORY_DISPLAY_LABELS[cat] ?? cat;
@@ -205,9 +207,10 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     return base;
   };
 
-  /** Total = DESO Staked + CCv1 + DeSo Unstaked (always) */
+  /** Total = DESO Staked + CCv1 + DeSo Unstaked (always). For overallTotal, use row.totalUsd (excludes Foundation backing User Tokens when !desoOnlyView). */
   const getTotalForDisplay = useCallback(
     (row: TokenHoldingsRow): number | null | undefined => {
+      if (row.type === 'overallTotal' && row.totalUsd != null) return row.totalUsd;
       const staked = row.DESOStaked ?? 0;
       const ccv1 = row.type === 'issued' || row.type === 'overallTotal' ? (ccv1TableTotalDeso ?? 0) : (row.CCv1 ?? 0);
       const unstakedDeso = desoOnlyView ? (row.DESOUnstaked ?? 0) : (getUnstakedUsd(row) / (prices.deso || 1));
@@ -231,13 +234,13 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
   }, [categoryFromFilter]);
 
   const { headerRows, dataRows, footerRows } = useMemo(() => {
-    let header = rows.filter((r) => r.type === 'issued' || r.type === 'heldByIssuer' || r.type === 'price');
-    if (desoOnlyView) header = header.filter((r) => r.type === 'issued'); // Hide Held by own account, Token Price
+    // Issued, Held by own account, Token Price rows removed from display
+    const header: TokenHoldingsRow[] = [];
     let data = rows.filter((r) => r.type === 'account');
     if (namedOnly) data = data.filter((r) => r.isNamed === true);
     const footer = rows.filter((r) => r.type === 'overallTotal');
     return { headerRows: header, dataRows: data, footerRows: footer };
-  }, [rows, namedOnly, desoOnlyView]);
+  }, [rows, namedOnly]);
 
   const sortedDataRows = useMemo(() => {
     let sorted = [...dataRows];

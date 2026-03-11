@@ -115,10 +115,11 @@ const Index = () => {
             onSegmentClick={(name) => setHighlightedSupplySegment((prev) => (prev === name ? null : name))}
           />
           <AssetsBreakdownBar
+            selectedSupplySegment={highlightedSupplySegment}
             selectedSection={tableSectionFilter}
             onSectionClick={(s) => setTableSectionFilter(s ?? (undefined as SectionFilter))}
           />
-          <CapitalStructureBreakdownChart />
+          <CapitalStructureBreakdownChart selectedSupplySegment={highlightedSupplySegment} />
         </div>
 
         {/* Token Holdings: bar click expands/filters by section */}

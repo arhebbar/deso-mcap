@@ -1,5 +1,7 @@
 // Hardcoded wallet and market data for DeSo Capital Structure Dashboard
 
+import { EXCHANGE_PUBLIC_KEYS, getExchangeDisplayName } from './exchangeData';
+
 export interface WalletData {
   name: string;
   classification: 'FOUNDATION' | 'AMM' | 'FOUNDER' | 'DESO_BULL' | 'EXTERNAL' | 'CORE_AFFILIATED' | 'EXCHANGE' | 'OTHERS';
@@ -296,18 +298,14 @@ export const CORE_AFFILIATED_WALLETS: WalletData[] = [
   { name: 'tickerpump', classification: 'CORE_AFFILIATED', balances: {}, usdValue: 0 },
 ];
 
-/** Exchange Accounts (excluded from Others). */
-export const EXCHANGE_WALLETS: WalletData[] = [
-  { name: 'Exchange (…Dbh)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…poG)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…NrY7)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…H49C)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…V9Nj)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…a583)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…9zN)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…Mdd)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-  { name: 'Exchange (…K4No)', classification: 'EXCHANGE', balances: {}, usdValue: 0 },
-];
+/** Exchange Accounts (excluded from Others). Built from exchangeData. */
+export const EXCHANGE_WALLETS: WalletData[] = EXCHANGE_PUBLIC_KEYS.map((pk) => ({
+  name: getExchangeDisplayName(pk),
+  classification: 'EXCHANGE' as const,
+  balances: {},
+  usdValue: 0,
+  publicKey: pk,
+}));
 
 /** Validator usernames considered "Core" (foundation-run). */
 export const CORE_VALIDATOR_USERNAMES: string[] = [

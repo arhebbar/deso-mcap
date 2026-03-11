@@ -57,7 +57,7 @@ export default function SupplyPieChart({ data, desoPrice, totalSupply, highlight
   return (
     <div className="chart-container">
       <h3 className="section-title">Supply Distribution</h3>
-      <p className="text-xs text-muted-foreground mb-2">Click a segment to filter the heatmap. % of supply and USD.</p>
+      <p className="text-xs text-muted-foreground mb-2">Click a segment to filter Charts 2 and 3. % of supply and USD.</p>
       <div className="flex items-center gap-6">
         <div className="h-64 flex-1">
           <ResponsiveContainer width="100%" height="100%">

@@ -16,12 +16,21 @@ import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
 import { getClassificationOverrides } from '@/lib/classificationOverrides';
 
-export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others';
+export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others' | 'Foundation backing User Tokens';
 
 /** Future use: tokens backed by certain wallets (yellow/orange/green highlights) */
 export type TokenHighlight = 'yellow' | 'orange' | 'green';
 
-/** Default sort order: Foundation, Core Team, Core Affiliated, AMM Liquidity, Exchange Liquidity, DeSo Bulls, Others */
+/** Accounts in Foundation backing User Tokens: excluded from Total when DESO only is NOT selected */
+export const FOUNDATION_BACKING_USER_TOKENS_ACCOUNTS = new Set([
+  'FOCUS_COLD_000',
+  'openfund',
+  'FOCUS_COLD_001',
+  'focus',
+  'Focus_Floor_Bid',
+]);
+
+/** Default sort order: Foundation, Core Team, Core Affiliated, AMM, Exchange, DeSo Bulls, Foundation backing User Tokens, Others */
 export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
   Foundation: 0,
   'Core Team': 1,
@@ -29,7 +38,8 @@ export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
   AMM: 3,
   'Exchange Accounts': 4,
   'DeSo Bulls': 5,
-  Others: 6,
+  'Foundation backing User Tokens': 6,
+  Others: 7,
 };
 
 export interface TokenHoldingsRow {
@@ -182,8 +192,11 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
 
     // Account rows from wallets (Foundation, AMM, Core Team, DeSo Bulls) with defaultOrder for default sort
     // Skip wallets with 0 in all columns
+    // FOUNDATION_BACKING_USER_TOKENS_ACCOUNTS get their own category
     for (const w of wallets) {
-      const cat = CATEGORY_BY_CLASS[w.classification];
+      const cat = FOUNDATION_BACKING_USER_TOKENS_ACCOUNTS.has(w.name)
+        ? 'Foundation backing User Tokens'
+        : CATEGORY_BY_CLASS[w.classification];
       if (!cat) continue;
       const b = w.balances;
       const deso = b.DESO ?? 0;
@@ -481,7 +494,14 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       });
     }
 
-    // Overall Total row (supply; Focus = 45B circulation)
+    // When DESO only is NOT selected, exclude Foundation backing User Tokens from Total
+    const foundationBackingUserTokensUsd = desoOnlyView
+      ? 0
+      : out
+          .filter((r) => r.type === 'account' && r.category === 'Foundation backing User Tokens')
+          .reduce((s, r) => s + (r.totalUsd ?? 0), 0);
+
+    // Overall Total row (supply; Focus = 45B circulation). Excludes Foundation backing User Tokens when !desoOnlyView.
     out.push({
       id: 'overallTotal',
       type: 'overallTotal',
@@ -495,7 +515,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       dBTC: 22,
       dETH: 210,
       dSOL: 2650,
-      totalUsd: totalSupplyUsd,
+      totalUsd: totalSupplyUsd - foundationBackingUserTokensUsd,
     });
 
     return out;
