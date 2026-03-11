@@ -175,7 +175,7 @@ export async function fetchUserProfile(username: string): Promise<UserProfileDat
   const balanceNanos = user?.BalanceNanos ?? 0;
   const desoBalanceNanos = user?.DESOBalanceNanos ?? balanceNanos;
   const lockedNanos = user?.LockedBalanceNanos;
-  let desoUnstaked = desoBalanceNanos / NANOS_PER_DESO;
+  const desoUnstaked = desoBalanceNanos / NANOS_PER_DESO;
   let desoStaked = 0;
   if (stakeResOk) {
     const stakeCall = apiCalls.find((c) => c.name === 'graphql-stake-entries');
