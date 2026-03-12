@@ -126,6 +126,68 @@ export const EXCHANGE_ACCOUNTS: Record<string, ExchangeAccountInfo> = {
     Nature: 'UNKNOWN',
     Icon: '/assets/icons/exchanges/coinbase-logo.svg',
   },
+  // Previously tracked; restored so Exchange totals are preserved
+  BC1YLipfFtg2FoVPSAYYuMtRYwrLEsnRPfutBmykewh32vLKvPhdgr6: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLgjbg1EVGZCX5WszQg8BMJxYqzStyZNoqobJRm73m79i2cca583: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLgdwUHnGuzbNRJhZsNLQbhzqLdgbfkCKtTnWTq3ZKPy7FtnK4No: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  // Additional exchange accounts
+  BC1YLg73UxUaqhcjXiaqYhacx2MEoQNgzqCNgMdkfEehmcympxetYFG: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLidTTtpDmZeEFUeeJLXCW4ebz66ajSHY1kBgbQ9Ne3uXLE6hmAU: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLgS5wjgLrvvxdiKYGdV63Ayw1i9huSagAemSC4umUCLHpLVMAEG: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLgd3KeWS9FaBuxcFsVZtCphmDFYBvuCGprrPgb8jRj7g34xwnqx: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLjHB7rUH7q8E4yETBexpFmALC3tE9e27vwJ5rmFNmAwq6mP8f6G: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLi5YxX5XPjumZUy6bcPjqqr5DyaYN8FAEeJ8uHBNmQuj6gZzAeZ: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
+  BC1YLg9JLtAoShJRivnPeooSnEGV5zL4hMSoMECQcsAvDxV97iniH9P: {
+    Exchange: 'MakerTaker',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
 };
 
 export const EXCHANGE_PUBLIC_KEYS = Object.keys(EXCHANGE_ACCOUNTS);
