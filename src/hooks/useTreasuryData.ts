@@ -78,7 +78,6 @@ export function useTreasuryAddresses() {
 
   const apiData = query.data ?? [];
   const staticByName = useMemo(() => new Map(STATIC_TREASURY_ADDRESSES.map((r) => [r.address, r])), []);
-  const cached = getTreasuryCache();
   const cachedByAddr = useMemo(
     () => (cached?.data?.length ? new Map(cached.data.map((c) => [c.address, c])) : new Map<string, CachedTreasuryRow>()),
     [cached?.data]
