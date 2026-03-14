@@ -18,7 +18,7 @@ import type { SectionFilter } from '@/components/dashboard/AssetsBreakdownBar';
 
 const SECTION_FILTER_TO_CATEGORY: Record<NonNullable<SectionFilter>, HoldingsCategory> = {
   FOUNDATION: 'Foundation',
-  AMM: 'AMM',
+  AMM: 'AMM/Token Backing Accts',
   FOUNDER: 'Core Team',
   DESO_BULL: 'DeSo Bulls',
   OTHERS: 'Others',
@@ -31,7 +31,7 @@ const CATEGORY_ORDER: HoldingsCategory[] = [
   'AMM',
   'Exchange Accounts',
   'DeSo Bulls',
-  'Foundation backing User Tokens',
+  'AMM/Token Backing Accts',
   'Others',
 ];
 
@@ -43,7 +43,7 @@ const CATEGORY_DISPLAY_LABELS: Record<HoldingsCategory, string> = {
   'Core Affiliated': 'Core+Affiliated',
   'Exchange Accounts': 'AMM/Exchanges',
   'DeSo Bulls': 'DeSo Bulls',
-  'Foundation backing User Tokens': 'Foundation backing User Tokens',
+  'AMM/Token Backing Accts': 'AMM/Token Backing Accts',
   Others: 'Others',
 };
 
@@ -207,7 +207,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
     return base;
   };
 
-  /** Total = DESO Staked + CCv1 + DeSo Unstaked (always). For overallTotal, use row.totalUsd (excludes Foundation backing User Tokens when !desoOnlyView). */
+  /** Total = DESO Staked + CCv1 + DeSo Unstaked (always). For overallTotal, use row.totalUsd (excludes AMM/Token Backing Accts when !desoOnlyView). */
   const getTotalForDisplay = useCallback(
     (row: TokenHoldingsRow): number | null | undefined => {
       if (row.type === 'overallTotal' && row.totalUsd != null) return row.totalUsd;
