@@ -361,6 +361,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
 
     // Tracked-only sums (Foundation, AMM, Core Team, DeSo Bulls — exclude free-float and Others row)
     const trackedRows = out.filter((r) => r.type === 'account' && r.category !== 'Others');
+    const ammTokenBackingRows = out.filter((r) => r.type === 'account' && r.category === 'AMM/Token Backing Accts');
+    const ammTokenBackingUsd = desoOnlyView ? 0 : ammTokenBackingRows.reduce((s, x) => s + (x.totalUsd ?? 0), 0);
     const sumTrackedStaked = trackedRows.reduce((s, x) => s + (x.DESOStaked ?? 0), 0);
     const sumTrackedTotalUsd = trackedRows.reduce((s, x) => s + (x.totalUsd ?? 0), 0);
     const sumTrackedDeso = trackedRows.reduce((s, x) => s + (x.DESO ?? 0), 0);
@@ -382,8 +384,10 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     const sumDeth = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.dETH ?? 0), 0);
     const sumDsol = out.filter((r) => r.type === 'account').reduce((s, x) => s + (x.dSOL ?? 0), 0);
 
-    // Others row: Total = 12.2M DESO equivalent minus tracked (Foundation+AMM+Core+DeSo Bulls)
-    const othersTotalUsd = totalSupplyUsd - sumTrackedTotalUsd;
+    // Others row: when !desoOnlyView, use reduced total (exclude AMM/Token Backing Accts) to avoid double-counting User Tokens + backing DESO
+    const effectiveTotalUsd = desoOnlyView ? totalSupplyUsd : totalSupplyUsd - ammTokenBackingUsd;
+    const effectiveSumTrackedUsd = desoOnlyView ? sumTrackedTotalUsd : sumTrackedTotalUsd - ammTokenBackingUsd;
+    const othersTotalUsd = Math.max(0, effectiveTotalUsd - effectiveSumTrackedUsd);
     const othersDesoStaked = Math.max(0, desoStakedIssued - sumTrackedStaked);
     const othersOpenfund = Math.max(0, openfundIssued - sumOpenfund);
     const othersFocus = Math.max(0, focusCirculation - sumFocus);
@@ -502,14 +506,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       });
     }
 
-    // When DESO only is NOT selected, exclude AMM/Token Backing Accts from Total
-    const foundationBackingUserTokensUsd = desoOnlyView
-      ? 0
-      : out
-          .filter((r) => r.type === 'account' && r.category === 'AMM/Token Backing Accts')
-          .reduce((s, r) => s + (r.totalUsd ?? 0), 0);
-
-    // Overall Total row (supply; Focus = 45B circulation). Excludes AMM/Token Backing Accts when !desoOnlyView.
+    // Overall Total row (supply; Focus = 45B circulation). Excludes AMM/Token Backing Accts when !desoOnlyView to avoid double-counting User Tokens + backing DESO.
     out.push({
       id: 'overallTotal',
       type: 'overallTotal',
@@ -523,7 +520,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       dBTC: 22,
       dETH: 210,
       dSOL: 2650,
-      totalUsd: totalSupplyUsd - foundationBackingUserTokensUsd,
+      totalUsd: effectiveTotalUsd,
     });
 
     return out;
