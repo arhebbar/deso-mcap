@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Script cache (find-ccv1-top-holders)
+scripts/.ccv1-*.json
+scripts/.ccv1-*.csv

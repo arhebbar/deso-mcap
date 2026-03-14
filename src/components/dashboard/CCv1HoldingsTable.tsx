@@ -70,7 +70,7 @@ export default function CCv1HoldingsTable() {
         <div>
           <h2 className="text-lg font-semibold">DESO locked in CCv1</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Top creator coins by DESO locked (cached, up to 25K)
+            *CCv1 Total from Locked Table – factors in only Top {rows.length} creator coins by value locked. Cached, up to 25K.
             {isBackgroundLoading && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                 <Loader2 className="h-3 w-3 animate-spin" /> Loading more…
@@ -147,7 +147,7 @@ export default function CCv1HoldingsTable() {
             ))}
             <tr className="border-t-2 border-border bg-muted/30 font-medium">
               <td className="py-2 px-3" />
-              <td className="py-2 px-3">Total ({rows.length} creators)</td>
+              <td className="py-2 px-3">CCv1 Total* ({rows.length} creators)</td>
               <td className="py-2 px-3 text-right font-mono">{formatNumberShort(totalDesoLocked)}</td>
               <td className="py-2 px-3 text-right font-mono">{formatUsd(totalUsd)}</td>
               <td className="py-2 px-3 text-right">—</td>

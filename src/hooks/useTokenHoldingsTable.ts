@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
+import { useCCv1HoldingsTable } from './useCCv1HoldingsTable';
 import { useFreeFloatTop100 } from './useFreeFloatTop100';
 import { useDesoBalancesTopHolders } from './useDesoBalancesTopHolders';
 import { useStakeEntriesTopStakers } from './useStakeEntriesTopStakers';
@@ -89,6 +90,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
 } {
   const { wallets, isLoading: walletsLoading } = useWalletData();
   const { marketData } = useLiveData();
+  const { totalDesoLocked: ccv1TableTotalDeso } = useCCv1HoldingsTable();
   const { top100: freeFloatTop100 } = useFreeFloatTop100();
   const { topHolders: desoBalancesHolders, isLoading: desoBalancesLoading } = useDesoBalancesTopHolders();
   const { topStakers: stakeEntriesStakers, isLoading: stakeEntriesLoading } = useStakeEntriesTopStakers();
@@ -123,10 +125,11 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     const out: TokenHoldingsRow[] = [];
     const p = prices;
 
-    // Issued row (supply / issued amounts)
+    // Issued row (supply / issued amounts). DeSo Unstaked excludes CCv1 (locked in creator coins).
     const desoIssued = marketData.desoTotalSupply;
     const desoStakedIssued = marketData.desoStaked;
-    const desoUnstakedIssued = Math.max(0, desoIssued - desoStakedIssued);
+    const ccv1Total = ccv1TableTotalDeso ?? 0;
+    const desoUnstakedIssued = Math.max(0, desoIssued - desoStakedIssued - ccv1Total);
     const openfundIssued = 95_000_000; // approximate
     /** Focus: 165B total; 120B in Focus account (excluded from circulation); circulation for table = 45B. Held by issuer row shows 165B for Focus. */
     const FOCUS_TOTAL_SUPPLY = 165_000_000_000;
@@ -388,7 +391,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     const othersDbtc = Math.max(0, 22 - sumDbtc);
     const othersDeth = Math.max(0, 210 - sumDeth);
     const othersDsol = Math.max(0, 2650 - sumDsol);
-    const othersCcv1 = 0;
+    const othersCcv1 = Math.max(0, ccv1Total - sumTrackedCcv1);
     const othersCcv2 = 0;
     const othersOtherColsUsd =
       othersDesoStaked * p.deso +
@@ -412,7 +415,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       othersDusdc > 0 ||
       othersDbtc > 0 ||
       othersDeth > 0 ||
-      othersDsol > 0;
+      othersDsol > 0 ||
+      othersCcv1 > 0;
 
     // Do NOT push an "Others" aggregate row: it would double-count. Others = top 100 + Unaccounted;
     // we only push top 100 rows and Unaccounted so category subtotals and Total row add up.
@@ -439,7 +443,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     const unaccountedDbtc = hasOthers ? othersDbtc : 0;
     const unaccountedDeth = hasOthers ? othersDeth : 0;
     const unaccountedDsol = hasOthers ? othersDsol : 0;
-    // Non-DESO-only: Unaccounted DESO Unstaked = 12.2M - Foundation - AMM - Core - Exchange - DeSo Bulls - Others Staked - (Others DESO Unstaked excl Unaccounted)
+    const unaccountedCcv1 = hasOthers ? othersCcv1 : 0;
+    // Non-DESO-only: Unaccounted DESO Unstaked = (12.2M - Staked - CCv1) - tracked unstaked - ff - desoBalances
     const unaccountedUnstakedDeso = desoOnlyView
       ? (() => {
           const unaccountedOtherColsUsd =
@@ -449,15 +454,17 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
             unaccountedDusdc +
             unaccountedDbtc * p.btc +
             unaccountedDeth * p.eth +
-            unaccountedDsol * p.sol;
+            unaccountedDsol * p.sol +
+            unaccountedCcv1 * p.deso;
           const unaccountedUnstakedUsd = Math.max(0, unaccountedTotalUsd - unaccountedOtherColsUsd);
           return p.deso > 0 ? unaccountedUnstakedUsd / p.deso : 0;
         })()
       : Math.max(
           0,
           desoIssued -
-            sumTrackedDeso -
-            (hasOthers ? othersDesoStaked : 0) -
+            desoStakedIssued -
+            ccv1Total -
+            (sumTrackedDeso - sumTrackedStaked) -
             (sumFfUnstaked + sumDesoBalancesUnstaked)
         );
     const unaccountedTotalUsdFinal =
@@ -470,8 +477,9 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
           unaccountedDusdc +
           unaccountedDbtc * p.btc +
           unaccountedDeth * p.eth +
-          unaccountedDsol * p.sol;
-    if (unaccountedTotalUsdFinal > 0 || unaccountedStaked > 0 || unaccountedUnstakedDeso > 0) {
+          unaccountedDsol * p.sol +
+          unaccountedCcv1 * p.deso;
+    if (unaccountedTotalUsdFinal > 0 || unaccountedStaked > 0 || unaccountedUnstakedDeso > 0 || unaccountedCcv1 > 0) {
       out.push({
         id: 'unaccounted',
         type: 'account',
@@ -487,7 +495,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         dBTC: unaccountedDbtc,
         dETH: unaccountedDeth,
         dSOL: unaccountedDsol,
-        CCv1: 0,
+        CCv1: unaccountedCcv1,
         CCv2: 0,
         totalUsd: unaccountedTotalUsdFinal,
         isNamed: true,
@@ -519,7 +527,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     });
 
     return out;
-  }, [wallets, marketData, prices, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
+  }, [wallets, marketData, prices, ccv1TableTotalDeso, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
 
   return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || stakeEntriesLoading || openfundFocusLoading || trackedPksLoading };
 }

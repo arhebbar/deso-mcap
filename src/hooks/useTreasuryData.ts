@@ -7,25 +7,33 @@ import { EXTERNAL_TREASURY } from '@/data/desoData';
 /**
  * Fetches external treasury balances (BTC, ETH, SOL) from blockchain APIs.
  * When API returns nothing or all zeros, defaults to cached totals (or static EXTERNAL_TREASURY).
+ * Uses localStorage cache for instant load.
  */
 export function useTreasuryData() {
+  const cachedTotals = getTreasuryTotalsFromCache();
+  const placeholderData =
+    cachedTotals != null
+      ? { btcAmount: cachedTotals.btc, ethAmount: cachedTotals.eth, solAmount: cachedTotals.sol }
+      : undefined;
+
   const query = useQuery({
     queryKey: ['treasury-balances'],
     queryFn: fetchTreasuryBalances,
     staleTime: 2 * 60 * 1000,
     retry: 2,
+    placeholderData,
   });
 
   const data = query.data;
   const apiHasValue = data && (data.btcAmount > 0 || data.ethAmount > 0 || data.solAmount > 0);
-  const cachedTotals = getTreasuryTotalsFromCache();
+  const totalsFromCache = getTreasuryTotalsFromCache();
   const staticBtc = EXTERNAL_TREASURY.btcHoldings;
   const staticEth = EXTERNAL_TREASURY.ethHotWallet + EXTERNAL_TREASURY.ethColdWallet;
   const staticSol = EXTERNAL_TREASURY.solColdWallet;
 
-  const btcAmount = apiHasValue ? data!.btcAmount : (cachedTotals?.btc ?? staticBtc);
-  const ethAmount = apiHasValue ? data!.ethAmount : (cachedTotals?.eth ?? staticEth);
-  const solAmount = apiHasValue ? data!.solAmount : (cachedTotals?.sol ?? staticSol);
+  const btcAmount = apiHasValue ? data!.btcAmount : (totalsFromCache?.btc ?? staticBtc);
+  const ethAmount = apiHasValue ? data!.ethAmount : (totalsFromCache?.eth ?? staticEth);
+  const solAmount = apiHasValue ? data!.solAmount : (totalsFromCache?.sol ?? staticSol);
 
   return {
     btcAmount,
@@ -59,11 +67,13 @@ function mergeWithStatic(apiRow: CachedTreasuryRow, staticRow: CachedTreasuryRow
  * Uses cache when API fails or returns zeros; merges API with static for robustness.
  */
 export function useTreasuryAddresses() {
+  const cached = getTreasuryCache();
   const query = useQuery({
     queryKey: ['treasury-addresses'],
     queryFn: fetchTreasuryBalancesPerAddress,
     staleTime: 2 * 60 * 1000,
     retry: 2,
+    placeholderData: cached?.data?.length ? cached.data : undefined,
   });
 
   const apiData = query.data ?? [];

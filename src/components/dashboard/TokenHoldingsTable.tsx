@@ -128,7 +128,7 @@ type TokenCol = (typeof BASE_COLS)[number] | (typeof UNSTAKED_SUB_COLS)[number];
 
 const TOKEN_COL_LABELS: Record<string, string> = {
   DESOStaked: 'DESO Staked',
-  CCv1: 'CCv1',
+  CCv1: 'CCv1*',
   DESOUnstaked: 'DeSo Unstaked',
   OpenFund: 'Openfund',
   Focus: 'Focus',
@@ -456,8 +456,8 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
           <h2 className="text-lg font-semibold">Token Holdings</h2>
           <p className="text-xs text-muted-foreground mt-1">
             {desoOnlyView
-              ? 'DeSo only: Total = DESO Staked + CCv1 + DeSo Unstaked (12.2M). Foundation + Core share of supply.'
-              : 'Total = DESO Staked + CCv1 + DeSo Unstaked. Expand DeSo Unstaked (+) to see Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO.'}
+              ? 'DeSo only: Total = DESO Staked + CCv1* + DeSo Unstaked (12.2M). *CCv1 from Locked Table (Top X). DeSo Unstaked excludes CCv1.'
+              : 'Total = DESO Staked + CCv1* + DeSo Unstaked. *CCv1 from Locked Table (Top X). DeSo Unstaked excludes CCv1. Expand (+) for Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
