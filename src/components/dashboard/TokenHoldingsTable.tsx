@@ -28,17 +28,15 @@ const CATEGORY_ORDER: HoldingsCategory[] = [
   'Foundation',
   'Core Team',
   'Core Affiliated',
-  'AMM',
   'Exchange Accounts',
   'DeSo Bulls',
   'AMM/Token Backing Accts',
   'Others',
 ];
 
-/** Display labels for category column (AMM/Exchange -> AMM/Exchanges, Others) */
+/** Display labels for category column */
 const CATEGORY_DISPLAY_LABELS: Record<HoldingsCategory, string> = {
   Foundation: 'Foundation',
-  AMM: 'AMM/Exchanges',
   'Core Team': 'Core+Affiliated',
   'Core Affiliated': 'Core+Affiliated',
   'Exchange Accounts': 'AMM/Exchanges',

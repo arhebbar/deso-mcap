@@ -5,8 +5,6 @@ import { useBtcPriceHistory } from '@/hooks/useBtcPriceHistory';
 import { useTreasuryData } from '@/hooks/useTreasuryData';
 import { EXTERNAL_TREASURY } from '@/data/desoData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
 
 const RANGES = [
   { label: '7D', days: 7 },
@@ -47,12 +45,6 @@ export default function TrendCharts() {
 
   return (
     <div className="chart-container">
-      <Alert className="mb-4 border-muted-foreground/30 bg-muted/30">
-        <Info className="h-4 w-4 text-muted-foreground" />
-        <AlertDescription>
-          Snapshot — Historical data is point-in-time and is not live.
-        </AlertDescription>
-      </Alert>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="section-title mb-0">Historical Trends</h3>

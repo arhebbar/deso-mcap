@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SupplyPieChart from '@/components/dashboard/SupplyPieChart';
@@ -19,15 +19,15 @@ import { clearCCv1HoldingsTableCache } from '@/lib/ccv1HoldingsTableCache';
 import { clearCCv1NetworkCache } from '@/lib/ccv1NetworkCache';
 
 const Index = () => {
-  // Force refresh: clear CCv1 caches once per session so data is fetched fresh
-  useEffect(() => {
-    const key = 'deso-ccv1-refreshed';
-    if (!sessionStorage.getItem(key)) {
-      clearCCv1HoldingsTableCache();
-      clearCCv1NetworkCache();
-      sessionStorage.setItem(key, '1');
-    }
-  }, []);
+  const [ccv1Expanded, setCcv1Expanded] = useState(false);
+  const [ccv1RefreshKey, setCcv1RefreshKey] = useState(0);
+
+  const handleCcv1Refresh = () => {
+    clearCCv1HoldingsTableCache();
+    clearCCv1NetworkCache();
+    setCcv1RefreshKey((k) => k + 1);
+  };
+
   const {
     marketData,
     marketCap,
@@ -127,9 +127,6 @@ const Index = () => {
           expandedSectionOnly={tableSectionFilter === undefined ? undefined : tableSectionFilter === 'OTHERS' ? null : tableSectionFilter}
         />
 
-        {/* Early Block Rewardees: first 1000 blocks (first week of March 2021) */}
-        <EarlyBlockRewardeesSection />
-
         {/* Historical Trends */}
         <TrendCharts />
 
@@ -155,8 +152,39 @@ const Index = () => {
         {/* Foundation Treasury + AMM Funds */}
         <TreasuryAddressTable />
 
-        {/* DESO locked in CCv1 */}
-        <CCv1HoldingsTable />
+        {/* DESO locked in CCv1 – expand/collapse, cached; refresh only on explicit button */}
+        <div className="border rounded-lg overflow-hidden bg-card">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+            onClick={() => setCcv1Expanded((e) => !e)}
+          >
+            <h3 className="section-title mb-0">DESO locked in CCv1</h3>
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCcv1Refresh();
+                }}
+                className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+              >
+                Refresh
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {ccv1Expanded ? 'Collapse' : 'Expand'} table
+              </span>
+            </span>
+          </button>
+          {ccv1Expanded && (
+            <div className="border-t">
+              <CCv1HoldingsTable key={ccv1RefreshKey} />
+            </div>
+          )}
+        </div>
+
+        {/* Early Block Rewardees: first 1000 blocks (first week of March 2021) */}
+        <EarlyBlockRewardeesSection />
 
         <footer className="text-center py-4">
           <p className="text-xs text-muted-foreground font-mono">

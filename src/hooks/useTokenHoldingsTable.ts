@@ -17,7 +17,7 @@ import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
 import { getClassificationOverrides } from '@/lib/classificationOverrides';
 
-export type HoldingsCategory = 'Foundation' | 'AMM' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others' | 'AMM/Token Backing Accts';
+export type HoldingsCategory = 'Foundation' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others' | 'AMM/Token Backing Accts';
 
 /** Future use: tokens backed by certain wallets (yellow/orange/green highlights) */
 export type TokenHighlight = 'yellow' | 'orange' | 'green';
@@ -31,16 +31,15 @@ export const AMM_TOKEN_BACKING_ACCOUNTS = new Set([
   'Focus_Floor_Bid',
 ]);
 
-/** Default sort order: Foundation, Core Team, Core Affiliated, AMM, Exchange, DeSo Bulls, AMM/Token Backing Accts, Others */
+/** Default sort order: Foundation, Core Team, Core Affiliated, Exchange, DeSo Bulls, AMM/Token Backing Accts, Others */
 export const DEFAULT_CATEGORY_ORDER: Record<HoldingsCategory, number> = {
   Foundation: 0,
   'Core Team': 1,
   'Core Affiliated': 2,
-  AMM: 3,
-  'Exchange Accounts': 4,
-  'DeSo Bulls': 5,
-  'AMM/Token Backing Accts': 6,
-  Others: 7,
+  'Exchange Accounts': 3,
+  'DeSo Bulls': 4,
+  'AMM/Token Backing Accts': 5,
+  Others: 6,
 };
 
 export interface TokenHoldingsRow {
