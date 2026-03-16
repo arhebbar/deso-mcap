@@ -15,6 +15,7 @@ import { useStakeEntriesTopStakers } from './useStakeEntriesTopStakers';
 import { useOpenfundFocusHolders } from './useOpenfundFocusHolders';
 import { useTrackedPublicKeys } from './useTrackedPublicKeys';
 import { useStakedDesoData } from './useStakedDesoData';
+import { useOthersUsernames, collectOthersPks } from './useOthersUsernames';
 import { getClassificationOverrides } from '@/lib/classificationOverrides';
 
 export type HoldingsCategory = 'Foundation' | 'Core Team' | 'Core Affiliated' | 'Exchange Accounts' | 'DeSo Bulls' | 'Others' | 'AMM/Token Backing Accts';
@@ -107,6 +108,18 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     }
     return set;
   }, [trackedPks, validatorBuckets]);
+
+  const othersPks = useMemo(
+    () =>
+      collectOthersPks({
+        freeFloatTop100,
+        desoBalancesHolders,
+        stakeEntriesStakers,
+        excludeFromOthersPks,
+      }),
+    [freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, excludeFromOthersPks]
+  );
+  const { usernameByPk } = useOthersUsernames(othersPks);
 
   const prices = useMemo(
     () => ({
@@ -224,13 +237,15 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         ccv1 * p.deso +
         ccv2Usd;
       if (totalUsd === 0) continue;
+      const pk = (w as { publicKey?: string }).publicKey;
+      const account = pk ? (usernameByPk.get(pk) ?? w.name) : w.name;
       out.push({
         id: `account-${w.name}`,
         type: 'account',
         category: cat,
         defaultOrder: DEFAULT_CATEGORY_ORDER[cat],
-        account: w.name,
-        publicKey: (w as { publicKey?: string }).publicKey,
+        account,
+        publicKey: pk,
         DESO: deso,
         DESOStaked: staked,
         DESOUnstaked: unstaked,
@@ -264,12 +279,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
+      const account = usernameByPk.get(w.pk) ?? w.name;
       out.push({
         id: `account-freefloat-${w.pk}`,
         type: 'account',
         category,
         defaultOrder: DEFAULT_CATEGORY_ORDER[category],
-        account: w.name,
+        account,
         publicKey: w.pk,
         DESO: deso,
         DESOStaked: w.staked,
@@ -300,12 +316,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
+      const account = usernameByPk.get(w.pk) ?? w.name;
       out.push({
         id: `account-desobalances-${w.pk}`,
         type: 'account',
         category,
         defaultOrder: DEFAULT_CATEGORY_ORDER[category],
-        account: w.name,
+        account,
         publicKey: w.pk,
         DESO: deso,
         DESOStaked: w.staked,
@@ -335,12 +352,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
+      const account = usernameByPk.get(w.pk) ?? w.name;
       out.push({
         id: `account-stakeentries-${w.pk}`,
         type: 'account',
         category,
         defaultOrder: DEFAULT_CATEGORY_ORDER[category],
-        account: w.name,
+        account,
         publicKey: w.pk,
         DESO: deso,
         DESOStaked: w.staked,
@@ -523,7 +541,11 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     });
 
     return out;
-  }, [wallets, marketData, prices, ccv1TableTotalDeso, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView]);
+  }, [wallets, marketData, prices, ccv1TableTotalDeso, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView, usernameByPk]);
 
-  return { rows, prices, isLoading: walletsLoading || desoBalancesLoading || stakeEntriesLoading || openfundFocusLoading || trackedPksLoading };
+  return {
+    rows,
+    prices,
+    isLoading: walletsLoading || desoBalancesLoading || stakeEntriesLoading || openfundFocusLoading || trackedPksLoading,
+  };
 }

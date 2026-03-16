@@ -30,6 +30,12 @@ export const EXCHANGE_ACCOUNTS: Record<string, ExchangeAccountInfo> = {
     Nature: 'Withdrawals',
     Icon: '/assets/icons/exchanges/coinbase-logo.svg',
   },
+  BC1YLfki5fnATeRysFiWZ9BfkSoL9iCxNa43FzCeBL4Tcmj6fXiNStn: {
+    Exchange: 'Unknown',
+    URL: '',
+    Nature: 'UNKNOWN',
+    Icon: '/assets/icons/exchanges/coinbase-logo.svg',
+  },
   BC1YLhxvk9Z6dHHnXbnawMpaGKGZePPsApVRcLNBCK3J8NAGgVoHpoG: {
     Exchange: 'Coinbase',
     URL: 'https://www.coinbase.com',

@@ -9,7 +9,6 @@ import { useLiveData } from '@/hooks/useLiveData';
 import {
   fetchStakeEntriesTopStakers,
   fetchBalancesForPublicKeys,
-  fetchUsernamesForPks,
 } from '@/api/walletApi';
 
 /** Fetch all stake-entry stakers for Others review/classification. */
@@ -24,29 +23,26 @@ export interface StakeEntryHolder {
   isNamed: boolean;
 }
 
+/** Usernames are resolved via useOthersUsernames (cached) in Token Holdings table. */
 async function fetchHoldersWithBalances(): Promise<StakeEntryHolder[]> {
   const stakers = await fetchStakeEntriesTopStakers(LIMIT);
   if (stakers.length === 0) return [];
 
   const pks = stakers.map((s) => s.pk);
-  const [balanceByPk, usernameByPk] = await Promise.all([
-    fetchBalancesForPublicKeys(pks),
-    fetchUsernamesForPks(pks),
-  ]);
+  const balanceByPk = await fetchBalancesForPublicKeys(pks);
 
   const desoPrice = 1;
   return stakers.map((s) => {
     const totalDeso = balanceByPk.get(s.pk) ?? s.staked;
     const unstaked = Math.max(0, totalDeso - s.staked);
-    const username = usernameByPk.get(s.pk);
-    const name = username ?? `${s.pk.slice(0, 8)}…`;
+    const name = `${s.pk.slice(0, 8)}…`;
     return {
       name,
       pk: s.pk,
       staked: s.staked,
       unstaked,
       totalUsd: totalDeso * desoPrice,
-      isNamed: !!username,
+      isNamed: false,
     };
   });
 }

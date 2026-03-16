@@ -273,7 +273,7 @@ export const FOUNDATION_PK_WALLETS: WalletData[] = [
   { name: 'Foundation (…aWbs)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'Foundation (…umt3n)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'Foundation (…nfhL)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
-  { name: 'Da5id', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
+  { name: 'Da5id', classification: 'FOUNDER', balances: {}, usdValue: 0 },
   { name: 'Foundation (…JKo6)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
   { name: 'Foundation (…oEkb)', classification: 'FOUNDATION', balances: {}, usdValue: 0 },
 ];
