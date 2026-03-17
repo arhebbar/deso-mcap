@@ -524,6 +524,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     }
 
     // Overall Total row (supply; Focus = 45B circulation). Excludes AMM/Token Backing Accts when !desoOnlyView to avoid double-counting User Tokens + backing DESO.
+    // When desoOnlyView: Total = DESO Staked + CCv1 + DeSo Unstaked = desoIssued (DESO supply only).
+    const overallTotalUsd = desoOnlyView ? desoIssued * p.deso : effectiveTotalUsd;
     out.push({
       id: 'overallTotal',
       type: 'overallTotal',
@@ -531,13 +533,14 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       DESO: desoIssued,
       DESOStaked: desoStakedIssued,
       DESOUnstaked: desoUnstakedIssued,
+      CCv1: ccv1Total,
       OpenFund: openfundIssued,
       Focus: focusCirculation,
       dUSDC: dusdcIssued,
       dBTC: 22,
       dETH: 210,
       dSOL: 2650,
-      totalUsd: effectiveTotalUsd,
+      totalUsd: overallTotalUsd,
     });
 
     return out;

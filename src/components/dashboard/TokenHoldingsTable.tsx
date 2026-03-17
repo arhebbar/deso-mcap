@@ -375,9 +375,9 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       return formatNumberShort(prices.deso > 0 ? unstakedUsd / prices.deso : 0);
     }
 
-    // Issued row: CCv1 uses network total from CC Locked
+    // Issued and overallTotal rows: CCv1 uses network total from CC Locked table
     const v =
-      row.type === 'issued' && col === 'CCv1'
+      (row.type === 'issued' || row.type === 'overallTotal') && col === 'CCv1'
         ? (ccv1TableTotalDeso ?? row.CCv1 ?? 0)
         : row[col as keyof TokenHoldingsRow];
 
