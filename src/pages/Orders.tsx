@@ -295,10 +295,10 @@ export default function Orders() {
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as OrderFilter)}
-                className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                className="flex h-9 rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm"
               >
-                <option value="notAtTop">Not at the Top</option>
-                <option value="all">All Orders</option>
+                <option value="notAtTop" className="bg-background text-foreground">Not at the Top</option>
+                <option value="all" className="bg-background text-foreground">All Orders</option>
               </select>
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <input
