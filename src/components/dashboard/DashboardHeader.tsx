@@ -104,6 +104,16 @@ export default function DashboardHeader({ isLive = false, lastUpdated }: Dashboa
             <BarChart3 className="h-4 w-4" />
             Protocol Activity
           </Link>
+          <Link
+            to="/orders"
+            className={`flex items-center gap-1.5 px-4 py-3 rounded-t-md text-sm font-medium transition-colors border-b-2 -mb-px ${
+              location.pathname === '/orders'
+                ? 'bg-background text-foreground border-primary'
+                : 'text-muted-foreground hover:text-foreground border-transparent'
+            }`}
+          >
+            Orders
+          </Link>
         </div>
       </nav>
     </>

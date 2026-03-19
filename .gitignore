@@ -26,3 +26,6 @@ dist-ssr
 # Script cache (find-ccv1-top-holders)
 scripts/.ccv1-*.json
 scripts/.ccv1-*.csv
+
+# CCv2 order undercut (contains SEED_HEX)
+scripts/ccv2-order-undercut.config.json

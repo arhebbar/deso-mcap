@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Index from "./pages/Index";
 import Analytics from "./pages/Analytics";
 import UserProfile from "./pages/UserProfile";
+import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -20,6 +21,7 @@ const router = createBrowserRouter(
   [
     { path: "/", element: <Index /> },
     { path: "/analytics", element: <Analytics /> },
+    { path: "/orders", element: <Orders /> },
     { path: "/u/:username", element: <UserProfile /> },
     { path: "*", element: <NotFound /> },
   ],
