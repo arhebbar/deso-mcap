@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   fetchTransactorOrders,
   fetchOrderBook,
@@ -40,33 +41,63 @@ function formatRate(rate: number) {
   return rate >= 0.01 ? rate.toFixed(4) : rate.toFixed(8);
 }
 
+function formatValue(value: number) {
+  if (!isFinite(value)) return '—';
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return value.toFixed(0);
+  if (abs >= 1_000) return value.toFixed(2);
+  if (abs >= 1) return value.toFixed(4);
+  if (abs >= 0.01) return value.toFixed(6);
+  return value.toExponential(2);
+}
+
 function OrderRow({
   order,
   pairLabel,
   tokenUsername,
+  expanded,
+  onToggle,
+  pairKey,
 }: {
   order: CCv2Order;
   pairLabel: string;
   tokenUsername?: string;
+  expanded: boolean;
+  pairKey: string;
+  onToggle: (pairKey: string) => void;
 }) {
   const openFundUrl = tokenUsername ? `https://openfund.com/trade/${tokenUsername}` : null;
   return (
     <tr className="border-b border-border">
       <td className="py-3 px-4 font-mono text-sm">
-        <span className="inline-flex items-center gap-1.5">
-          {pairLabel}
-          {openFundUrl && (
-            <a
-              href={openFundUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title={`Trade on Openfund`}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            {pairLabel}
+            {openFundUrl && (
+              <a
+                href={openFundUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title={`Trade on Openfund`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(pairKey);
+            }}
+            aria-label={expanded ? 'Collapse pair details' : 'Expand pair details'}
+          >
+            {expanded ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
       </td>
       <td className="py-3 px-4">
         <Badge variant={order.OperationType === 'ASK' ? 'destructive' : 'default'}>
@@ -85,6 +116,7 @@ export default function Orders() {
   const [username, setUsername] = useState(DEFAULT_USERNAME);
   const [filter, setFilter] = useState<OrderFilter>('notAtTop');
   const [activeTokensOnly, setActiveTokensOnly] = useState(false);
+  const [expandedPairKey, setExpandedPairKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const pkQuery = useQuery({
@@ -252,6 +284,109 @@ export default function Orders() {
       })
     : displayOrdersBase;
 
+  const buyOrdersByPairData = useMemo(() => {
+    const map = new Map<string, { top3: CCv2Order[]; bottom3: CCv2Order[] }>();
+    const buyerPks = new Set<string>();
+
+    if (!orderBooksData || !displayOrders?.length) return { map, buyerPks };
+
+    for (const entry of displayOrders) {
+      const book = orderBooksData.get(entry.pairKey) ?? [];
+      const bids = book.filter((o) => o.OperationType === 'BID');
+      const sorted = [...bids].sort(
+        (a, b) => b.ExchangeRateCoinsToSellPerCoinToBuy - a.ExchangeRateCoinsToSellPerCoinToBuy
+      );
+      const top3 = sorted.slice(0, 3);
+      const bottom3 = sorted.slice(-3);
+
+      for (const o of [...top3, ...bottom3]) {
+        if (o.TransactorPublicKeyBase58Check) buyerPks.add(o.TransactorPublicKeyBase58Check);
+      }
+
+      map.set(entry.pairKey, { top3, bottom3 });
+    }
+
+    return { map, buyerPks };
+  }, [orderBooksData, displayOrders]);
+
+  const buyerPksKey = [...buyOrdersByPairData.buyerPks].sort().join(',');
+  const { data: buyerUsernameMap = new Map<string, string>() } = useQuery({
+    queryKey: ['ccv2-buyer-usernames', buyerPksKey],
+    queryFn: () => fetchUsernamesForPks(Array.from(buyOrdersByPairData.buyerPks)),
+    enabled: buyOrdersByPairData.buyerPks.size > 0 && !!transactorPk,
+    retry: false,
+  });
+
+  const toggleExpandedPair = (pairKey: string) => {
+    setExpandedPairKey((cur) => (cur === pairKey ? null : pairKey));
+  };
+
+  function BuyOrdersTable({
+    orders,
+    title,
+    quoteLabel,
+    highlightMine,
+  }: {
+    orders: CCv2Order[];
+    title: string;
+    quoteLabel: string;
+    highlightMine: boolean;
+  }) {
+    return (
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground uppercase">{title}</div>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="text-muted-foreground text-xs uppercase">
+              <th className="py-1 px-2" colSpan={2}>
+                Buyer
+              </th>
+              <th className="py-1 px-2">Bid Qty</th>
+              <th className="py-1 px-2">Bid Price</th>
+              <th className="py-1 px-2">Value</th>
+              <th className="py-1 px-2">Order Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.length === 0 ? (
+              <tr>
+                <td className="py-2 px-2 text-muted-foreground" colSpan={6}>
+                  No BID orders.
+                </td>
+              </tr>
+            ) : (
+              orders.map((o) => {
+                const buyerPk = o.TransactorPublicKeyBase58Check;
+                const buyerName = buyerUsernameMap.get(buyerPk) ?? `${buyerPk.slice(0, 8)}…`;
+                const isMine = highlightMine && !!transactorPk && buyerPk === transactorPk;
+                const value = o.QuantityToFill * o.ExchangeRateCoinsToSellPerCoinToBuy;
+                const initials = buyerName.slice(0, 1).toUpperCase();
+                return (
+                  <tr key={o.OrderID} className={isMine ? 'bg-primary/10' : undefined}>
+                    <td className="py-1 px-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                    </td>
+                    <td className="py-1 px-2 font-medium">{buyerName}</td>
+                    <td className="py-1 px-2 font-mono">{o.QuantityToFill.toFixed(2)}</td>
+                    <td className="py-1 px-2 font-mono">{formatRate(o.ExchangeRateCoinsToSellPerCoinToBuy)}</td>
+                    <td className="py-1 px-2 font-mono">
+                      {formatValue(value)} {quoteLabel}
+                    </td>
+                    <td className="py-1 px-2 text-muted-foreground" title="The CCv2 orderbook response does not include a timestamp.">
+                      —
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -348,14 +483,45 @@ export default function Orders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayOrders.map(({ order, pairLabel, tokenUsername }) => (
-                    <OrderRow
-                      key={order.OrderID}
-                      order={order}
-                      pairLabel={pairLabel}
-                      tokenUsername={tokenUsername}
-                    />
-                  ))}
+                  {displayOrders.map((entry) => {
+                    const { order, pairKey, pairLabel, tokenUsername } = entry;
+                    const expanded = expandedPairKey === pairKey;
+                    const buyPair = buyOrdersByPairData.map.get(pairKey);
+                    const quoteLabel = pairLabel.split('/')[1] ?? '';
+
+                    return (
+                      <Fragment key={pairKey}>
+                        <OrderRow
+                          order={order}
+                          pairKey={pairKey}
+                          pairLabel={pairLabel}
+                          tokenUsername={tokenUsername}
+                          expanded={expanded}
+                          onToggle={toggleExpandedPair}
+                        />
+                        {expanded && buyPair && (
+                          <tr>
+                            <td colSpan={4} className="px-4 pb-4 pt-0">
+                              <div className="space-y-4">
+                                <BuyOrdersTable
+                                  orders={buyPair.top3}
+                                  title="Top 3 Buy Orders"
+                                  quoteLabel={quoteLabel}
+                                  highlightMine
+                                />
+                                <BuyOrdersTable
+                                  orders={buyPair.bottom3}
+                                  title="Bottom 3 Buy Orders"
+                                  quoteLabel={quoteLabel}
+                                  highlightMine={false}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
