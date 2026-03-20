@@ -284,36 +284,47 @@ export default function Orders() {
       })
     : displayOrdersBase;
 
-  const buyOrdersByPairData = useMemo(() => {
-    const map = new Map<string, { top3: CCv2Order[]; bottom3: CCv2Order[] }>();
-    const buyerPks = new Set<string>();
+  const sideOrdersByPairData = useMemo(() => {
+    const map = new Map<
+      string,
+      { highest3Bids: CCv2Order[]; lowest3Asks: CCv2Order[] }
+    >();
+    const partyPks = new Set<string>();
 
-    if (!orderBooksData || !displayOrders?.length) return { map, buyerPks };
+    if (!orderBooksData || !displayOrders?.length) return { map, partyPks };
 
     for (const entry of displayOrders) {
       const book = orderBooksData.get(entry.pairKey) ?? [];
+
+      // Highest 3 BUY orders = BID with highest price.
       const bids = book.filter((o) => o.OperationType === 'BID');
-      const sorted = [...bids].sort(
+      const sortedBids = [...bids].sort(
         (a, b) => b.ExchangeRateCoinsToSellPerCoinToBuy - a.ExchangeRateCoinsToSellPerCoinToBuy
       );
-      const top3 = sorted.slice(0, 3);
-      const bottom3 = sorted.slice(-3);
+      const highest3Bids = sortedBids.slice(0, 3);
 
-      for (const o of [...top3, ...bottom3]) {
-        if (o.TransactorPublicKeyBase58Check) buyerPks.add(o.TransactorPublicKeyBase58Check);
+      // Lowest 3 SELL orders = ASK with lowest price.
+      const asks = book.filter((o) => o.OperationType === 'ASK');
+      const sortedAsks = [...asks].sort(
+        (a, b) => a.ExchangeRateCoinsToSellPerCoinToBuy - b.ExchangeRateCoinsToSellPerCoinToBuy
+      );
+      const lowest3Asks = sortedAsks.slice(0, 3);
+
+      for (const o of [...highest3Bids, ...lowest3Asks]) {
+        if (o.TransactorPublicKeyBase58Check) partyPks.add(o.TransactorPublicKeyBase58Check);
       }
 
-      map.set(entry.pairKey, { top3, bottom3 });
+      map.set(entry.pairKey, { highest3Bids, lowest3Asks });
     }
 
-    return { map, buyerPks };
+    return { map, partyPks };
   }, [orderBooksData, displayOrders]);
 
-  const buyerPksKey = [...buyOrdersByPairData.buyerPks].sort().join(',');
-  const { data: buyerUsernameMap = new Map<string, string>() } = useQuery({
-    queryKey: ['ccv2-buyer-usernames', buyerPksKey],
-    queryFn: () => fetchUsernamesForPks(Array.from(buyOrdersByPairData.buyerPks)),
-    enabled: buyOrdersByPairData.buyerPks.size > 0 && !!transactorPk,
+  const partyPksKey = [...sideOrdersByPairData.partyPks].sort().join(',');
+  const { data: partyUsernameMap = new Map<string, string>() } = useQuery({
+    queryKey: ['ccv2-party-usernames', partyPksKey],
+    queryFn: () => fetchUsernamesForPks(Array.from(sideOrdersByPairData.partyPks)),
+    enabled: sideOrdersByPairData.partyPks.size > 0 && !!transactorPk,
     retry: false,
   });
 
@@ -321,15 +332,21 @@ export default function Orders() {
     setExpandedPairKey((cur) => (cur === pairKey ? null : pairKey));
   };
 
-  function BuyOrdersTable({
+  function SideOrdersTable({
     orders,
     title,
     quoteLabel,
+    sideLabel,
+    qtyLabel,
+    priceLabel,
     highlightMine,
   }: {
     orders: CCv2Order[];
     title: string;
     quoteLabel: string;
+    sideLabel: string;
+    qtyLabel: string;
+    priceLabel: string;
     highlightMine: boolean;
   }) {
     return (
@@ -339,10 +356,10 @@ export default function Orders() {
           <thead>
             <tr className="text-muted-foreground text-xs uppercase">
               <th className="py-1 px-2" colSpan={2}>
-                Buyer
+                {sideLabel}
               </th>
-              <th className="py-1 px-2">Bid Qty</th>
-              <th className="py-1 px-2">Bid Price</th>
+              <th className="py-1 px-2">{qtyLabel}</th>
+              <th className="py-1 px-2">{priceLabel}</th>
               <th className="py-1 px-2">Value</th>
               <th className="py-1 px-2">Order Date</th>
             </tr>
@@ -351,16 +368,16 @@ export default function Orders() {
             {orders.length === 0 ? (
               <tr>
                 <td className="py-2 px-2 text-muted-foreground" colSpan={6}>
-                  No BID orders.
+                  No {sideLabel} orders.
                 </td>
               </tr>
             ) : (
               orders.map((o) => {
-                const buyerPk = o.TransactorPublicKeyBase58Check;
-                const buyerName = buyerUsernameMap.get(buyerPk) ?? `${buyerPk.slice(0, 8)}…`;
-                const isMine = highlightMine && !!transactorPk && buyerPk === transactorPk;
+                const partyPk = o.TransactorPublicKeyBase58Check;
+                const partyName = partyUsernameMap.get(partyPk) ?? `${partyPk.slice(0, 8)}…`;
+                const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
                 const value = o.QuantityToFill * o.ExchangeRateCoinsToSellPerCoinToBuy;
-                const initials = buyerName.slice(0, 1).toUpperCase();
+                const initials = partyName.slice(0, 1).toUpperCase();
                 return (
                   <tr key={o.OrderID} className={isMine ? 'bg-primary/10' : undefined}>
                     <td className="py-1 px-2">
@@ -368,7 +385,7 @@ export default function Orders() {
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
                     </td>
-                    <td className="py-1 px-2 font-medium">{buyerName}</td>
+                    <td className="py-1 px-2 font-medium">{partyName}</td>
                     <td className="py-1 px-2 font-mono">{o.QuantityToFill.toFixed(2)}</td>
                     <td className="py-1 px-2 font-mono">{formatRate(o.ExchangeRateCoinsToSellPerCoinToBuy)}</td>
                     <td className="py-1 px-2 font-mono">
@@ -486,7 +503,7 @@ export default function Orders() {
                   {displayOrders.map((entry) => {
                     const { order, pairKey, pairLabel, tokenUsername } = entry;
                     const expanded = expandedPairKey === pairKey;
-                    const buyPair = buyOrdersByPairData.map.get(pairKey);
+                    const sidePair = sideOrdersByPairData.map.get(pairKey);
                     const quoteLabel = pairLabel.split('/')[1] ?? '';
 
                     return (
@@ -499,21 +516,27 @@ export default function Orders() {
                           expanded={expanded}
                           onToggle={toggleExpandedPair}
                         />
-                        {expanded && buyPair && (
+                        {expanded && sidePair && (
                           <tr>
                             <td colSpan={4} className="px-4 pb-4 pt-0">
                               <div className="space-y-4">
-                                <BuyOrdersTable
-                                  orders={buyPair.top3}
-                                  title="Top 3 Buy Orders"
+                                <SideOrdersTable
+                                  orders={sidePair.highest3Bids}
+                                  title="Highest 3 Buy Orders"
                                   quoteLabel={quoteLabel}
+                                  sideLabel="Buyer"
+                                  qtyLabel="Bid Qty"
+                                  priceLabel="Bid Price"
                                   highlightMine
                                 />
-                                <BuyOrdersTable
-                                  orders={buyPair.bottom3}
-                                  title="Bottom 3 Buy Orders"
+                                <SideOrdersTable
+                                  orders={sidePair.lowest3Asks}
+                                  title="Lowest 3 Sell Orders"
                                   quoteLabel={quoteLabel}
-                                  highlightMine={false}
+                                  sideLabel="Seller"
+                                  qtyLabel="Ask Qty"
+                                  priceLabel="Ask Price"
+                                  highlightMine
                                 />
                               </div>
                             </td>
