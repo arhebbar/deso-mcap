@@ -328,15 +328,8 @@ export default function Orders() {
       const buyOrders = book.filter((o) => o.BuyingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
       const sellOrders = book.filter((o) => o.SellingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
 
-      // For buy orders, the order price we want is quote-per-token.
-      // If Price = token per quote, then quote-per-token = 1 / Price.
-      const sortedBuys = [...buyOrders].sort((a, b) => {
-        const aP = Number(a.Price);
-        const bP = Number(b.Price);
-        const aQuotePerToken = aP !== 0 ? 1 / aP : 0;
-        const bQuotePerToken = bP !== 0 ? 1 / bP : 0;
-        return bQuotePerToken - aQuotePerToken;
-      });
+      // For both sides, API Price maps to quote-per-token for UI sorting/display.
+      const sortedBuys = [...buyOrders].sort((a, b) => Number(b.Price) - Number(a.Price));
       const highest3Buys = sortedBuys.slice(0, 3);
 
       // For sell orders, Price already represents quote-per-token.
@@ -416,9 +409,8 @@ export default function Orders() {
                 const avatarSrc = partyMeta?.largeProfilePicUrl;
                 const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
 
-                const priceField = Number(o.Price);
-                const quotePerToken = sideType === 'buy' ? (priceField ? 1 / priceField : 0) : priceField;
-                const tokenQty = sideType === 'buy' ? o.QuantityToFill * priceField : o.QuantityToFill;
+                const quotePerToken = Number(o.Price);
+                const tokenQty = o.QuantityToFill;
 
                 const tokenPriceUsd = quotePerToken * quoteUsdPrice;
                 const orderValueUsd = tokenQty * tokenPriceUsd;
@@ -572,17 +564,6 @@ export default function Orders() {
                             <td colSpan={4} className="px-4 pb-4 pt-0">
                               <div className="space-y-4">
                                 <SideOrdersTable
-                                  orders={sidePair.highest3Buys}
-                                  title="Highest 3 Buy Orders"
-                                  quoteLabel={quoteLabel}
-                                  sideLabel="Buyer"
-                                  qtyLabel="Bid Qty"
-                                  priceLabel="Bid Ask Price"
-                                  sideType="buy"
-                                  quoteUsdPrice={quoteUsdPrice}
-                                  highlightMine
-                                />
-                                <SideOrdersTable
                                   orders={sidePair.lowest3Sells}
                                   title="Lowest 3 Sell Orders"
                                   quoteLabel={quoteLabel}
@@ -590,6 +571,17 @@ export default function Orders() {
                                   qtyLabel="Ask Qty"
                                   priceLabel="Ask Price"
                                   sideType="sell"
+                                  quoteUsdPrice={quoteUsdPrice}
+                                  highlightMine
+                                />
+                                <SideOrdersTable
+                                  orders={sidePair.highest3Buys}
+                                  title="Highest 3 Buy Orders"
+                                  quoteLabel={quoteLabel}
+                                  sideLabel="Buyer"
+                                  qtyLabel="Bid Qty"
+                                  priceLabel="Bid Ask Price"
+                                  sideType="buy"
                                   quoteUsdPrice={quoteUsdPrice}
                                   highlightMine
                                 />
