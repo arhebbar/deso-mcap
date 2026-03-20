@@ -9,7 +9,11 @@ export interface CCv2Order {
   TransactorPublicKeyBase58Check: string;
   BuyingDAOCoinCreatorPublicKeyBase58Check: string;
   SellingDAOCoinCreatorPublicKeyBase58Check: string;
+  /** Price = coins bought per coin sold (string from API). */
+  Price: string;
   ExchangeRateCoinsToSellPerCoinToBuy: number;
+  /** Quantity from API (string). QuantityToFill is typically the parsed numeric value. */
+  Quantity?: string;
   QuantityToFill: number;
   OperationType: 'BID' | 'ASK';
   OrderID: string;
@@ -21,6 +25,12 @@ export interface OrderBookResponse {
 
 export interface TransactorOrdersResponse {
   Orders?: CCv2Order[];
+}
+
+export interface CCv2UserProfileMeta {
+  username: string;
+  /** DeSo returns profile pic URLs inside ProfileEntryResponse.ExtraData. */
+  largeProfilePicUrl?: string;
 }
 
 /** Get all open orders for a token pair. Use "DESO" for the DESO side (not empty string). */
@@ -148,6 +158,55 @@ export async function fetchUsernamesForPks(pks: string[]): Promise<Map<string, s
   return map;
 }
 
+/** Resolve public keys to { username, largeProfilePicUrl } for UI avatars. */
+export async function fetchUserProfilesForPks(
+  pks: string[]
+): Promise<Map<string, CCv2UserProfileMeta>> {
+  const map = new Map<string, CCv2UserProfileMeta>();
+  if (pks.length === 0) return map;
+
+  const unique = [...new Set(pks.filter((pk) => pk && pk !== 'DESO'))];
+  const BATCH = 100;
+  for (let i = 0; i < unique.length; i += BATCH) {
+    const batch = unique.slice(i, i + BATCH);
+    try {
+      const res = await fetch(`${DESO_NODE}/get-users-stateless`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          PublicKeysBase58Check: batch,
+          SkipForLeaderboard: false,
+          IncludeBalance: false,
+        }),
+      });
+      if (!res.ok) continue;
+
+      const data = (await res.json()) as {
+        UserList?: Array<{
+          PublicKeyBase58Check?: string;
+          ProfileEntryResponse?: { Username?: string; ExtraData?: Record<string, unknown> };
+          Profile?: { Username?: string; ExtraData?: Record<string, unknown> };
+        }>;
+      };
+
+      for (const u of data.UserList ?? []) {
+        const pk = u.PublicKeyBase58Check;
+        const username = u.ProfileEntryResponse?.Username ?? u.Profile?.Username;
+        if (!pk || !username) continue;
+
+        const extra =
+          u.ProfileEntryResponse?.ExtraData ?? u.Profile?.ExtraData ?? ({} as Record<string, unknown>);
+        const largeProfilePicUrl = (extra['LargeProfilePicURL'] as string | undefined) ?? undefined;
+
+        map.set(pk, { username, largeProfilePicUrl });
+      }
+    } catch {
+      // ignore failed batch
+    }
+  }
+  return map;
+}
+
 /** Get token creator public key from username. */
 export async function getPublicKeyFromUsername(username: string): Promise<string> {
   const res = await fetch(`${DESO_NODE}/get-single-profile`, {
@@ -166,15 +225,19 @@ export async function getPublicKeyFromUsername(username: string): Promise<string
 export function getBestSell(orders: CCv2Order[]): CCv2Order | null {
   const asks = orders.filter((o) => o.OperationType === 'ASK');
   if (asks.length === 0) return null;
-  return asks.reduce((a, b) =>
-    a.ExchangeRateCoinsToSellPerCoinToBuy < b.ExchangeRateCoinsToSellPerCoinToBuy ? a : b
-  );
+  return asks.reduce((a, b) => {
+    const aPrice = Number(a.Price);
+    const bPrice = Number(b.Price);
+    return aPrice <= bPrice ? a : b;
+  });
 }
 
 export function getBestBuy(orders: CCv2Order[]): CCv2Order | null {
   const bids = orders.filter((o) => o.OperationType === 'BID');
   if (bids.length === 0) return null;
-  return bids.reduce((a, b) =>
-    a.ExchangeRateCoinsToSellPerCoinToBuy > b.ExchangeRateCoinsToSellPerCoinToBuy ? a : b
-  );
+  return bids.reduce((a, b) => {
+    const aPrice = Number(a.Price);
+    const bPrice = Number(b.Price);
+    return aPrice >= bPrice ? a : b;
+  });
 }

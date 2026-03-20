@@ -5,16 +5,18 @@ import { ArrowLeft, ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   fetchTransactorOrders,
   fetchOrderBook,
   fetchUsernamesForPks,
+  fetchUserProfilesForPks,
   getPublicKeyFromUsername,
   getBestSell,
   getBestBuy,
   type CCv2Order,
 } from '@/api/ccv2OrdersApi';
+import { MARKET_DATA } from '@/data/desoData';
 
 const DEFAULT_USERNAME = 'Randhir';
 const ACTIVE_TOKEN_USERNAMES = new Set(
@@ -180,6 +182,10 @@ export default function Orders() {
     pairLabel: string;
     tokenUsername?: string;
     tokenDisplayName: string;
+    tokenCreator: string;
+    quoteCreator: string;
+    quoteUsdPrice: number;
+    quoteLabel: string;
   }[] = [];
   const notAtTopOrders: {
     order: CCv2Order;
@@ -187,6 +193,10 @@ export default function Orders() {
     pairLabel: string;
     tokenUsername?: string;
     tokenDisplayName: string;
+    tokenCreator: string;
+    quoteCreator: string;
+    quoteUsdPrice: number;
+    quoteLabel: string;
   }[] = [];
   if (orders && orderBooksData && transactorPk) {
     for (const order of orders) {
@@ -205,15 +215,23 @@ export default function Orders() {
 
       let tokenPk = '';
       let quoteLabel = '';
+      let quoteCreator = '';
+      let quoteUsdPrice = 0;
       if (sideA === 'DESO' || sideB === 'DESO') {
         quoteLabel = 'DESO';
+        quoteCreator = 'DESO';
+        quoteUsdPrice = MARKET_DATA.desoPrice;
         tokenPk = sideA === 'DESO' ? sideB : sideA;
       } else if (lowerA === 'focus' || lowerB === 'focus') {
         quoteLabel = 'Focus';
+        quoteCreator = lowerA === 'focus' ? sideA : sideB;
+        quoteUsdPrice = MARKET_DATA.focusPrice;
         tokenPk = lowerA === 'focus' ? sideB : sideA;
       } else if (lowerA === 'dusdc_' || lowerA === 'dusdc' || lowerB === 'dusdc_' || lowerB === 'dusdc') {
         quoteLabel = 'USDC';
         const isDusdcA = lowerA === 'dusdc_' || lowerA === 'dusdc';
+        quoteCreator = isDusdcA ? sideA : sideB;
+        quoteUsdPrice = 1;
         tokenPk = isDusdcA ? sideB : sideA;
       } else {
         continue; // unsupported quote pair
@@ -226,7 +244,17 @@ export default function Orders() {
       const isAtTop = isAsk
         ? getBestSell(book)?.TransactorPublicKeyBase58Check === transactorPk
         : getBestBuy(book)?.TransactorPublicKeyBase58Check === transactorPk;
-      const entry = { order, pairKey, pairLabel, tokenUsername, tokenDisplayName };
+      const entry = {
+        order,
+        pairKey,
+        pairLabel,
+        tokenUsername,
+        tokenDisplayName,
+        tokenCreator: tokenPk,
+        quoteCreator,
+        quoteUsdPrice,
+        quoteLabel,
+      };
       if (isAtTop) atTopOrders.push(entry);
       else notAtTopOrders.push(entry);
     }
@@ -285,10 +313,7 @@ export default function Orders() {
     : displayOrdersBase;
 
   const sideOrdersByPairData = useMemo(() => {
-    const map = new Map<
-      string,
-      { highest3Bids: CCv2Order[]; lowest3Asks: CCv2Order[] }
-    >();
+    const map = new Map<string, { highest3Buys: CCv2Order[]; lowest3Sells: CCv2Order[] }>();
     const partyPks = new Set<string>();
 
     if (!orderBooksData || !displayOrders?.length) return { map, partyPks };
@@ -296,34 +321,42 @@ export default function Orders() {
     for (const entry of displayOrders) {
       const book = orderBooksData.get(entry.pairKey) ?? [];
 
-      // Highest 3 BUY orders = BID with highest price.
-      const bids = book.filter((o) => o.OperationType === 'BID');
-      const sortedBids = [...bids].sort(
-        (a, b) => b.ExchangeRateCoinsToSellPerCoinToBuy - a.ExchangeRateCoinsToSellPerCoinToBuy
-      );
-      const highest3Bids = sortedBids.slice(0, 3);
+      // We interpret "buy" and "sell" relative to the token side of the pair:
+      // - Buy orders: Buying token = tokenCreator
+      // - Sell orders: Selling token = tokenCreator
+      // DeSo API Price is "coins bought per coin sold".
+      const buyOrders = book.filter((o) => o.BuyingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
+      const sellOrders = book.filter((o) => o.SellingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
 
-      // Lowest 3 SELL orders = ASK with lowest price.
-      const asks = book.filter((o) => o.OperationType === 'ASK');
-      const sortedAsks = [...asks].sort(
-        (a, b) => a.ExchangeRateCoinsToSellPerCoinToBuy - b.ExchangeRateCoinsToSellPerCoinToBuy
-      );
-      const lowest3Asks = sortedAsks.slice(0, 3);
+      // For buy orders, the order price we want is quote-per-token.
+      // If Price = token per quote, then quote-per-token = 1 / Price.
+      const sortedBuys = [...buyOrders].sort((a, b) => {
+        const aP = Number(a.Price);
+        const bP = Number(b.Price);
+        const aQuotePerToken = aP !== 0 ? 1 / aP : 0;
+        const bQuotePerToken = bP !== 0 ? 1 / bP : 0;
+        return bQuotePerToken - aQuotePerToken;
+      });
+      const highest3Buys = sortedBuys.slice(0, 3);
 
-      for (const o of [...highest3Bids, ...lowest3Asks]) {
+      // For sell orders, Price already represents quote-per-token.
+      const sortedSells = [...sellOrders].sort((a, b) => Number(a.Price) - Number(b.Price));
+      const lowest3Sells = sortedSells.slice(0, 3);
+
+      for (const o of [...highest3Buys, ...lowest3Sells]) {
         if (o.TransactorPublicKeyBase58Check) partyPks.add(o.TransactorPublicKeyBase58Check);
       }
 
-      map.set(entry.pairKey, { highest3Bids, lowest3Asks });
+      map.set(entry.pairKey, { highest3Buys, lowest3Sells });
     }
 
     return { map, partyPks };
   }, [orderBooksData, displayOrders]);
 
   const partyPksKey = [...sideOrdersByPairData.partyPks].sort().join(',');
-  const { data: partyUsernameMap = new Map<string, string>() } = useQuery({
-    queryKey: ['ccv2-party-usernames', partyPksKey],
-    queryFn: () => fetchUsernamesForPks(Array.from(sideOrdersByPairData.partyPks)),
+  const { data: partyProfilesMap = new Map<string, { username: string; largeProfilePicUrl?: string }>() } = useQuery({
+    queryKey: ['ccv2-party-profiles', partyPksKey],
+    queryFn: () => fetchUserProfilesForPks(Array.from(sideOrdersByPairData.partyPks)),
     enabled: sideOrdersByPairData.partyPks.size > 0 && !!transactorPk,
     retry: false,
   });
@@ -339,6 +372,8 @@ export default function Orders() {
     sideLabel,
     qtyLabel,
     priceLabel,
+    sideType,
+    quoteUsdPrice,
     highlightMine,
   }: {
     orders: CCv2Order[];
@@ -347,6 +382,8 @@ export default function Orders() {
     sideLabel: string;
     qtyLabel: string;
     priceLabel: string;
+    sideType: 'buy' | 'sell';
+    quoteUsdPrice: number;
     highlightMine: boolean;
   }) {
     return (
@@ -360,7 +397,7 @@ export default function Orders() {
               </th>
               <th className="py-1 px-2">{qtyLabel}</th>
               <th className="py-1 px-2">{priceLabel}</th>
-              <th className="py-1 px-2">Value</th>
+              <th className="py-1 px-2">Value of the Order</th>
               <th className="py-1 px-2">Order Date</th>
             </tr>
           </thead>
@@ -374,24 +411,39 @@ export default function Orders() {
             ) : (
               orders.map((o) => {
                 const partyPk = o.TransactorPublicKeyBase58Check;
-                const partyName = partyUsernameMap.get(partyPk) ?? `${partyPk.slice(0, 8)}…`;
+                const partyMeta = partyProfilesMap.get(partyPk);
+                const partyName = partyMeta?.username ?? `${partyPk.slice(0, 8)}…`;
+                const avatarSrc = partyMeta?.largeProfilePicUrl;
                 const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
-                const value = o.QuantityToFill * o.ExchangeRateCoinsToSellPerCoinToBuy;
+
+                const priceField = Number(o.Price);
+                const quotePerToken = sideType === 'buy' ? (priceField ? 1 / priceField : 0) : priceField;
+                const tokenQty = sideType === 'buy' ? o.QuantityToFill * priceField : o.QuantityToFill;
+
+                const tokenPriceUsd = quotePerToken * quoteUsdPrice;
+                const orderValueUsd = tokenQty * tokenPriceUsd;
+
                 const initials = partyName.slice(0, 1).toUpperCase();
+                const focusPerDesoLabel = quoteLabel === 'Focus' ? 'Focus/DESO price' : `${quoteLabel} price`;
+
                 return (
                   <tr key={o.OrderID} className={isMine ? 'bg-primary/10' : undefined}>
                     <td className="py-1 px-2">
                       <Avatar className="h-6 w-6">
+                        {avatarSrc && <AvatarImage src={avatarSrc} alt={partyName} />}
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
                     </td>
                     <td className="py-1 px-2 font-medium">{partyName}</td>
-                    <td className="py-1 px-2 font-mono">{o.QuantityToFill.toFixed(2)}</td>
-                    <td className="py-1 px-2 font-mono">{formatRate(o.ExchangeRateCoinsToSellPerCoinToBuy)}</td>
-                    <td className="py-1 px-2 font-mono">
-                      {formatValue(value)} {quoteLabel}
+                    <td className="py-1 px-2 font-mono">{tokenQty.toFixed(2)}</td>
+                    <td className="py-1 px-2">
+                      <div className="font-mono text-sm">${formatValue(tokenPriceUsd)}</div>
+                      <div className="text-muted-foreground font-mono text-[11px]">
+                        {focusPerDesoLabel}: {formatRate(quotePerToken)}
+                      </div>
                     </td>
-                    <td className="py-1 px-2 text-muted-foreground" title="The CCv2 orderbook response does not include a timestamp.">
+                    <td className="py-1 px-2 font-mono">${formatValue(orderValueUsd)}</td>
+                    <td className="py-1 px-2 text-muted-foreground" title="CCv2 orderbook response does not include a timestamp.">
                       —
                     </td>
                   </tr>
@@ -501,10 +553,9 @@ export default function Orders() {
                 </thead>
                 <tbody>
                   {displayOrders.map((entry) => {
-                    const { order, pairKey, pairLabel, tokenUsername } = entry;
+                    const { order, pairKey, pairLabel, tokenUsername, quoteLabel, quoteUsdPrice } = entry;
                     const expanded = expandedPairKey === pairKey;
                     const sidePair = sideOrdersByPairData.map.get(pairKey);
-                    const quoteLabel = pairLabel.split('/')[1] ?? '';
 
                     return (
                       <Fragment key={pairKey}>
@@ -521,21 +572,25 @@ export default function Orders() {
                             <td colSpan={4} className="px-4 pb-4 pt-0">
                               <div className="space-y-4">
                                 <SideOrdersTable
-                                  orders={sidePair.highest3Bids}
+                                  orders={sidePair.highest3Buys}
                                   title="Highest 3 Buy Orders"
                                   quoteLabel={quoteLabel}
                                   sideLabel="Buyer"
                                   qtyLabel="Bid Qty"
-                                  priceLabel="Bid Price"
+                                  priceLabel="Bid Ask Price"
+                                  sideType="buy"
+                                  quoteUsdPrice={quoteUsdPrice}
                                   highlightMine
                                 />
                                 <SideOrdersTable
-                                  orders={sidePair.lowest3Asks}
+                                  orders={sidePair.lowest3Sells}
                                   title="Lowest 3 Sell Orders"
                                   quoteLabel={quoteLabel}
                                   sideLabel="Seller"
                                   qtyLabel="Ask Qty"
                                   priceLabel="Ask Price"
+                                  sideType="sell"
+                                  quoteUsdPrice={quoteUsdPrice}
                                   highlightMine
                                 />
                               </div>
