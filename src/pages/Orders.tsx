@@ -15,7 +15,7 @@ import {
   getBestSell,
   getBestBuy,
   quotePerTokenForDisplay,
-  quotePerTokenForUi,
+  tokenQuantityForDisplay,
   type CCv2Order,
 } from '@/api/ccv2OrdersApi';
 import { MARKET_DATA } from '@/data/desoData';
@@ -55,16 +55,17 @@ function formatValue(value: number) {
   return value.toExponential(2);
 }
 
-/** Best bid first: DESO/USDC = max quote/token; Focus = min raw P (see quotePerTokenForUi). */
-function sortBuysBestFirst(buys: CCv2Order[], quoteLabel: string): CCv2Order[] {
-  return [...buys].sort((a, b) => {
-    const ua = quotePerTokenForUi(a, quoteLabel);
-    const ub = quotePerTokenForUi(b, quoteLabel);
-    if (quoteLabel === 'Focus') {
-      return ua - ub;
-    }
-    return ub - ua;
-  });
+function formatQty(q: number) {
+  if (!isFinite(q)) return '—';
+  const abs = Math.abs(q);
+  if (abs >= 1_000_000) return q.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (abs >= 10_000) return q.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return q.toFixed(2);
+}
+
+/** Best bid first = highest quote per token (same metric for DESO / Focus / USDC). */
+function sortBuysBestFirst(buys: CCv2Order[]): CCv2Order[] {
+  return [...buys].sort((a, b) => quotePerTokenForDisplay(b) - quotePerTokenForDisplay(a));
 }
 
 function askPriceColumnTitle(quoteLabel: string): string {
@@ -434,14 +435,14 @@ export default function Orders() {
                 const avatarSrc = partyMeta?.largeProfilePicUrl;
                 const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
 
-                const quotePerToken = quotePerTokenForUi(o, quoteLabel);
-                const tokenQty = o.QuantityToFill;
+                // USD/token = quote per token × $ per 1 unit of quote (DESO / Focus / USDC).
+                const quotePerToken = quotePerTokenForDisplay(o);
+                const tokenQty = tokenQuantityForDisplay(o, quoteLabel);
 
                 const tokenPriceUsd = quotePerToken * quoteUsdPrice;
                 const orderValueUsd = tokenQty * tokenPriceUsd;
 
                 const initials = partyName.slice(0, 1).toUpperCase();
-                const focusPerDesoLabel = quoteLabel === 'Focus' ? 'Focus/DESO price' : `${quoteLabel} price`;
 
                 return (
                   <tr key={o.OrderID} className={isMine ? 'bg-primary/10' : undefined}>
@@ -452,12 +453,9 @@ export default function Orders() {
                       </Avatar>
                     </td>
                     <td className="py-1 px-2 font-medium">{partyName}</td>
-                    <td className="py-1 px-2 font-mono">{tokenQty.toFixed(2)}</td>
+                    <td className="py-1 px-2 font-mono">{formatQty(tokenQty)}</td>
                     <td className="py-1 px-2">
                       <div className="font-mono text-sm">${formatValue(tokenPriceUsd)}</div>
-                      <div className="text-muted-foreground font-mono text-[11px]">
-                        {focusPerDesoLabel}: {formatRate(quotePerToken)}
-                      </div>
                     </td>
                     <td className="py-1 px-2 font-mono">${formatValue(orderValueUsd)}</td>
                     <td className="py-1 px-2 text-muted-foreground" title="CCv2 orderbook response does not include a timestamp.">
@@ -574,7 +572,7 @@ export default function Orders() {
                     const expanded = expandedPairKey === pairKey;
                     const sidePair = sideOrdersByPairData.map.get(pairKey);
                     const sellsDisplay = sidePair ? [...sidePair.lowest3Sells].reverse() : [];
-                    const buysDisplay = sidePair ? sortBuysBestFirst(sidePair.highest3Buys, quoteLabel) : [];
+                    const buysDisplay = sidePair ? sortBuysBestFirst(sidePair.highest3Buys) : [];
 
                     return (
                       <Fragment key={pairKey}>

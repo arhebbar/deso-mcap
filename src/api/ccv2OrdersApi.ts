@@ -224,7 +224,7 @@ export async function getPublicKeyFromUsername(username: string): Promise<string
   return pk;
 }
 
-/** Quote asset per 1 token: ASK uses Price; BID uses 1/Price (see interface comment). */
+/** Quote asset per 1 token: ASK uses Price; BID uses 1/Price (coins bought ÷ coins sold). */
 export function quotePerTokenForDisplay(o: CCv2Order): number {
   const p = Number(o.Price);
   if (!isFinite(p) || p <= 0) return 0;
@@ -232,16 +232,27 @@ export function quotePerTokenForDisplay(o: CCv2Order): number {
   return p;
 }
 
-/**
- * USD / column display: same as quotePerTokenForDisplay, except Focus **BIDs** where we use
- * 1 / quotePerTokenForDisplay (Focus per token for the pair).
- */
-export function quotePerTokenForUi(o: CCv2Order, quoteLabel: string): number {
-  const base = quotePerTokenForDisplay(o);
-  if (o.OperationType === 'BID' && quoteLabel === 'Focus') {
-    return base > 0 ? 1 / base : 0;
+/** Prefer parsed Quantity string when present (some responses only populate Quantity). */
+export function orderQuantityRaw(o: CCv2Order): number {
+  if (o.Quantity != null && String(o.Quantity).trim() !== '') {
+    const n = Number(o.Quantity);
+    if (isFinite(n)) return n;
   }
-  return base;
+  return o.QuantityToFill;
+}
+
+/**
+ * Token amount for UI: ASK = token qty from API.
+ * BID on token/Focus: node often reports quote (Focus) to spend; token qty ≈ quote × Price
+ * (Price = tokens bought per Focus sold).
+ */
+export function tokenQuantityForDisplay(o: CCv2Order, quoteLabel: string): number {
+  const q = orderQuantityRaw(o);
+  if (o.OperationType !== 'BID') return q;
+  if (quoteLabel !== 'Focus') return q;
+  const p = Number(o.Price);
+  if (!isFinite(p) || p <= 0) return q;
+  return q * p;
 }
 
 /** Best ASK = minimum Price (lowest ask). */
