@@ -14,6 +14,8 @@ import {
   getPublicKeyFromUsername,
   getBestSell,
   getBestBuy,
+  quotePerTokenForDisplay,
+  quotePerTokenForUi,
   type CCv2Order,
 } from '@/api/ccv2OrdersApi';
 import { MARKET_DATA } from '@/data/desoData';
@@ -51,6 +53,30 @@ function formatValue(value: number) {
   if (abs >= 1) return value.toFixed(4);
   if (abs >= 0.01) return value.toFixed(6);
   return value.toExponential(2);
+}
+
+/** Best bid first: DESO/USDC = max quote/token; Focus = min raw P (see quotePerTokenForUi). */
+function sortBuysBestFirst(buys: CCv2Order[], quoteLabel: string): CCv2Order[] {
+  return [...buys].sort((a, b) => {
+    const ua = quotePerTokenForUi(a, quoteLabel);
+    const ub = quotePerTokenForUi(b, quoteLabel);
+    if (quoteLabel === 'Focus') {
+      return ua - ub;
+    }
+    return ub - ua;
+  });
+}
+
+function askPriceColumnTitle(quoteLabel: string): string {
+  if (quoteLabel === 'Focus') return 'Ask Price ($/Focus)';
+  if (quoteLabel === 'USDC') return 'Ask Price ($/USDC)';
+  return 'Ask Price ($/DESO)';
+}
+
+function bidPriceColumnTitle(quoteLabel: string): string {
+  if (quoteLabel === 'Focus') return 'Bid Price ($/Focus)';
+  if (quoteLabel === 'USDC') return 'Bid Price ($/USDC)';
+  return 'Bid Price ($/DESO)';
 }
 
 function OrderRow({
@@ -321,18 +347,16 @@ export default function Orders() {
     for (const entry of displayOrders) {
       const book = orderBooksData.get(entry.pairKey) ?? [];
 
-      // We interpret "buy" and "sell" relative to the token side of the pair:
-      // - Buy orders: Buying token = tokenCreator
-      // - Sell orders: Selling token = tokenCreator
-      // DeSo API Price is "coins bought per coin sold".
+      // Buy/sell relative to the token: buyers have Buying = tokenCreator; sellers Selling = tokenCreator.
       const buyOrders = book.filter((o) => o.BuyingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
       const sellOrders = book.filter((o) => o.SellingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
 
-      // For both sides, API Price maps to quote-per-token for UI sorting/display.
-      const sortedBuys = [...buyOrders].sort((a, b) => Number(b.Price) - Number(a.Price));
-      const highest3Buys = sortedBuys.slice(0, 3);
+      // BIDs: rank by quotePerTokenForDisplay (1/Price); take top 3; display order refined in sortBuysBestFirst + quoteLabel.
+      const sortedBuysByQuote = [...buyOrders].sort(
+        (a, b) => quotePerTokenForDisplay(b) - quotePerTokenForDisplay(a)
+      );
+      const highest3Buys = sortedBuysByQuote.slice(0, 3);
 
-      // For sell orders, Price already represents quote-per-token.
       const sortedSells = [...sellOrders].sort((a, b) => Number(a.Price) - Number(b.Price));
       const lowest3Sells = sortedSells.slice(0, 3);
 
@@ -376,6 +400,7 @@ export default function Orders() {
     qtyLabel: string;
     priceLabel: string;
     sideType: 'buy' | 'sell';
+    /** USD per 1 unit of quote (DESO, Focus, USDC). */
     quoteUsdPrice: number;
     highlightMine: boolean;
   }) {
@@ -409,7 +434,7 @@ export default function Orders() {
                 const avatarSrc = partyMeta?.largeProfilePicUrl;
                 const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
 
-                const quotePerToken = Number(o.Price);
+                const quotePerToken = quotePerTokenForUi(o, quoteLabel);
                 const tokenQty = o.QuantityToFill;
 
                 const tokenPriceUsd = quotePerToken * quoteUsdPrice;
@@ -548,6 +573,8 @@ export default function Orders() {
                     const { order, pairKey, pairLabel, tokenUsername, quoteLabel, quoteUsdPrice } = entry;
                     const expanded = expandedPairKey === pairKey;
                     const sidePair = sideOrdersByPairData.map.get(pairKey);
+                    const sellsDisplay = sidePair ? [...sidePair.lowest3Sells].reverse() : [];
+                    const buysDisplay = sidePair ? sortBuysBestFirst(sidePair.highest3Buys, quoteLabel) : [];
 
                     return (
                       <Fragment key={pairKey}>
@@ -564,23 +591,23 @@ export default function Orders() {
                             <td colSpan={4} className="px-4 pb-4 pt-0">
                               <div className="space-y-4">
                                 <SideOrdersTable
-                                  orders={sidePair.lowest3Sells}
+                                  orders={sellsDisplay}
                                   title="Lowest 3 Sell Orders"
                                   quoteLabel={quoteLabel}
                                   sideLabel="Seller"
                                   qtyLabel="Ask Qty"
-                                  priceLabel="Ask Price"
+                                  priceLabel={askPriceColumnTitle(quoteLabel)}
                                   sideType="sell"
                                   quoteUsdPrice={quoteUsdPrice}
                                   highlightMine
                                 />
                                 <SideOrdersTable
-                                  orders={sidePair.highest3Buys}
-                                  title="Highest 3 Buy Orders"
+                                  orders={buysDisplay}
+                                  title="Highest 3 Buy Orders (best bids — highest quote per token)"
                                   quoteLabel={quoteLabel}
                                   sideLabel="Buyer"
                                   qtyLabel="Bid Qty"
-                                  priceLabel="Bid Ask Price"
+                                  priceLabel={bidPriceColumnTitle(quoteLabel)}
                                   sideType="buy"
                                   quoteUsdPrice={quoteUsdPrice}
                                   highlightMine

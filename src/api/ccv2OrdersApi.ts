@@ -9,7 +9,10 @@ export interface CCv2Order {
   TransactorPublicKeyBase58Check: string;
   BuyingDAOCoinCreatorPublicKeyBase58Check: string;
   SellingDAOCoinCreatorPublicKeyBase58Check: string;
-  /** Price = coins bought per coin sold (string from API). */
+  /**
+   * Raw limit price from the node (string). ASK: Price ≈ quote per token.
+   * BID: Price = token per quote → use quotePerTokenForDisplay() for USD/sorting.
+   */
   Price: string;
   ExchangeRateCoinsToSellPerCoinToBuy: number;
   /** Quantity from API (string). QuantityToFill is typically the parsed numeric value. */
@@ -221,7 +224,27 @@ export async function getPublicKeyFromUsername(username: string): Promise<string
   return pk;
 }
 
-/** For a token/DESO pair: lowest ASK = best sell, highest BID = best buy. */
+/** Quote asset per 1 token: ASK uses Price; BID uses 1/Price (see interface comment). */
+export function quotePerTokenForDisplay(o: CCv2Order): number {
+  const p = Number(o.Price);
+  if (!isFinite(p) || p <= 0) return 0;
+  if (o.OperationType === 'BID') return 1 / p;
+  return p;
+}
+
+/**
+ * USD / column display: same as quotePerTokenForDisplay, except Focus **BIDs** where we use
+ * 1 / quotePerTokenForDisplay (Focus per token for the pair).
+ */
+export function quotePerTokenForUi(o: CCv2Order, quoteLabel: string): number {
+  const base = quotePerTokenForDisplay(o);
+  if (o.OperationType === 'BID' && quoteLabel === 'Focus') {
+    return base > 0 ? 1 / base : 0;
+  }
+  return base;
+}
+
+/** Best ASK = minimum Price (lowest ask). */
 export function getBestSell(orders: CCv2Order[]): CCv2Order | null {
   const asks = orders.filter((o) => o.OperationType === 'ASK');
   if (asks.length === 0) return null;
@@ -232,12 +255,13 @@ export function getBestSell(orders: CCv2Order[]): CCv2Order | null {
   });
 }
 
+/** Best BID = highest quote per token (max of 1/Price among BIDs). */
 export function getBestBuy(orders: CCv2Order[]): CCv2Order | null {
   const bids = orders.filter((o) => o.OperationType === 'BID');
   if (bids.length === 0) return null;
   return bids.reduce((a, b) => {
-    const aPrice = Number(a.Price);
-    const bPrice = Number(b.Price);
-    return aPrice >= bPrice ? a : b;
+    const aQ = quotePerTokenForDisplay(a);
+    const bQ = quotePerTokenForDisplay(b);
+    return aQ >= bQ ? a : b;
   });
 }
