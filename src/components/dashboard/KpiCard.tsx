@@ -10,7 +10,7 @@ interface KpiCardProps {
 
 export default function KpiCard({ label, value, change, subtitle, status = 'neutral' }: KpiCardProps) {
   return (
-    <div className="kpi-card">
+    <div className="kpi-card group">
       <p className="kpi-label">{label}</p>
       <p className={`kpi-value mt-2 ${status === 'positive' ? 'status-positive' : status === 'negative' ? 'status-negative' : status === 'warning' ? 'status-warning' : 'text-foreground'}`}>
         {value}

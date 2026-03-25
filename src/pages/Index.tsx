@@ -81,11 +81,11 @@ const Index = () => {
   ].filter((d) => d.value > 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
-      <main className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-[1600px] mx-auto">
+      <main className="relative z-10 px-4 md:px-6 pt-6 pb-10 space-y-8 max-w-[1600px] mx-auto">
         {/* KPI Row - show cached/static values first, then refresh with live data */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-5">
           <KpiCard label="DESO Market Cap" value={formatUsd(marketCap)} subtitle={isLoading ? 'Updating…' : `$${marketData.desoPrice.toFixed(2)}/DESO`} />
           <KpiCard label="Float-Adjusted MCap" value={formatUsd(floatAdjustedMcap)} subtitle={isLoading ? 'Updating…' : `${formatPercent(freeFloat / marketData.desoTotalSupply)} float`} />
           <KpiCard label="BTC Treasury" value={formatUsd(btcTreasuryValue)} subtitle={isLoading ? 'Updating…' : `$${marketData.btcPrice.toLocaleString()}/BTC`} />
@@ -106,7 +106,7 @@ const Index = () => {
         <div className="glow-line" />
 
         {/* Charts Row: Supply Distribution | Assets by User Group | Capital Charts (1/3 each) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <SupplyPieChart
             data={supplyData}
             desoPrice={desoPrice}
@@ -131,10 +131,10 @@ const Index = () => {
         <TrendCharts />
 
         {/* DESO in Circulation – minimized by default; expand to drill down */}
-        <div className="border rounded-lg overflow-hidden bg-card">
+        <div className="panel-elevated overflow-hidden">
           <button
             type="button"
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+            className="w-full flex items-center justify-between p-4 md:p-5 text-left hover:bg-muted/30 transition-colors"
             onClick={() => setCirculationExpanded((e) => !e)}
           >
             <h3 className="section-title mb-0">DESO in Circulation</h3>
@@ -153,10 +153,10 @@ const Index = () => {
         <TreasuryAddressTable />
 
         {/* DESO locked in CCv1 – expand/collapse, cached; refresh only on explicit button */}
-        <div className="border rounded-lg overflow-hidden bg-card">
+        <div className="panel-elevated overflow-hidden">
           <button
             type="button"
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+            className="w-full flex items-center justify-between p-4 md:p-5 text-left hover:bg-muted/30 transition-colors"
             onClick={() => setCcv1Expanded((e) => !e)}
           >
             <h3 className="section-title mb-0">DESO locked in CCv1</h3>
@@ -186,8 +186,8 @@ const Index = () => {
         {/* Early Block Rewardees: first 1000 blocks (first week of March 2021) */}
         <EarlyBlockRewardeesSection />
 
-        <footer className="text-center py-4">
-          <p className="text-xs text-muted-foreground font-mono">
+        <footer className="text-center py-8 border-t border-border/40">
+          <p className="text-xs text-muted-foreground font-mono tracking-wide">
             {isLive ? 'Live prices · Refreshing every 60s' : 'Using cached data'} · Last updated{' '}
             {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString()}
           </p>

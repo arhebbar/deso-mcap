@@ -76,6 +76,11 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        glow: "0 0 40px -8px hsl(var(--primary) / 0.35)",
+        "glow-sm": "0 0 24px -6px hsl(var(--primary) / 0.25)",
+        card: "0 8px 32px -8px hsl(0 0% 0% / 0.4), 0 1px 0 hsl(0 0% 100% / 0.04) inset",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -89,11 +94,16 @@ export default {
           "0%, 100%": { opacity: "0.4" },
           "50%": { opacity: "1" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        shimmer: "shimmer 8s ease-in-out infinite",
       },
     },
   },

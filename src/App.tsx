@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Analytics from "./pages/Analytics";
 import UserProfile from "./pages/UserProfile";
 import Orders from "./pages/Orders";
+import DesoRevenue from "./pages/DesoRevenue";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ const router = createBrowserRouter(
     { path: "/", element: <Index /> },
     { path: "/analytics", element: <Analytics /> },
     { path: "/orders", element: <Orders /> },
+    { path: "/revenue", element: <DesoRevenue /> },
     { path: "/u/:username", element: <UserProfile /> },
     { path: "*", element: <NotFound /> },
   ],
@@ -36,9 +38,13 @@ const router = createBrowserRouter(
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <RouterProvider router={router} />
+      <div className="relative min-h-screen">
+        <div className="app-page-bg" aria-hidden />
+        <div className="app-page-bg-grid" aria-hidden />
+        <Toaster />
+        <Sonner />
+        <RouterProvider router={router} />
+      </div>
     </TooltipProvider>
   </QueryClientProvider>
 );

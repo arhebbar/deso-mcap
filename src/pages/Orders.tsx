@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +14,19 @@ import {
   getPublicKeyFromUsername,
   getBestSell,
   getBestBuy,
-  quotePerTokenForDisplay,
-  tokenQuantityForDisplay,
+  ORDER_BOOK_SIDE_DEPTH,
+  resolvePairOrientation,
+  filterBidsForTokenPair,
+  filterAsksForTokenPair,
+  canonicalPairKeyFromOrder,
+  normalizeDaoCoinCreatorPk,
+  orderBookSortKey,
+  orderBookRowDisplay,
   type CCv2Order,
 } from '@/api/ccv2OrdersApi';
 import { MARKET_DATA } from '@/data/desoData';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { useLiveData } from '@/hooks/useLiveData';
 
 const DEFAULT_USERNAME = 'Randhir';
 const ACTIVE_TOKEN_USERNAMES = new Set(
@@ -40,6 +48,56 @@ const ACTIVE_TOKEN_USERNAMES = new Set(
     'JohnJardin',
   ].map((v) => v.toLowerCase())
 );
+
+type PairSpec = { pairKey: string; tokenPk: string; quotePk: string };
+
+/** Active-token pairs first (fetch + display priority), then stable by pairKey. */
+function sortPairSpecsActiveFirst(specs: PairSpec[], usernameMap: Map<string, string>): PairSpec[] {
+  return [...specs].sort((a, b) => {
+    const aName = (usernameMap.get(a.tokenPk) ?? '').toLowerCase();
+    const bName = (usernameMap.get(b.tokenPk) ?? '').toLowerCase();
+    const aKey = aName === 'dusdc' ? 'dusdc_' : aName;
+    const bKey = bName === 'dusdc' ? 'dusdc_' : bName;
+    const activeA = ACTIVE_TOKEN_USERNAMES.has(aKey);
+    const activeB = ACTIVE_TOKEN_USERNAMES.has(bKey);
+    if (activeA !== activeB) return activeB ? 1 : -1;
+    return a.pairKey.localeCompare(b.pairKey);
+  });
+}
+
+/** True if this pair is an Active Token, or username not loaded yet (fetch in first wave). */
+function isActiveTokenPairSpec(spec: PairSpec, usernameMap: Map<string, string>): boolean {
+  const name = usernameMap.get(spec.tokenPk);
+  if (name === undefined) return true;
+  const key = name.toLowerCase();
+  const norm = key === 'dusdc' ? 'dusdc_' : key;
+  return ACTIVE_TOKEN_USERNAMES.has(norm);
+}
+
+type OrderRowEntry = {
+  order: CCv2Order;
+  pairKey: string;
+  pairLabel: string;
+  tokenUsername?: string;
+  tokenDisplayName: string;
+  tokenCreator: string;
+  quoteCreator: string;
+  quoteUsdPrice: number;
+  quoteLabel: string;
+};
+
+function sortOrderRowsActiveFirst(entries: OrderRowEntry[]): OrderRowEntry[] {
+  return [...entries].sort((a, b) => {
+    const rawA = (a.tokenUsername ?? a.tokenDisplayName ?? '').toLowerCase();
+    const rawB = (b.tokenUsername ?? b.tokenDisplayName ?? '').toLowerCase();
+    const keyA = rawA === 'dusdc' ? 'dusdc_' : rawA;
+    const keyB = rawB === 'dusdc' ? 'dusdc_' : rawB;
+    const activeA = ACTIVE_TOKEN_USERNAMES.has(keyA);
+    const activeB = ACTIVE_TOKEN_USERNAMES.has(keyB);
+    if (activeA !== activeB) return activeB ? 1 : -1;
+    return a.pairKey.localeCompare(b.pairKey);
+  });
+}
 
 function formatRate(rate: number) {
   return rate >= 0.01 ? rate.toFixed(4) : rate.toFixed(8);
@@ -63,21 +121,16 @@ function formatQty(q: number) {
   return q.toFixed(2);
 }
 
-/** Best bid first = highest quote per token (same metric for DESO / Focus / USDC). */
-function sortBuysBestFirst(buys: CCv2Order[]): CCv2Order[] {
-  return [...buys].sort((a, b) => quotePerTokenForDisplay(b) - quotePerTokenForDisplay(a));
-}
-
 function askPriceColumnTitle(quoteLabel: string): string {
-  if (quoteLabel === 'Focus') return 'Ask Price ($/Focus)';
-  if (quoteLabel === 'USDC') return 'Ask Price ($/USDC)';
-  return 'Ask Price ($/DESO)';
+  if (quoteLabel === 'Focus') return 'Ask price (USD / native)';
+  if (quoteLabel === 'USDC') return 'Ask price (US$ / token)';
+  return 'Ask price (USD / native)';
 }
 
 function bidPriceColumnTitle(quoteLabel: string): string {
-  if (quoteLabel === 'Focus') return 'Bid Price ($/Focus)';
-  if (quoteLabel === 'USDC') return 'Bid Price ($/USDC)';
-  return 'Bid Price ($/DESO)';
+  if (quoteLabel === 'Focus') return 'Bid price (USD / native)';
+  if (quoteLabel === 'USDC') return 'Bid price (US$ / token)';
+  return 'Bid price (USD / native)';
 }
 
 function OrderRow({
@@ -144,9 +197,10 @@ type OrderFilter = 'notAtTop' | 'all';
 export default function Orders() {
   const [username, setUsername] = useState(DEFAULT_USERNAME);
   const [filter, setFilter] = useState<OrderFilter>('notAtTop');
-  const [activeTokensOnly, setActiveTokensOnly] = useState(false);
+  const [activeTokensOnly, setActiveTokensOnly] = useState(true);
   const [expandedPairKey, setExpandedPairKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { isLive, lastUpdated } = useLiveData();
 
   const pkQuery = useQuery({
     queryKey: ['profile-pk', username],
@@ -163,38 +217,16 @@ export default function Orders() {
     retry: false,
   });
 
-  const { data: orderBooksData, isLoading: orderBooksLoading } = useQuery({
-    queryKey: ['ccv2-orderbooks', orders, transactorPk],
-    queryFn: async () => {
-      if (!orders?.length || !transactorPk) return new Map<string, CCv2Order[]>();
-      const pairs = new Set<string>();
-      for (const o of orders) {
-        const buying = o.BuyingDAOCoinCreatorPublicKeyBase58Check || '';
-        const selling = o.SellingDAOCoinCreatorPublicKeyBase58Check || '';
-        const key = [buying || 'DESO', selling || 'DESO'].sort().join('/');
-        pairs.add(key);
-      }
-      const map = new Map<string, CCv2Order[]>();
-      for (const pair of pairs) {
-        const [a, b] = pair.split('/');
-        const tokenPk = a === 'DESO' ? b : a;
-        const quotePk = a === 'DESO' ? '' : b;
-        const book = await fetchOrderBook(tokenPk, quotePk);
-        map.set(pair, book);
-      }
-      return map;
-    },
-    enabled: !!orders?.length && !!transactorPk,
-  });
-
   const tokenPks = orders
-    ? [...new Set(
-        orders.flatMap((o) => {
-          const b = o.BuyingDAOCoinCreatorPublicKeyBase58Check || '';
-          const s = o.SellingDAOCoinCreatorPublicKeyBase58Check || '';
-          return [b, s].filter((pk) => pk && pk !== 'DESO');
-        })
-      )]
+    ? [
+        ...new Set(
+          orders.flatMap((o) => {
+            const b = normalizeDaoCoinCreatorPk(o.BuyingDAOCoinCreatorPublicKeyBase58Check);
+            const s = normalizeDaoCoinCreatorPk(o.SellingDAOCoinCreatorPublicKeyBase58Check);
+            return [b, s].filter((pk) => pk && pk !== 'DESO');
+          })
+        ),
+      ]
     : [];
   const tokenPksKey = tokenPks.length > 0 ? [...tokenPks].sort().join(',') : '';
   const { data: usernameMap = new Map<string, string>() } = useQuery({
@@ -202,6 +234,70 @@ export default function Orders() {
     queryFn: () => fetchUsernamesForPks(tokenPks),
     enabled: tokenPks.length > 0,
   });
+
+  const pairSpecs = useMemo((): PairSpec[] => {
+    if (!orders?.length || !transactorPk) return [];
+    const pairs = new Set<string>();
+    for (const o of orders) {
+      pairs.add(canonicalPairKeyFromOrder(o));
+    }
+    const specs: PairSpec[] = [];
+    for (const pair of pairs) {
+      const oriented = resolvePairOrientation(pair, usernameMap);
+      if (!oriented) continue;
+      specs.push({ pairKey: pair, tokenPk: oriented.tokenPk, quotePk: oriented.quotePk });
+    }
+    return sortPairSpecsActiveFirst(specs, usernameMap);
+  }, [orders, transactorPk, usernameMap]);
+
+  const { activePairSpecs, restPairSpecs } = useMemo(() => {
+    const active: PairSpec[] = [];
+    const rest: PairSpec[] = [];
+    for (const s of pairSpecs) {
+      if (isActiveTokenPairSpec(s, usernameMap)) active.push(s);
+      else rest.push(s);
+    }
+    return { activePairSpecs: active, restPairSpecs: rest };
+  }, [pairSpecs, usernameMap]);
+
+  const activeOrderBookQueries = useQueries({
+    queries: activePairSpecs.map((spec) => ({
+      queryKey: ['ccv2-orderbook', spec.pairKey, spec.tokenPk, spec.quotePk] as const,
+      queryFn: () => fetchOrderBook(spec.tokenPk, spec.quotePk),
+      enabled: !!transactorPk && activePairSpecs.length > 0,
+      staleTime: 30_000,
+    })),
+  });
+
+  const activeBooksSettled =
+    activePairSpecs.length === 0 ||
+    activeOrderBookQueries.every((q) => q.isSuccess || q.isError);
+
+  const restOrderBookQueries = useQueries({
+    queries: restPairSpecs.map((spec) => ({
+      queryKey: ['ccv2-orderbook', spec.pairKey, spec.tokenPk, spec.quotePk] as const,
+      queryFn: () => fetchOrderBook(spec.tokenPk, spec.quotePk),
+      enabled: !!transactorPk && restPairSpecs.length > 0 && activeBooksSettled,
+      staleTime: 30_000,
+    })),
+  });
+
+  const orderBooksData = useMemo(() => {
+    const m = new Map<string, CCv2Order[]>();
+    activePairSpecs.forEach((spec, i) => {
+      const data = activeOrderBookQueries[i]?.data;
+      if (data !== undefined) m.set(spec.pairKey, data);
+    });
+    restPairSpecs.forEach((spec, i) => {
+      const data = restOrderBookQueries[i]?.data;
+      if (data !== undefined) m.set(spec.pairKey, data);
+    });
+    return m;
+  }, [activePairSpecs, activeOrderBookQueries, restPairSpecs, restOrderBookQueries]);
+
+  const orderBooksStillLoading =
+    activeOrderBookQueries.some((q) => q.isPending || q.isFetching) ||
+    restOrderBookQueries.some((q) => q.isPending || q.isFetching);
 
   const atTopOrders: {
     order: CCv2Order;
@@ -225,12 +321,23 @@ export default function Orders() {
     quoteUsdPrice: number;
     quoteLabel: string;
   }[] = [];
-  if (orders && orderBooksData && transactorPk) {
+  const pendingOrders: {
+    order: CCv2Order;
+    pairKey: string;
+    pairLabel: string;
+    tokenUsername?: string;
+    tokenDisplayName: string;
+    tokenCreator: string;
+    quoteCreator: string;
+    quoteUsdPrice: number;
+    quoteLabel: string;
+  }[] = [];
+  if (orders && transactorPk) {
     for (const order of orders) {
-      const buying = order.BuyingDAOCoinCreatorPublicKeyBase58Check || '';
-      const selling = order.SellingDAOCoinCreatorPublicKeyBase58Check || '';
-      const pairKey = [buying || 'DESO', selling || 'DESO'].sort().join('/');
-      const book = orderBooksData.get(pairKey) ?? [];
+      const pairKey = canonicalPairKeyFromOrder(order);
+      const book = orderBooksData.get(pairKey);
+      const bookLoaded = book !== undefined;
+      const bookArr = book ?? [];
       const [sideA, sideB] = pairKey.split('/');
       const nameA = sideA === 'DESO' ? 'DESO' : (usernameMap.get(sideA) ?? sideA);
       const nameB = sideB === 'DESO' ? 'DESO' : (usernameMap.get(sideB) ?? sideB);
@@ -268,9 +375,6 @@ export default function Orders() {
       const tokenDisplayName = tokenPk ? tokenUsername ?? tokenPk : '';
       const pairLabel = tokenDisplayName ? `${tokenDisplayName}/${quoteLabel}` : '';
       const isAsk = order.OperationType === 'ASK';
-      const isAtTop = isAsk
-        ? getBestSell(book)?.TransactorPublicKeyBase58Check === transactorPk
-        : getBestBuy(book)?.TransactorPublicKeyBase58Check === transactorPk;
       const entry = {
         order,
         pairKey,
@@ -282,35 +386,31 @@ export default function Orders() {
         quoteUsdPrice,
         quoteLabel,
       };
+      if (!bookLoaded) {
+        pendingOrders.push(entry);
+        continue;
+      }
+      const pairAsks = filterAsksForTokenPair(bookArr, pairKey, tokenPk);
+      const pairBids = filterBidsForTokenPair(bookArr, pairKey, tokenPk);
+      const isAtTop = isAsk
+        ? getBestSell(pairAsks, quoteLabel)?.TransactorPublicKeyBase58Check === transactorPk
+        : getBestBuy(pairBids, quoteLabel)?.TransactorPublicKeyBase58Check === transactorPk;
       if (isAtTop) atTopOrders.push(entry);
       else notAtTopOrders.push(entry);
     }
   }
 
-  function bestOrderForPair(entries: Array<{
-    order: CCv2Order;
-    pairKey: string;
-    pairLabel: string;
-    tokenUsername?: string;
-    tokenDisplayName: string;
-  }>) {
-    // "Best" means: for ASKs the lowest rate wins (best sell), for BID the highest rate wins (best buy).
-    // If both ASK and BID exist for the same pair, we use a simple normalized metric to pick one row.
+  function bestOrderForPair(entries: OrderRowEntry[]): OrderRowEntry {
+    const ql = entries[0]?.quoteLabel ?? 'DESO';
     return entries.reduce((best, cur) => {
-      const bestMetric =
-        best.order.OperationType === 'ASK'
-          ? -best.order.ExchangeRateCoinsToSellPerCoinToBuy
-          : best.order.ExchangeRateCoinsToSellPerCoinToBuy;
-      const curMetric =
-        cur.order.OperationType === 'ASK'
-          ? -cur.order.ExchangeRateCoinsToSellPerCoinToBuy
-          : cur.order.ExchangeRateCoinsToSellPerCoinToBuy;
-      return curMetric > bestMetric ? cur : best;
+      const metric = (o: CCv2Order) =>
+        o.OperationType === 'ASK' ? -orderBookSortKey(o, ql) : orderBookSortKey(o, ql);
+      return metric(cur.order) > metric(best.order) ? cur : best;
     });
   }
 
   const displayOrdersAllPairs = (() => {
-    const all = [...atTopOrders, ...notAtTopOrders];
+    const all = [...pendingOrders, ...atTopOrders, ...notAtTopOrders];
     const byPair = new Map<string, typeof all>();
     for (const e of all) {
       const arr = byPair.get(e.pairKey) ?? [];
@@ -330,42 +430,68 @@ export default function Orders() {
     return Array.from(byPair.values()).map((entries) => bestOrderForPair(entries));
   })();
 
-  const displayOrdersBase = filter === 'notAtTop' ? displayOrdersNotAtTop : displayOrdersAllPairs;
-  const displayOrders = activeTokensOnly
-    ? displayOrdersBase.filter(({ tokenUsername, tokenDisplayName }) => {
-        const rawKey = (tokenUsername ?? tokenDisplayName ?? '').toLowerCase();
-        const key = rawKey === 'dusdc' ? 'dusdc_' : rawKey;
-        return ACTIVE_TOKEN_USERNAMES.has(key);
-      })
-    : displayOrdersBase;
+  /** Open orders by pair — used so "Not at the Top" never lists a pair with zero open orders from @username. */
+  const pairKeysWithOpenOrders = new Set((orders ?? []).map(canonicalPairKeyFromOrder));
+
+  const displayOrdersBase =
+    filter === 'notAtTop'
+      ? displayOrdersNotAtTop.filter((entry) => pairKeysWithOpenOrders.has(entry.pairKey))
+      : displayOrdersAllPairs;
+  const displayOrders = sortOrderRowsActiveFirst(
+    activeTokensOnly
+      ? displayOrdersBase.filter(({ tokenUsername, tokenDisplayName }) => {
+          const rawKey = (tokenUsername ?? tokenDisplayName ?? '').toLowerCase();
+          const key = rawKey === 'dusdc' ? 'dusdc_' : rawKey;
+          return ACTIVE_TOKEN_USERNAMES.has(key);
+        })
+      : displayOrdersBase
+  );
 
   const sideOrdersByPairData = useMemo(() => {
-    const map = new Map<string, { highest3Buys: CCv2Order[]; lowest3Sells: CCv2Order[] }>();
+    const map = new Map<
+      string,
+      {
+        rawBookCount: number;
+        bidCount: number;
+        askCount: number;
+        topBids: CCv2Order[];
+        topAsks: CCv2Order[];
+      }
+    >();
     const partyPks = new Set<string>();
 
-    if (!orderBooksData || !displayOrders?.length) return { map, partyPks };
+    if (!displayOrders?.length) return { map, partyPks };
 
     for (const entry of displayOrders) {
-      const book = orderBooksData.get(entry.pairKey) ?? [];
+      if (!orderBooksData.has(entry.pairKey)) continue;
+      const book = orderBooksData.get(entry.pairKey)!;
 
-      // Buy/sell relative to the token: buyers have Buying = tokenCreator; sellers Selling = tokenCreator.
-      const buyOrders = book.filter((o) => o.BuyingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
-      const sellOrders = book.filter((o) => o.SellingDAOCoinCreatorPublicKeyBase58Check === entry.tokenCreator);
+      // Full book → filter by OperationType + both legs (token + quote); see ccv2OrdersApi filter*ForTokenPair.
+      const bidsAll = filterBidsForTokenPair(book, entry.pairKey, entry.tokenCreator);
+      const asksAll = filterAsksForTokenPair(book, entry.pairKey, entry.tokenCreator);
 
-      // BIDs: rank by quotePerTokenForDisplay (1/Price); take top 3; display order refined in sortBuysBestFirst + quoteLabel.
-      const sortedBuysByQuote = [...buyOrders].sort(
-        (a, b) => quotePerTokenForDisplay(b) - quotePerTokenForDisplay(a)
+      const ql = entry.quoteLabel;
+      const sortedBids = [...bidsAll].sort(
+        (a, b) => orderBookSortKey(b, ql) - orderBookSortKey(a, ql)
       );
-      const highest3Buys = sortedBuysByQuote.slice(0, 3);
+      const sortedAsks = [...asksAll].sort(
+        (a, b) => orderBookSortKey(a, ql) - orderBookSortKey(b, ql)
+      );
 
-      const sortedSells = [...sellOrders].sort((a, b) => Number(a.Price) - Number(b.Price));
-      const lowest3Sells = sortedSells.slice(0, 3);
+      const topBids = sortedBids.slice(0, ORDER_BOOK_SIDE_DEPTH);
+      const topAsks = sortedAsks.slice(0, ORDER_BOOK_SIDE_DEPTH);
 
-      for (const o of [...highest3Buys, ...lowest3Sells]) {
+      for (const o of [...topBids, ...topAsks]) {
         if (o.TransactorPublicKeyBase58Check) partyPks.add(o.TransactorPublicKeyBase58Check);
       }
 
-      map.set(entry.pairKey, { highest3Buys, lowest3Sells });
+      map.set(entry.pairKey, {
+        rawBookCount: book.length,
+        bidCount: bidsAll.length,
+        askCount: asksAll.length,
+        topBids,
+        topAsks,
+      });
     }
 
     return { map, partyPks };
@@ -416,7 +542,7 @@ export default function Orders() {
               </th>
               <th className="py-1 px-2">{qtyLabel}</th>
               <th className="py-1 px-2">{priceLabel}</th>
-              <th className="py-1 px-2">Value of the Order</th>
+              <th className="py-1 px-2">Total (USD)</th>
               <th className="py-1 px-2">Order Date</th>
             </tr>
           </thead>
@@ -435,12 +561,25 @@ export default function Orders() {
                 const avatarSrc = partyMeta?.largeProfilePicUrl;
                 const isMine = highlightMine && !!transactorPk && partyPk === transactorPk;
 
-                // USD/token = quote per token × $ per 1 unit of quote (DESO / Focus / USDC).
-                const quotePerToken = quotePerTokenForDisplay(o);
-                const tokenQty = tokenQuantityForDisplay(o, quoteLabel);
+                /** Price / Qty / Total from {@link orderBookRowDisplay} — same math as sort ({@link orderBookSortKey}). */
+                const ql = quoteLabel as 'DESO' | 'USDC' | 'Focus';
+                const row = orderBookRowDisplay(o, ql, sideType === 'buy' ? 'bid' : 'ask');
+                const tokenQty = row.tokenQuantity;
+                const priceUsd = row.quotePerToken * quoteUsdPrice;
+                const totalUsd = row.totalQuote * quoteUsdPrice;
 
-                const tokenPriceUsd = quotePerToken * quoteUsdPrice;
-                const orderValueUsd = tokenQty * tokenPriceUsd;
+                let priceNativeLine: string | null = null;
+                let totalNativeLine: string | null = null;
+                if (quoteLabel === 'Focus') {
+                  priceNativeLine = `${formatValue(row.quotePerToken)} Focus / token`;
+                  totalNativeLine = `${formatValue(row.totalQuote)} Focus`;
+                } else if (quoteLabel === 'DESO') {
+                  priceNativeLine = `${formatValue(row.quotePerToken)} DESO / token`;
+                  totalNativeLine = `${formatValue(row.totalQuote)} DESO`;
+                } else if (quoteLabel === 'USDC') {
+                  priceNativeLine = `${formatValue(row.quotePerToken)} USDC / token`;
+                  totalNativeLine = `${formatValue(row.totalQuote)} USDC`;
+                }
 
                 const initials = partyName.slice(0, 1).toUpperCase();
 
@@ -453,11 +592,21 @@ export default function Orders() {
                       </Avatar>
                     </td>
                     <td className="py-1 px-2 font-medium">{partyName}</td>
-                    <td className="py-1 px-2 font-mono">{formatQty(tokenQty)}</td>
-                    <td className="py-1 px-2">
-                      <div className="font-mono text-sm">${formatValue(tokenPriceUsd)}</div>
+                    <td className="py-1 px-2 font-mono" title="# tokens = Total (quote) / Price (quote per token)">
+                      {formatQty(tokenQty)}
                     </td>
-                    <td className="py-1 px-2 font-mono">${formatValue(orderValueUsd)}</td>
+                    <td className="py-1 px-2">
+                      <div className="font-mono text-sm">${formatValue(priceUsd)}</div>
+                      {priceNativeLine && (
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{priceNativeLine}</div>
+                      )}
+                    </td>
+                    <td className="py-1 px-2">
+                      <div className="font-mono">${formatValue(totalUsd)}</div>
+                      {totalNativeLine && (
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{totalNativeLine}</div>
+                      )}
+                    </td>
                     <td className="py-1 px-2 text-muted-foreground" title="CCv2 orderbook response does not include a timestamp.">
                       —
                     </td>
@@ -472,16 +621,10 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-        </Link>
-
-        <Card>
+    <div className="min-h-screen">
+      <DashboardHeader isLive={isLive} lastUpdated={lastUpdated} />
+      <main className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6 pb-10">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm shadow-card">
           <CardHeader>
             <CardTitle>CCv2 Limit Orders</CardTitle>
             <CardDescription>
@@ -505,7 +648,7 @@ export default function Orders() {
                 onClick={() => {
                   queryClient.invalidateQueries({ queryKey: ['profile-pk', username] });
                   queryClient.invalidateQueries({ queryKey: ['ccv2-orders'] });
-                  queryClient.invalidateQueries({ queryKey: ['ccv2-orderbooks'] });
+                  queryClient.invalidateQueries({ queryKey: ['ccv2-orderbook'] });
                   queryClient.invalidateQueries({ queryKey: ['ccv2-token-usernames'] });
                 }}
               >
@@ -539,23 +682,34 @@ export default function Orders() {
             {(pkQuery.isLoading && !username.startsWith('BC1Y')) && (
               <p className="text-sm text-muted-foreground">Looking up @{username}…</p>
             )}
-            {(ordersLoading || orderBooksLoading) && !pkQuery.isError && !ordersError && (
+            {ordersLoading && !pkQuery.isError && !ordersError && (
               <p className="text-sm text-muted-foreground">Loading orders…</p>
+            )}
+            {orders && orders.length > 0 && !ordersLoading && orderBooksStillLoading && (
+              <p className="text-sm text-muted-foreground">Loading order books (pairs fill in as they load)…</p>
             )}
             {orders && orders.length === 0 && !ordersLoading && !ordersError && (
               <p className="text-sm text-muted-foreground">No open orders for @{username}.</p>
             )}
-            {orders && orders.length > 0 && displayOrders.length === 0 && !ordersLoading && !orderBooksLoading && (
-              <p className="text-sm text-muted-foreground">
-                {filter === 'notAtTop'
-                  ? activeTokensOnly
-                    ? `No not-at-top orders found for @${username} in Active Tokens.`
-                    : `All of @${username}'s orders are at the top of the book.`
-                  : activeTokensOnly
-                    ? `No orders found for @${username} in Active Tokens.`
-                    : `No orders found for @${username}.`}
-              </p>
-            )}
+            {orders &&
+              orders.length > 0 &&
+              displayOrders.length === 0 &&
+              !ordersLoading &&
+              (filter === 'notAtTop' && orderBooksStillLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading order books to determine &quot;not at top&quot;…
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {filter === 'notAtTop'
+                    ? activeTokensOnly
+                      ? `No not-at-top orders found for @${username} in Active Tokens.`
+                      : `All of @${username}'s orders are at the top of the book.`
+                    : activeTokensOnly
+                      ? `No orders found for @${username} in Active Tokens.`
+                      : `No orders found for @${username}.`}
+                </p>
+              ))}
             {displayOrders.length > 0 && (
               <table className="w-full text-left">
                 <thead>
@@ -568,11 +722,46 @@ export default function Orders() {
                 </thead>
                 <tbody>
                   {displayOrders.map((entry) => {
-                    const { order, pairKey, pairLabel, tokenUsername, quoteLabel, quoteUsdPrice } = entry;
+                    const { order, pairKey, pairLabel, tokenUsername, quoteLabel, quoteUsdPrice, tokenCreator } =
+                      entry;
                     const expanded = expandedPairKey === pairKey;
                     const sidePair = sideOrdersByPairData.map.get(pairKey);
-                    const sellsDisplay = sidePair ? [...sidePair.lowest3Sells].reverse() : [];
-                    const buysDisplay = sidePair ? sortBuysBestFirst(sidePair.highest3Buys) : [];
+                    /** Asks: sorted ascending by askNativePricePerToken (lowest/best first); slice(0,N) = N best asks. */
+                    const sellsDisplay = sidePair ? sidePair.topAsks : [];
+                    const buysDisplay = sidePair ? sidePair.topBids : [];
+
+                    const orderBookDebugJson = sidePair
+                      ? JSON.stringify(
+                          {
+                            source: 'get-dao-coin-limit-orders → full Orders[], then filterBids/AsksForTokenPair → sort → top N',
+                            semantics: {
+                              buy:
+                                'BID + Buying=token + Selling=quote (DESO normalized via normalizeDaoCoinCreatorPk)',
+                              sell:
+                                'ASK + Selling=token + Buying=quote',
+                              sort: `bids: highest orderBookSortKey first; asks: lowest first; N=${ORDER_BOOK_SIDE_DEPTH}`,
+                            },
+                            context: {
+                              pairKey,
+                              pairLabel,
+                              tokenCreator,
+                              quoteLabel,
+                              quoteUsdPrice,
+                            },
+                            counts: {
+                              rawBook: sidePair.rawBookCount,
+                              bidsForToken: sidePair.bidCount,
+                              asksForToken: sidePair.askCount,
+                            },
+                            displaySlices: {
+                              topBids: sidePair.topBids,
+                              topAsks: sidePair.topAsks,
+                            },
+                          },
+                          null,
+                          2
+                        )
+                      : '';
 
                     return (
                       <Fragment key={pairKey}>
@@ -584,16 +773,30 @@ export default function Orders() {
                           expanded={expanded}
                           onToggle={toggleExpandedPair}
                         />
-                        {expanded && sidePair && (
+                        {expanded && !orderBooksData.has(pairKey) && (
+                          <tr>
+                            <td colSpan={4} className="px-4 pb-4 pt-0 text-sm text-muted-foreground">
+                              Loading order book…
+                            </td>
+                          </tr>
+                        )}
+                        {expanded && orderBooksData.has(pairKey) && sidePair && (
                           <tr>
                             <td colSpan={4} className="px-4 pb-4 pt-0">
                               <div className="space-y-4">
+                                {sidePair && (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Order book: {sidePair.rawBookCount} raw orders · {sidePair.bidCount} bids (buy
+                                    token) · {sidePair.askCount} asks (sell token). Showing top {ORDER_BOOK_SIDE_DEPTH}{' '}
+                                    per side after sort.
+                                  </p>
+                                )}
                                 <SideOrdersTable
                                   orders={sellsDisplay}
-                                  title="Lowest 3 Sell Orders"
+                                  title={`Top ${ORDER_BOOK_SIDE_DEPTH} asks (sell ${tokenUsername ?? 'token'} — lowest price first)`}
                                   quoteLabel={quoteLabel}
                                   sideLabel="Seller"
-                                  qtyLabel="Ask Qty"
+                                  qtyLabel="# Tokens"
                                   priceLabel={askPriceColumnTitle(quoteLabel)}
                                   sideType="sell"
                                   quoteUsdPrice={quoteUsdPrice}
@@ -601,15 +804,28 @@ export default function Orders() {
                                 />
                                 <SideOrdersTable
                                   orders={buysDisplay}
-                                  title="Highest 3 Buy Orders (best bids — highest quote per token)"
+                                  title={`Top ${ORDER_BOOK_SIDE_DEPTH} bids (buy ${tokenUsername ?? 'token'} — highest price first)`}
                                   quoteLabel={quoteLabel}
                                   sideLabel="Buyer"
-                                  qtyLabel="Bid Qty"
+                                  qtyLabel="# Tokens"
                                   priceLabel={bidPriceColumnTitle(quoteLabel)}
                                   sideType="buy"
                                   quoteUsdPrice={quoteUsdPrice}
                                   highlightMine
                                 />
+                                <details className="rounded-md border border-border bg-muted/40 p-3">
+                                  <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                                    Debug: raw order JSON (API)
+                                  </summary>
+                                  <p className="mt-2 mb-2 text-[11px] text-muted-foreground">
+                                    From <code className="rounded bg-muted px-1">get-dao-coin-limit-orders</code> —
+                                    compare with your node response. Includes raw top/bottom slices and the arrays
+                                    used for the tables above.
+                                  </p>
+                                  <pre className="max-h-[min(24rem,50vh)] overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-foreground">
+                                    {orderBookDebugJson}
+                                  </pre>
+                                </details>
                               </div>
                             </td>
                           </tr>
@@ -622,7 +838,14 @@ export default function Orders() {
             )}
           </CardContent>
         </Card>
-      </div>
+
+        <footer className="text-center pt-4 border-t border-border/40">
+          <p className="text-xs text-muted-foreground font-mono tracking-wide">
+            {isLive ? 'Live data' : 'Cached'} · Last updated{' '}
+            {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString()}
+          </p>
+        </footer>
+      </main>
     </div>
   );
 }
