@@ -15,50 +15,63 @@ export interface LivePrices {
   solPrice: number;
 }
 
-const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : '/api/coingecko';
+// CoinGecko allows browser CORS; the Vercel proxy gets 403, so call it directly in prod.
+const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : 'https://api.coingecko.com/api/v3';
+const DESO_NODE = import.meta.env.DEV ? '/deso-api' : '/api/deso';
+
+interface DesoExchangeRate {
+  USDCentsPerDeSoExchangeRate?: number;
+  USDCentsPerBitcoinExchangeRate?: number;
+  USDCentsPerETHExchangeRate?: number;
+}
+
+async function fetchCoinGecko(): Promise<Partial<LivePrices>> {
+  try {
+    const res = await fetch(
+      `${COINGECKO_BASE}/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return {};
+    const data = CoinGeckoPricesSchema.partial().parse(await res.json());
+    return {
+      desoPrice: data['decentralized-social']?.usd ?? data.decentralized_social?.usd,
+      btcPrice: data.bitcoin?.usd,
+      ethPrice: data.ethereum?.usd,
+      solPrice: data.solana?.usd,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function fetchDesoNodeRates(): Promise<Partial<LivePrices>> {
+  try {
+    // get-exchange-rate is GET-only on node.deso.org (POST returns 404)
+    const res = await fetch(`${DESO_NODE}/get-exchange-rate`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return {};
+    const d = (await res.json()) as DesoExchangeRate;
+    const cents = (v?: number) => (v && v > 0 ? v / 100 : undefined);
+    return {
+      desoPrice: cents(d.USDCentsPerDeSoExchangeRate),
+      btcPrice: cents(d.USDCentsPerBitcoinExchangeRate),
+      ethPrice: cents(d.USDCentsPerETHExchangeRate),
+    };
+  } catch {
+    return {};
+  }
+}
 
 export async function fetchLivePrices(): Promise<LivePrices> {
-  // In production, skip CoinGecko (proxy often returns 403). Use CryptoCompare + DeSo first.
-  const useCoinGeckoFirst = import.meta.env.DEV;
-  if (useCoinGeckoFirst) {
-    try {
-      const res = await fetch(
-        `${COINGECKO_BASE}/simple/price?ids=bitcoin,ethereum,solana,decentralized-social&vs_currencies=usd`,
-        { headers: { Accept: 'application/json' } }
-      );
-      if (res.ok) {
-        const raw = await res.json();
-        const data = CoinGeckoPricesSchema.parse(raw);
-        return {
-          desoPrice: data['decentralized-social']?.usd ?? data.decentralized_social?.usd ?? 0,
-          btcPrice: data.bitcoin.usd,
-          ethPrice: data.ethereum.usd,
-          solPrice: data.solana.usd,
-        };
-      }
-    } catch {
-      // Fall through to CryptoCompare
-    }
-  }
-
-  // Primary (prod) or fallback: CryptoCompare + DeSo node
-  const ccBase = import.meta.env.DEV ? '/cryptocompare' : '/api/cryptocompare';
-  const desoUrl = import.meta.env.DEV ? '/deso-api' : '/api/deso';
-
-  const [ccRes, ethRes, solRes, desoRes] = await Promise.all([
-    fetch(ccBase + '/data/price?fsym=BTC&tsyms=USD,ETH,SOL&extraParams=deso-marketcap', { headers: { Accept: 'application/json' } }),
-    fetch(ccBase + '/data/price?fsym=ETH&tsyms=USD&extraParams=deso-marketcap', { headers: { Accept: 'application/json' } }),
-    fetch(ccBase + '/data/price?fsym=SOL&tsyms=USD&extraParams=deso-marketcap', { headers: { Accept: 'application/json' } }),
-    fetch(desoUrl + '/get-exchange-rate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }),
-  ]);
-
-  if (!ccRes.ok) throw new Error('Failed to fetch live prices');
-  const cc = (await ccRes.json()) as { USD?: number };
-  const btcPrice = cc.USD ?? 0;
-  const ethPrice = ethRes.ok ? ((await ethRes.json()) as { USD?: number }).USD ?? 0 : 0;
-  const solPrice = solRes.ok ? ((await solRes.json()) as { USD?: number }).USD ?? 0 : 0;
-  const desoJson = desoRes.ok ? (await desoRes.json()) as { USDCentsPerDeSoExchangeRate?: number } : null;
-  const desoPrice = desoJson ? (desoJson.USDCentsPerDeSoExchangeRate ?? 0) / 100 : 0;
-
-  return { desoPrice, btcPrice, ethPrice, solPrice };
+  // DeSo node is the source of truth for DESO; CoinGecko fills SOL and backs up BTC/ETH.
+  // (CryptoCompare now requires an API key and returns 401.)
+  const [deso, cg] = await Promise.all([fetchDesoNodeRates(), fetchCoinGecko()]);
+  const desoPrice = deso.desoPrice ?? cg.desoPrice ?? 0;
+  const btcPrice = deso.btcPrice ?? cg.btcPrice ?? 0;
+  if (!desoPrice && !btcPrice) throw new Error('Failed to fetch live prices');
+  return {
+    desoPrice,
+    btcPrice,
+    ethPrice: cg.ethPrice ?? deso.ethPrice ?? 0,
+    solPrice: cg.solPrice ?? 0,
+  };
 }

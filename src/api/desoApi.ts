@@ -16,9 +16,7 @@ export interface DesoNodeData {
 
 export async function fetchDesoExchangeRate(): Promise<DesoNodeData> {
   const res = await fetch(`${DESO_NODE}/get-exchange-rate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
+    headers: { Accept: 'application/json' },
   });
 
   if (!res.ok) {
