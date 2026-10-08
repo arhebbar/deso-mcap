@@ -61,6 +61,8 @@ function buildDashboardData(
         btcPrice: prices.btcPrice > 0 ? prices.btcPrice : MARKET_DATA.btcPrice,
         ethPrice: prices.ethPrice > 0 ? prices.ethPrice : MARKET_DATA.ethPrice,
         solPrice: prices.solPrice > 0 ? prices.solPrice : MARKET_DATA.solPrice,
+        focusPrice: prices.focusPrice > 0 ? prices.focusPrice : MARKET_DATA.focusPrice,
+        openfundPrice: prices.openfundPrice > 0 ? prices.openfundPrice : MARKET_DATA.openfundPrice,
       }
     : MARKET_DATA;
 

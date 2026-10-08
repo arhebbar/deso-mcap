@@ -23,7 +23,7 @@ describe('Cache fallbacks – price cache', () => {
   });
 
   it('setPriceCache then getPriceCache returns same data', () => {
-    const data = { desoPrice: 5.9, btcPrice: 97000, ethPrice: 3500, solPrice: 220 };
+    const data = { desoPrice: 5.9, btcPrice: 97000, ethPrice: 3500, solPrice: 220, focusPrice: 0.0001, openfundPrice: 0.02 };
     setPriceCache(data);
     expect(getPriceCache()).toEqual(data);
   });

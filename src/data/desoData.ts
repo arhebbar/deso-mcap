@@ -33,14 +33,15 @@ export interface MarketData {
 }
 
 export const MARKET_DATA: MarketData = {
-  desoPrice: 5.78,
+  // Fallbacks only, used when live prices fail (last checked 2026-10-08).
+  desoPrice: 1.46,
   desoTotalSupply: 12_200_000,
   desoStaked: 5_730_000,
-  btcPrice: 100_000, // Fallback when live API fails; live uses CoinGecko
-  ethPrice: 2_640,
-  solPrice: 196,
-  focusPrice: 0.00034,
-  openfundPrice: 0.087,
+  btcPrice: 83_000,
+  ethPrice: 2_570,
+  solPrice: 115,
+  focusPrice: 0.000086, // DESO order-book mid
+  openfundPrice: 0.023,
 };
 
 export const FOUNDATION_WALLETS: WalletData[] = [

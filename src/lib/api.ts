@@ -95,8 +95,8 @@ export function useAssetPrices() {
         btc: query.data.btcPrice,
         eth: query.data.ethPrice,
         sol: query.data.solPrice,
-        focus: MARKET_DATA.focusPrice,
-        openfund: MARKET_DATA.openfundPrice,
+        focus: query.data.focusPrice > 0 ? query.data.focusPrice : MARKET_DATA.focusPrice,
+        openfund: query.data.openfundPrice > 0 ? query.data.openfundPrice : MARKET_DATA.openfundPrice,
       }
     : {
         deso: MARKET_DATA.desoPrice,

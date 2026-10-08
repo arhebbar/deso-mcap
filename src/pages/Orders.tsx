@@ -24,7 +24,6 @@ import {
   orderBookRowDisplay,
   type CCv2Order,
 } from '@/api/ccv2OrdersApi';
-import { MARKET_DATA } from '@/data/desoData';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { useLiveData } from '@/hooks/useLiveData';
 
@@ -200,7 +199,7 @@ export default function Orders() {
   const [activeTokensOnly, setActiveTokensOnly] = useState(true);
   const [expandedPairKey, setExpandedPairKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const { isLive, lastUpdated } = useLiveData();
+  const { isLive, lastUpdated, marketData } = useLiveData();
 
   const pkQuery = useQuery({
     queryKey: ['profile-pk', username],
@@ -354,12 +353,12 @@ export default function Orders() {
       if (sideA === 'DESO' || sideB === 'DESO') {
         quoteLabel = 'DESO';
         quoteCreator = 'DESO';
-        quoteUsdPrice = MARKET_DATA.desoPrice;
+        quoteUsdPrice = marketData.desoPrice;
         tokenPk = sideA === 'DESO' ? sideB : sideA;
       } else if (lowerA === 'focus' || lowerB === 'focus') {
         quoteLabel = 'Focus';
         quoteCreator = lowerA === 'focus' ? sideA : sideB;
-        quoteUsdPrice = MARKET_DATA.focusPrice;
+        quoteUsdPrice = marketData.focusPrice;
         tokenPk = lowerA === 'focus' ? sideB : sideA;
       } else if (lowerA === 'dusdc_' || lowerA === 'dusdc' || lowerB === 'dusdc_' || lowerB === 'dusdc') {
         quoteLabel = 'USDC';
