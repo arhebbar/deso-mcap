@@ -6,6 +6,8 @@
  */
 
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchBuyLadder, realizableUsd, FOCUS_PK, OPENFUND_PK, type BuyLadder } from '@/api/tokenLiquidityApi';
 import { useWalletData } from './useWalletData';
 import { useLiveData } from './useLiveData';
 import { useCCv1HoldingsTable } from './useCCv1HoldingsTable';
@@ -56,6 +58,10 @@ export interface TokenHoldingsRow {
   DESOUnstaked?: number;
   OpenFund?: number;
   Focus?: number;
+  /** Account rows: what the Openfund / Focus holding would sell for into live buy orders (depth-aware).
+   * Absent on supply-level rows, which use quantity × market price. */
+  OpenFundUsd?: number;
+  FocusUsd?: number;
   dUSDC?: number;
   dBTC?: number;
   dETH?: number;
@@ -121,6 +127,20 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
   );
   const { usernameByPk } = useOthersUsernames(othersPks);
 
+  // Live buy orders for Openfund and Focus, so each account's holding is valued at what it could actually sell for.
+  const laddersQuery = useQuery({
+    queryKey: ['buy-ladders', marketData.desoPrice, marketData.focusPrice],
+    queryFn: async () => {
+      const quoteUsd = { deso: marketData.desoPrice, focus: marketData.focusPrice };
+      const [openfund, focus] = await Promise.all([fetchBuyLadder(OPENFUND_PK, quoteUsd), fetchBuyLadder(FOCUS_PK, quoteUsd)]);
+      return { openfund, focus };
+    },
+    enabled: marketData.desoPrice > 0,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+  const ladders = laddersQuery.data;
+
   const prices = useMemo(
     () => ({
       deso: marketData.desoPrice,
@@ -136,6 +156,13 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
   const rows = useMemo(() => {
     const out: TokenHoldingsRow[] = [];
     const p = prices;
+    /** Depth-aware value of an account's holding; quantity × market price until the order books load. */
+    const sellValue = (ladder: BuyLadder | undefined, qty: number, price: number, pk?: string) =>
+      qty <= 0 ? 0 : ladder ? realizableUsd(ladder, qty, pk) : qty * price;
+    const accountTokenUsd = (openfund: number, focus: number, pk?: string) => ({
+      OpenFundUsd: sellValue(ladders?.openfund, openfund, p.openfund, pk),
+      FocusUsd: sellValue(ladders?.focus, focus, p.focus, pk),
+    });
 
     // Issued row (supply / issued amounts). DeSo Unstaked excludes CCv1 (locked in creator coins).
     const desoIssued = marketData.desoTotalSupply;
@@ -226,10 +253,12 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const ccv1 = w.ccv1ValueDeso ?? 0;
       const ccv2Usd = w.ccv2ValueUsd ?? 0;
       const ccv2Deso = p.deso > 0 ? ccv2Usd / p.deso : 0;
+      const pk = (w as { publicKey?: string }).publicKey;
+      const tokenUsd = accountTokenUsd(openfund, focus, pk);
       const totalUsd =
         deso * p.deso +
-        openfund * p.openfund +
-        focus * p.focus +
+        tokenUsd.OpenFundUsd +
+        tokenUsd.FocusUsd +
         dusdc +
         dbtc * p.btc +
         deth * p.eth +
@@ -237,7 +266,6 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         ccv1 * p.deso +
         ccv2Usd;
       if (totalUsd === 0) continue;
-      const pk = (w as { publicKey?: string }).publicKey;
       const account = pk ? (usernameByPk.get(pk) ?? w.name) : w.name;
       out.push({
         id: `account-${w.name}`,
@@ -251,6 +279,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         DESOUnstaked: unstaked,
         OpenFund: openfund,
         Focus: focus,
+        ...tokenUsd,
         dUSDC: dusdc,
         dBTC: dbtc,
         dETH: deth,
@@ -274,8 +303,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const of = openfundFocusByPk.get(w.pk);
       const openfund = of?.Openfund ?? 0;
       const focus = of?.Focus ?? 0;
-      const totalUsd =
-        w.totalUsd + openfund * p.openfund + focus * p.focus;
+      const tokenUsd = accountTokenUsd(openfund, focus, w.pk);
+      const totalUsd = w.totalUsd + tokenUsd.OpenFundUsd + tokenUsd.FocusUsd;
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
@@ -292,6 +321,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         DESOUnstaked: w.unstaked,
         OpenFund: openfund,
         Focus: focus,
+        ...tokenUsd,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
@@ -311,8 +341,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const of = openfundFocusByPk.get(w.pk);
       const openfund = of?.Openfund ?? 0;
       const focus = of?.Focus ?? 0;
-      const totalUsd =
-        w.totalUsd + openfund * p.openfund + focus * p.focus;
+      const tokenUsd = accountTokenUsd(openfund, focus, w.pk);
+      const totalUsd = w.totalUsd + tokenUsd.OpenFundUsd + tokenUsd.FocusUsd;
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
@@ -329,6 +359,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         DESOUnstaked: w.unstaked,
         OpenFund: openfund,
         Focus: focus,
+        ...tokenUsd,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
@@ -347,8 +378,8 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
       const of = openfundFocusByPk.get(w.pk);
       const openfund = of?.Openfund ?? 0;
       const focus = of?.Focus ?? 0;
-      const totalUsd =
-        w.totalUsd + openfund * p.openfund + focus * p.focus;
+      const tokenUsd = accountTokenUsd(openfund, focus, w.pk);
+      const totalUsd = w.totalUsd + tokenUsd.OpenFundUsd + tokenUsd.FocusUsd;
       if (totalUsd === 0) continue;
       const overrideCat = overrides.get(w.pk);
       const category = overrideCat === 'DESO_BULL' ? 'DeSo Bulls' : 'Others';
@@ -365,6 +396,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
         DESOUnstaked: w.unstaked,
         OpenFund: openfund,
         Focus: focus,
+        ...tokenUsd,
         dUSDC: 0,
         dBTC: 0,
         dETH: 0,
@@ -544,7 +576,7 @@ export function useTokenHoldingsTable(desoOnlyView = false): {
     });
 
     return out;
-  }, [wallets, marketData, prices, ccv1TableTotalDeso, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView, usernameByPk]);
+  }, [ladders, wallets, marketData, prices, ccv1TableTotalDeso, freeFloatTop100, desoBalancesHolders, stakeEntriesStakers, openfundFocusByPk, excludeFromOthersPks, desoOnlyView, usernameByPk]);
 
   return {
     rows,

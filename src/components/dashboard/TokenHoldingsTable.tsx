@@ -171,14 +171,23 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
 
   const categoryFromFilter = expandedSectionOnly != null ? SECTION_FILTER_TO_CATEGORY[expandedSectionOnly] : undefined;
 
+  /** Openfund / Focus value in USD: account rows carry a depth-aware sell value; supply rows use quantity × price. */
+  const tokenUsd = useCallback(
+    (row: TokenHoldingsRow, col: 'OpenFund' | 'Focus'): number =>
+      col === 'OpenFund'
+        ? (row.OpenFundUsd ?? (row.OpenFund ?? 0) * prices.openfund)
+        : (row.FocusUsd ?? (row.Focus ?? 0) * prices.focus),
+    [prices]
+  );
+
   /** Unstaked = Openfund + Focus + CCv2 + dUSDC + dBTC + dETH + dSOL + DESO (in USD). DeSo only: just DESO. */
   const getUnstakedUsd = useCallback(
     (row: TokenHoldingsRow): number => {
       const p = prices;
       if (desoOnlyView) return (row.DESOUnstaked ?? 0) * p.deso;
       return (
-        (row.OpenFund ?? 0) * p.openfund +
-        (row.Focus ?? 0) * p.focus +
+        tokenUsd(row, 'OpenFund') +
+        tokenUsd(row, 'Focus') +
         (row.CCv2 ?? 0) * p.deso +
         (row.dUSDC ?? 0) * 1 +
         (row.dBTC ?? 0) * p.btc +
@@ -187,7 +196,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         (row.DESOUnstaked ?? 0) * p.deso
       );
     },
-    [prices, desoOnlyView]
+    [prices, desoOnlyView, tokenUsd]
   );
 
   const displayCols = desoOnlyView
@@ -309,6 +318,8 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
         DESOUnstaked: sum('DESOUnstaked'),
         OpenFund: sum('OpenFund'),
         Focus: sum('Focus'),
+        OpenFundUsd: list.reduce((s, r) => s + tokenUsd(r, 'OpenFund'), 0),
+        FocusUsd: list.reduce((s, r) => s + tokenUsd(r, 'Focus'), 0),
         dUSDC: sum('dUSDC'),
         dBTC: sum('dBTC'),
         dETH: sum('dETH'),
@@ -319,7 +330,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       };
     }
     return out;
-  }, [rowsByCategory]);
+  }, [rowsByCategory, tokenUsd]);
 
   const handleSort = (col: TokenCol | 'category' | 'account' | 'total') => {
     setUseDefaultOrder(false);
@@ -397,15 +408,13 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
       if (col === 'DESOStaked') return '–';
       if (col === 'DESOUnstaked') return formatUsd(prices.deso); // native DESO price
       if (v == null) return '–';
-      const priceUsd =
-        col === 'OpenFund' || col === 'Focus' ? (v as number) * prices.deso : (v as number);
+      const priceUsd = v as number; // all price-row values are USD
       if (valueMode === 'deso')
         return prices.deso > 0 ? formatNumberShort(priceUsd / prices.deso) : '–';
-      if (col === 'OpenFund') return formatUsd((v as number) * prices.deso);
+      if (col === 'OpenFund') return formatUsd(priceUsd);
       if (col === 'Focus') {
-        const focusPriceUsd = (v as number) * prices.deso;
-        if (focusPriceUsd < 0.01) return `$${focusPriceUsd.toFixed(7)}`;
-        return formatUsd(focusPriceUsd);
+        if (priceUsd < 0.01) return `${priceUsd.toFixed(7)}`;
+        return formatUsd(priceUsd);
       }
       if (col === 'dUSDC') return '$1.00';
       if (col === 'dBTC') return formatUsd(v as number);
@@ -432,7 +441,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
                   : col === 'dSOL'
                     ? prices.sol
                     : 1;
-    const valueUsd = (v as number) * mult;
+    const valueUsd = col === 'OpenFund' || col === 'Focus' ? tokenUsd(row, col) : (v as number) * mult;
     if (valueMode === 'usd') return formatUsd(valueUsd);
     if (valueMode === 'deso') return formatNumberShort(prices.deso > 0 ? valueUsd / prices.deso : 0);
     return formatNumberShort(v as number);
@@ -455,7 +464,7 @@ export default function TokenHoldingsTable({ expandedSectionOnly }: TokenHolding
           <p className="text-xs text-muted-foreground mt-1">
             {desoOnlyView
               ? 'DeSo only: Total = DESO Staked + CCv1* + DeSo Unstaked (12.2M). *CCv1 from Locked Table (Top X). DeSo Unstaked excludes CCv1.'
-              : 'Total = DESO Staked + CCv1* + DeSo Unstaked. *CCv1 from Locked Table (Top X). DeSo Unstaked excludes CCv1. Expand (+) for Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO.'}
+              : 'Total = DESO Staked + CCv1* + DeSo Unstaked. *CCv1 from Locked Table (Top X). DeSo Unstaked excludes CCv1. Expand (+) for Openfund, Focus, CCv2, dUSDC, dBTC, dETH, dSOL, DESO. Openfund and Focus held by each account are valued at what selling them into live buy orders would return, not quantity × price.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">

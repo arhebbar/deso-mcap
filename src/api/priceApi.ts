@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FOCUS_PK, OPENFUND_PK } from './tokenLiquidityApi';
 
 const CoinGeckoPricesSchema = z.object({
   bitcoin: z.object({ usd: z.number() }),
@@ -18,8 +19,6 @@ export interface LivePrices {
   openfundPrice: number;
 }
 
-const FOCUS_PK = 'BC1YLjEayZDjAPitJJX4Boy7LsEfN3sWAkYb3hgE9kGBirztsc2re1N';
-const OPENFUND_PK = 'BC1YLj3zNA7hRAqBVkvsTeqw7oi4H6ogKiAFL1VXhZy6pYeZcZ6TDRY';
 
 // CoinGecko allows browser CORS; the Vercel proxy gets 403, so call it directly in prod.
 const COINGECKO_BASE = import.meta.env.DEV ? '/coingecko' : 'https://api.coingecko.com/api/v3';
